@@ -1,0 +1,4 @@
+/.env
+/node_modules/
+/public/favicon.ico
+/public/robots.txt

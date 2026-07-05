@@ -1,0 +1,468 @@
+/*
+ * Web projection for the World environment model.
+ */
+:root {
+    color-scheme: dark;
+    background: #050809;
+    color: #eefaf8;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+button {
+    font: inherit;
+}
+
+a {
+    color: #b8fff3;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.runtime-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #050809;
+}
+
+.runtime-workspace {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+}
+
+.field-projection {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #050809;
+    outline: none;
+}
+
+.field-projection__sky,
+.field-projection__grid,
+.field-projection__horizon,
+.field-projection__objects {
+    position: absolute;
+    inset: 0;
+}
+
+.field-projection__sky {
+    background:
+        radial-gradient(circle at 50% 35%, rgba(180, 255, 240, 0.08), transparent 16%),
+        linear-gradient(180deg, #0b171a 0%, #071011 48%, #0c1718 50%, #061011 100%);
+}
+
+.field-projection__grid {
+    opacity: 0.18;
+    background-image:
+        linear-gradient(rgba(184, 255, 243, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(184, 255, 243, 0.06) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: radial-gradient(circle at center, #000 0%, transparent 72%);
+}
+
+.field-projection__horizon {
+    top: 49.5%;
+    bottom: auto;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(184, 255, 243, 0.12), rgba(184, 255, 243, 0.6) 50%, rgba(184, 255, 243, 0.12));
+    box-shadow: 0 0 24px rgba(184, 255, 243, 0.16);
+}
+
+.field-projection__north {
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    width: 0;
+    height: 84px;
+    transform: translateX(-50%);
+    border-left: 2px solid rgba(184, 255, 243, 0.62);
+}
+
+.field-projection__north span {
+    position: absolute;
+    top: -24px;
+    left: 0;
+    transform: translateX(-50%);
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(184, 255, 243, 0.45);
+    border-radius: 50%;
+    background: rgba(5, 12, 13, 0.92);
+    color: #b8fff3;
+    font-size: 0.72rem;
+}
+
+.field-projection__objects {
+    z-index: 4;
+}
+
+.field-marker {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    color: #eefaf8;
+}
+
+.field-marker__target {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 2px solid rgba(215, 255, 243, 0.88);
+    border-radius: 50%;
+    background: rgba(18, 23, 24, 0.2);
+}
+
+.field-marker__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.field-marker__label {
+    display: grid;
+    gap: 2px;
+    min-width: 138px;
+    margin-left: 12px;
+    padding: 8px 10px;
+    border: 1px solid rgba(215, 255, 243, 0.42);
+    border-radius: 8px;
+    background: rgba(10, 16, 17, 0.86);
+}
+
+.field-marker__label span {
+    color: #b8fff3;
+    font-size: 0.64rem;
+    text-transform: uppercase;
+}
+
+.field-marker__label strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.field-projection__status,
+.runtime-session {
+    position: absolute;
+    z-index: 8;
+    color: #d0ddd5;
+    font-size: 0.82rem;
+}
+
+.field-projection__status {
+    left: 22px;
+    top: 66px;
+    margin: 0;
+}
+
+.runtime-session {
+    right: 20px;
+    top: 64px;
+    display: grid;
+    gap: 3px;
+    text-align: right;
+}
+
+.runtime-session .meta-line {
+    margin: 0;
+}
+
+.carry-top,
+.carry-bottom,
+.carry-panel,
+.carry-focus,
+.finding-overlay {
+    position: absolute;
+    z-index: 10;
+    border: 1px solid rgba(184, 255, 243, 0.28);
+    background: rgba(6, 12, 13, 0.82);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(10px);
+}
+
+.carry-top {
+    top: 8px;
+    left: 10px;
+    right: 10px;
+    min-height: 48px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 7px;
+    border-radius: 10px;
+}
+
+.carry-bottom {
+    left: 10px;
+    right: 10px;
+    bottom: 8px;
+    min-height: 48px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 7px;
+    border-radius: 10px;
+}
+
+.carry-panel {
+    top: 156px;
+    bottom: 128px;
+    width: min(320px, calc(50vw - 40px));
+    overflow: auto;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.carry-panel--left {
+    left: 18px;
+}
+
+.carry-panel--right {
+    right: 18px;
+}
+
+.carry-focus {
+    left: 50%;
+    bottom: 106px;
+    width: min(500px, calc(100vw - 48px));
+    max-height: 44vh;
+    transform: translateX(-50%);
+    overflow: auto;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.finding-overlay {
+    right: 18px;
+    top: 156px;
+    width: min(360px, calc(100vw - 36px));
+    max-height: 44vh;
+    overflow: auto;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.finding-overlay:empty,
+.carry-panel:empty,
+.carry-focus__context:empty {
+    display: none;
+}
+
+.world-collection {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.world-collection header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.world-collection h2,
+.world-collection h3,
+.active-object h2,
+.world-collection p,
+.active-object p,
+.meta-line,
+.empty,
+figure {
+    margin-top: 0;
+}
+
+.world-collection h3 {
+    margin-bottom: 0;
+    color: #eefaf8;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.world-collection header p {
+    margin-bottom: 0;
+    color: #d0ddd5;
+    font-size: 0.78rem;
+}
+
+.world-object-list {
+    display: grid;
+    gap: 8px;
+}
+
+.carry-top .world-object-list,
+.carry-bottom .world-object-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.world-object {
+    width: 100%;
+    min-height: 72px;
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    border: 1px solid rgba(184, 255, 243, 0.25);
+    border-radius: 7px;
+    background: rgba(25, 39, 42, 0.88);
+    color: #eefaf8;
+    padding: 9px 10px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.carry-top .world-object,
+.carry-bottom .world-object {
+    width: auto;
+    min-width: 88px;
+    min-height: 34px;
+    align-content: center;
+}
+
+.world-object:hover,
+.world-object:focus,
+.world-object[aria-pressed="true"] {
+    border-color: rgba(184, 255, 243, 0.72);
+    background: rgba(34, 52, 56, 0.96);
+    outline: none;
+}
+
+.object-type,
+.object-badge {
+    width: fit-content;
+    color: #b8fff3;
+    font-size: 0.64rem;
+    text-transform: uppercase;
+}
+
+.object-summary {
+    color: #d0ddd5;
+    font-size: 0.78rem;
+}
+
+.object-badge {
+    border: 1px solid rgba(255, 184, 184, 0.4);
+    color: #ffc8c8;
+    padding: 1px 5px;
+}
+
+.active-object {
+    display: grid;
+    gap: 8px;
+}
+
+.active-object h2 {
+    margin-bottom: 0;
+    font-size: 1.15rem;
+}
+
+.carry-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.world-action {
+    border: 1px solid rgba(184, 255, 243, 0.4);
+    border-radius: 7px;
+    background: #b8fff3;
+    color: #041013;
+    padding: 8px 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.world-action:disabled {
+    background: rgba(25, 39, 42, 0.88);
+    color: #788986;
+    cursor: not-allowed;
+}
+
+.action-result,
+.world-resource,
+.related-object {
+    border: 1px solid rgba(184, 255, 243, 0.2);
+    border-radius: 7px;
+    background: rgba(8, 15, 16, 0.82);
+    padding: 9px;
+    margin-bottom: 8px;
+}
+
+.world-resource img {
+    display: block;
+    width: 100%;
+    max-height: 180px;
+    object-fit: cover;
+    background: #101819;
+}
+
+.world-resource figcaption,
+.meta-line,
+.empty {
+    color: #d0ddd5;
+    font-size: 0.78rem;
+}
+
+.meta-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.meta-line strong {
+    color: #eefaf8;
+}
+
+.empty {
+    margin-bottom: 0;
+}
+
+.noscript-runtime {
+    position: relative;
+    z-index: 30;
+    padding: 20px;
+    background: #050809;
+}
+
+@media (max-width: 920px) {
+    .carry-panel {
+        display: none;
+    }
+
+    .carry-focus {
+        bottom: 86px;
+    }
+
+    .finding-overlay {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        top: auto;
+        bottom: 154px;
+    }
+}
