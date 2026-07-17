@@ -37,7 +37,7 @@
             var zoneMap = zonesByKey(scene.layers || []);
             renderZone(nodes.carryTop, zoneMap['carry:top_dock'], 'compact');
             renderZone(nodes.carryLeft, zoneMap['carry:left_panel'], 'panel');
-            renderZone(nodes.carryMain, null, 'panel');
+            renderZone(nodes.carryMain, zoneMap['carry:main_content'], 'panel');
             renderZone(nodes.carryRight, zoneMap['carry:right_panel'], 'panel');
             renderZone(nodes.carryBottom, zoneMap['carry:bottom_dock'], 'compact');
             renderZone(nodes.findings, zoneMap['findings:findings'], 'overlay');

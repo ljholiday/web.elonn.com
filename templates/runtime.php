@@ -92,7 +92,7 @@ $pageUrl = rtrim($app['url'], '/') . '/';
                 <?php if (is_array($fallbackDataset)): ?>
                     <p>
                         Server-rendered fallback for
-                        <?= htmlspecialchars((string) ($fallbackDataset['dataset']['runtime_session_id'] ?? 'runtime session'), ENT_QUOTES, 'UTF-8') ?>.
+                        <?= htmlspecialchars((string) ($fallbackDataset['id'] ?? 'runtime session'), ENT_QUOTES, 'UTF-8') ?>.
                         World actions require an interactive runtime.
                     </p>
                     <?php foreach (web_runtime_fallback_collections($fallbackDataset) as $collection): ?>
@@ -126,29 +126,30 @@ $pageUrl = rtrim($app['url'], '/') . '/';
 function web_runtime_fallback_collections(array $dataset): array
 {
     $objects = [];
-    foreach (($dataset['objects']['items'] ?? []) as $object) {
+    foreach (($dataset['objects'] ?? []) as $object) {
         if (is_array($object) && is_string($object['id'] ?? null)) {
             $objects[$object['id']] = [
-                'title' => (string) ($object['title'] ?? 'Object'),
+                'title' => (string) ($object['name'] ?? $object['title'] ?? 'Object'),
                 'type' => (string) ($object['type'] ?? 'object'),
             ];
         }
     }
 
     $collections = [];
-    foreach (($dataset['collections']['items'] ?? []) as $collection) {
+    foreach (($dataset['collections'] ?? []) as $collection) {
         if (!is_array($collection)) {
             continue;
         }
+        $content = is_array($collection['content'] ?? null) ? $collection['content'] : [];
         $items = [];
-        foreach (($collection['items'] ?? []) as $item) {
+        foreach (($content['items'] ?? []) as $item) {
             if (is_array($item) && isset($objects[(string) ($item['object_id'] ?? '')])) {
                 $items[] = $objects[(string) $item['object_id']];
             }
         }
         $collections[] = [
-            'title' => (string) ($collection['title'] ?? 'Collection'),
-            'summary' => (string) ($collection['summary'] ?? ''),
+            'title' => (string) ($content['name'] ?? 'Collection'),
+            'summary' => (string) ($content['description'] ?? ''),
             'objects' => $items,
         ];
     }

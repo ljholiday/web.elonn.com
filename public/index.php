@@ -68,39 +68,45 @@ require BASE_PATH . '/templates/runtime.php';
 function web_runtime_fallback_dataset(array $world): ?array
 {
     $body = json_encode([
-        'contract' => [
-            'name' => 'elonn.world.session_request',
-            'version' => 1,
-        ],
-        'context' => [
-            'intent' => 'render_world_dataset',
-            'scope' => 'server_fallback',
-        ],
-        'runtime' => [
-            'name' => 'web',
-            'contract' => [
-                'name' => 'elonn.world.dataset',
-                'version' => 1,
+        'id' => 'call:runtime:web:fallback',
+        'content' => [
+            'runtime' => [
+                'id' => 'web',
+                'session_id' => '',
+                'locale' => 'en-US',
+                'timezone' => '',
+                'capabilities' => [
+                    'screen' => true,
+                    'pointer' => false,
+                    'keyboard' => true,
+                    'touch' => false,
+                    'field_view' => true,
+                ],
+            ],
+            'input' => [
+                'type' => 'text',
+                'text' => 'Open my world.',
+            ],
+            'intent' => 'overview',
+            'capabilities' => [
+                'screen' => true,
+                'pointer' => false,
+                'keyboard' => true,
+                'touch' => false,
+                'field_view' => true,
             ],
         ],
-        'capabilities' => [
-            'screen' => true,
-            'pointer' => false,
-            'keyboard' => true,
-            'touch' => false,
-            'field_view' => true,
-            'collections' => true,
-            'resources' => true,
-            'action_dispatch' => false,
+        'context' => [
+            'scope' => 'server_fallback',
+            'runtime_state' => [],
         ],
-        'runtime_state' => [],
     ], JSON_UNESCAPED_SLASHES);
 
     if (!is_string($body)) {
         return null;
     }
 
-    $response = @file_get_contents(rtrim($world['base_url'], '/') . '/world/session', false, stream_context_create([
+    $response = @file_get_contents(rtrim($world['base_url'], '/') . '/world/call', false, stream_context_create([
         'http' => [
             'method' => 'POST',
             'header' => [
@@ -118,7 +124,7 @@ function web_runtime_fallback_dataset(array $world): ?array
     }
 
     $payload = json_decode($response, true);
-    if (!is_array($payload) || ($payload['dataset']['name'] ?? '') !== 'elonn.world.dataset') {
+    if (!is_array($payload) || ($payload['type'] ?? '') !== 'world') {
         return null;
     }
 

@@ -1,8 +1,7 @@
 /*
  * World client boundary.
  *
- * The browser runtime talks only to POST /world/session and published World
- * action endpoints.
+ * The browser runtime talks only to POST /world/call.
  */
 (function () {
     'use strict';
@@ -32,46 +31,49 @@
                 voice: false,
                 collections: true,
                 resources: true,
-                action_dispatch: true
+                action_dispatch: false
             };
         }
 
-        function sessionRequest(runtimeState) {
+        function worldCall(runtimeState) {
             var state = runtimeState && typeof runtimeState === 'object' ? runtimeState : {};
-            var body = {
-                contract: {
-                    name: 'elonn.world.session_request',
-                    version: 1
+            var call = {
+                id: 'call:runtime:web:' + String(Date.now()),
+                content: {
+                    runtime: {
+                        id: runtimeName,
+                        session_id: String(state.runtimeSessionId || ''),
+                        locale: String(navigator.language || ''),
+                        timezone: typeof Intl !== 'undefined' && Intl.DateTimeFormat
+                            ? String(Intl.DateTimeFormat().resolvedOptions().timeZone || '')
+                            : '',
+                        capabilities: runtimeCapabilities()
+                    },
+                    input: {
+                        type: 'text',
+                        text: String(state.inputText || 'Open my world.')
+                    },
+                    intent: String(state.intent || 'overview'),
+                    capabilities: runtimeCapabilities()
                 },
-                user_id: 'demo_user',
                 context: {
-                    intent: 'render_world_dataset',
-                    scope: 'reference_fixture'
-                },
-                runtime: {
-                    name: runtimeName,
-                    contract: {
-                        name: 'elonn.world.dataset',
-                        version: 1
-                    }
-                },
-                capabilities: runtimeCapabilities(),
-                runtime_state: {}
+                    scope: String(state.scope || 'default'),
+                    runtime_state: {},
+                    focus: {}
+                }
             };
 
             if (String(state.selectedObjectId || '') !== '') {
-                body.selected_object_id = String(state.selectedObjectId);
-                body.runtime_state.selected_object_id = String(state.selectedObjectId);
+                call.context.focus.object_id = String(state.selectedObjectId);
             }
             if (String(state.selectedCollectionId || '') !== '') {
-                body.selected_collection_id = String(state.selectedCollectionId);
-                body.runtime_state.selected_collection_id = String(state.selectedCollectionId);
+                call.context.runtime_state.selected_collection_id = String(state.selectedCollectionId);
             }
             if (String(state.runtimeSessionId || '') !== '') {
-                body.runtime_state.runtime_session_id = String(state.runtimeSessionId);
+                call.context.runtime_state.runtime_session_id = String(state.runtimeSessionId);
             }
 
-            return body;
+            return call;
         }
 
         function postJson(path, body) {
@@ -97,14 +99,14 @@
         }
 
         return {
-            sessionRequest: sessionRequest,
+            worldCall: worldCall,
 
             loadDataset: function (runtimeState) {
-                return postJson('/world/session', sessionRequest(runtimeState));
+                return postJson('/world/call', worldCall(runtimeState));
             },
 
             dispatchWorldAction: function (action, body) {
-                return postJson(String(action.endpoint || ''), body);
+                return postJson('/world/call', body);
             }
         };
     };

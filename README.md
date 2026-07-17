@@ -1,9 +1,10 @@
 # web.elonn.local
 
-`web.elonn.local` is the browser runtime for the canonical World Dataset Contract.
+`web.elonn.local` is the browser runtime for canonical World Datasets.
 
-The runtime requests `elonn.world.dataset` version 1 from World and renders only
-the dataset sections published by World:
+The runtime submits canonical Calls to `POST /world/call`, receives canonical
+World Datasets, adapts them into browser scene sections, and renders only the
+data published by World:
 
 - identity
 - context
@@ -19,8 +20,7 @@ the dataset sections published by World:
 - metadata
 
 World is the only dependency. Web does not call Social, Find, Maps, Messages,
-Time, provider endpoints, or service loaders. Interactive commands are dispatched
-only through World action endpoints published in the dataset.
+Time, provider endpoints, or service loaders.
 
 ## Runtime projection
 
