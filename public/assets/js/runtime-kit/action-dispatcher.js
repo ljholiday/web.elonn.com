@@ -12,7 +12,7 @@
                 selectedObjectId: String(state.selectedObjectId || action.target_id || ''),
                 selectedCollectionId: String(state.selectedCollectionId || ''),
                 runtimeSessionId: String(state.runtimeSessionId || ''),
-                intent: String(action.type || 'action'),
+                operation: String(action.type || 'world.compose'),
                 inputText: String(action.label || 'World action.')
             });
         }

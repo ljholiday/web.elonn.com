@@ -60,17 +60,17 @@
         renderState();
 
         dispatcher.dispatch(state, action).then(function (payload) {
-            var result = payload && payload.result && typeof payload.result === 'object' ? payload.result : {};
+            var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
             state.actionResult = {
-                state: payload && payload.status === 'accepted' ? 'success' : 'neutral',
-                status: String(payload && payload.status || 'unknown'),
-                outcome: String(result.outcome || 'unknown'),
-                message: String(result.message || 'World action returned a result.')
+                state: errors.length === 0 ? 'success' : 'error',
+                status: errors.length === 0 ? 'dataset' : 'error',
+                outcome: errors.length === 0 ? 'updated' : 'failed',
+                message: errors.length === 0 ? 'World Dataset updated.' : String(errors[0].message || 'World action failed.')
             };
-            if (payload && payload.dataset) {
-                replaceDataset(payload.dataset);
+            if (payload && payload.type === 'world') {
+                replaceDataset(payload);
             }
-            renderer.status('World action completed.', 'ready');
+            renderer.status(state.actionResult.message, errors.length === 0 ? 'ready' : 'error');
         }).catch(function (error) {
             state.actionResult = {
                 state: 'error',
@@ -88,7 +88,7 @@
     function loadDataset(runtimeState) {
         client.loadDataset(runtimeState).then(function (payload) {
             replaceDataset(payload);
-            renderer.status('World Dataset loaded.', 'ready');
+            renderer.status(datasetStatus(payload), (payload.errors || []).length === 0 ? 'ready' : 'error');
         }).catch(function (error) {
             var message = error && error.message ? error.message : 'World Dataset unavailable.';
             renderer.status(message, 'error');
@@ -115,8 +115,9 @@
         }
         state.selectedCollectionId = collectionId;
         firstItem = runtime.Common.sectionItems({items: collection.items})[0] || {};
-        if (firstItem.object_id && state.indexes.objects[String(firstItem.object_id)]) {
-            state.selectedObjectId = String(firstItem.object_id);
+        firstItem = runtime.Common.itemIds(collection.items)[0] || '';
+        if (firstItem && state.indexes.objects[String(firstItem)]) {
+            state.selectedObjectId = String(firstItem);
         }
         renderState();
     }
@@ -149,7 +150,15 @@
 
     function collectionContains(collection, objectId) {
         return runtime.Common.sectionItems({items: collection.items}).some(function (item) {
-            return String(item.object_id || '') === objectId;
-        });
+            return runtime.Common.itemIds(collection.items).indexOf(objectId) !== -1;
+        }) || runtime.Common.itemIds(collection.items).indexOf(objectId) !== -1;
+    }
+
+    function datasetStatus(payload) {
+        var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
+        if (errors.length > 0) {
+            return String(errors[0].message || 'World Dataset returned errors.');
+        }
+        return 'World Dataset loaded.';
     }
 }());

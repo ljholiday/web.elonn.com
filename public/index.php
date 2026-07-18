@@ -70,9 +70,15 @@ function web_runtime_fallback_dataset(array $world): ?array
     $body = json_encode([
         'id' => 'call:runtime:web:fallback',
         'content' => [
+            'operation' => 'world.compose',
+            'input' => [
+                'type' => 'text',
+                'text' => 'Open my world.',
+            ],
+        ],
+        'context' => [
             'runtime' => [
                 'id' => 'web',
-                'session_id' => '',
                 'locale' => 'en-US',
                 'timezone' => '',
                 'capabilities' => [
@@ -83,20 +89,6 @@ function web_runtime_fallback_dataset(array $world): ?array
                     'field_view' => true,
                 ],
             ],
-            'input' => [
-                'type' => 'text',
-                'text' => 'Open my world.',
-            ],
-            'intent' => 'overview',
-            'capabilities' => [
-                'screen' => true,
-                'pointer' => false,
-                'keyboard' => true,
-                'touch' => false,
-                'field_view' => true,
-            ],
-        ],
-        'context' => [
             'scope' => 'server_fallback',
             'runtime_state' => [],
         ],
@@ -124,7 +116,7 @@ function web_runtime_fallback_dataset(array $world): ?array
     }
 
     $payload = json_decode($response, true);
-    if (!is_array($payload) || ($payload['type'] ?? '') !== 'world') {
+    if (!is_array($payload) || ($payload['type'] ?? '') !== 'world' || !array_key_exists('errors', $payload)) {
         return null;
     }
 

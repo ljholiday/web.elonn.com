@@ -37,7 +37,7 @@
             var zoneMap = zonesByKey(scene.layers || []);
             renderZone(nodes.carryTop, zoneMap['carry:top_dock'], 'compact');
             renderZone(nodes.carryLeft, zoneMap['carry:left_panel'], 'panel');
-            renderZone(nodes.carryMain, zoneMap['carry:main_content'], 'panel');
+            renderZone(nodes.carryMain, zoneMap['carry:carry'], 'panel');
             renderZone(nodes.carryRight, zoneMap['carry:right_panel'], 'panel');
             renderZone(nodes.carryBottom, zoneMap['carry:bottom_dock'], 'compact');
             renderZone(nodes.findings, zoneMap['findings:findings'], 'overlay');
@@ -68,7 +68,7 @@
                 common.replaceChildren(node, []);
                 return;
             }
-            common.replaceChildren(node, collections(zone.collections || [], mode));
+            common.replaceChildren(node, collections(zone.collections || [], mode).concat(objectList(zone.objects || [], mode)));
         }
 
         function renderField(node, zone) {
@@ -83,6 +83,7 @@
             (zone.collections || []).forEach(function (collection) {
                 objects = objects.concat(collection.objects || []);
             });
+            objects = objects.concat(zone.objects || []);
             common.replaceChildren(node, objects.map(fieldMarker));
         }
 
@@ -93,6 +94,18 @@
             return items.map(function (collection) {
                 return collectionNode(collection, mode);
             });
+        }
+
+        function objectList(items, mode) {
+            if (items.length === 0) {
+                return [];
+            }
+            var list = document.createElement('div');
+            list.className = 'world-object-list';
+            items.forEach(function (object) {
+                list.appendChild(objectButton(object, mode));
+            });
+            return [list];
         }
 
         function collectionNode(collection, mode) {

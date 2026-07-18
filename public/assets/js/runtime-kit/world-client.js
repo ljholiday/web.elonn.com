@@ -40,25 +40,25 @@
             var call = {
                 id: 'call:runtime:web:' + String(Date.now()),
                 content: {
+                    operation: String(state.operation || 'world.compose'),
+                    input: {
+                        type: 'text',
+                        text: String(state.inputText || 'Open my world.')
+                    }
+                },
+                context: {
                     runtime: {
                         id: runtimeName,
-                        session_id: String(state.runtimeSessionId || ''),
                         locale: String(navigator.language || ''),
                         timezone: typeof Intl !== 'undefined' && Intl.DateTimeFormat
                             ? String(Intl.DateTimeFormat().resolvedOptions().timeZone || '')
                             : '',
                         capabilities: runtimeCapabilities()
                     },
-                    input: {
-                        type: 'text',
-                        text: String(state.inputText || 'Open my world.')
-                    },
-                    intent: String(state.intent || 'overview'),
-                    capabilities: runtimeCapabilities()
-                },
-                context: {
                     scope: String(state.scope || 'default'),
-                    runtime_state: {},
+                    runtime_state: {
+                        dataset_id: String(state.runtimeSessionId || '')
+                    },
                     focus: {}
                 }
             };
@@ -70,7 +70,7 @@
                 call.context.runtime_state.selected_collection_id = String(state.selectedCollectionId);
             }
             if (String(state.runtimeSessionId || '') !== '') {
-                call.context.runtime_state.runtime_session_id = String(state.runtimeSessionId);
+                call.context.runtime_state.dataset_id = String(state.runtimeSessionId);
             }
 
             return call;
@@ -86,9 +86,13 @@
                 },
                 body: JSON.stringify(body && typeof body === 'object' ? body : {})
             }).then(function (response) {
-                return response.json().then(function (payload) {
+                return response.json().catch(function () {
+                    return {};
+                }).then(function (payload) {
                     if (!response.ok) {
-                        var message = payload && payload.error ? String(payload.error) : 'World request failed: ' + String(response.status);
+                        var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
+                        var first = errors[0] && typeof errors[0] === 'object' ? errors[0] : {};
+                        var message = first.message ? String(first.message) : 'World request failed: ' + String(response.status);
                         var error = new Error(message);
                         error.payload = payload;
                         throw error;

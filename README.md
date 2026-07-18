@@ -3,28 +3,24 @@
 `web.elonn.local` is the browser runtime for canonical World Datasets.
 
 The runtime submits canonical Calls to `POST /world/call`, receives canonical
-World Datasets, adapts them into browser scene sections, and renders only the
-data published by World:
+World Datasets, translates them into browser-owned render state, and renders
+only the data published by World:
 
-- identity
-- context
 - objects
 - relationships
 - actions
 - collections
-- layout
-- capabilities
-- permissions
 - resources
-- extensions
-- metadata
+- placements
+- errors
+- context
 
 World is the only dependency. Web does not call Social, Find, Maps, Messages,
 Time, provider endpoints, or service loaders.
 
 ## Runtime projection
 
-Web renders the World layout layers as a flat-screen runtime:
+Web translates semantic Placement as a flat-screen runtime:
 
 - Carry Layer: persistent user-anchored workspace with top, side, main, and
   bottom zones.

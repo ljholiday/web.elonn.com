@@ -1,139 +1,98 @@
 /*
- * Dataset parser and adapter for canonical World Datasets.
+ * Parses canonical World Datasets into Web-owned runtime state.
  */
 (function () {
     'use strict';
 
     var common = window.ElonnWorldRuntime.Common;
-    var requiredSections = [
-        'identity',
-        'context',
+    var datasetFields = [
+        'id',
+        'type',
+        'scope',
+        'mode',
+        'created',
         'objects',
         'relationships',
         'actions',
         'collections',
-        'layout',
-        'capabilities',
-        'permissions',
         'resources',
-        'extensions',
-        'metadata'
+        'placements',
+        'errors',
+        'context'
     ];
 
     window.ElonnWorldRuntime.DatasetParser = {
-        requiredSections: requiredSections.slice(),
+        datasetFields: datasetFields.slice(),
 
         parse: function (payload) {
             var dataset = payload && typeof payload === 'object' ? common.clone(payload) : {};
-            var adapted = {};
-            var contract = {};
+            this.validateDataset(dataset);
+            return {
+                id: String(dataset.id),
+                type: 'world',
+                scope: String(dataset.scope),
+                mode: String(dataset.mode),
+                created: String(dataset.created),
+                objects: this.objects(dataset),
+                relationships: this.relationships(dataset),
+                actions: this.actions(dataset),
+                collections: this.collections(dataset),
+                resources: this.resources(dataset),
+                placements: this.placements(dataset),
+                errors: this.errors(dataset),
+                context: dataset.context && typeof dataset.context === 'object' ? dataset.context : {}
+            };
+        },
 
-            if (dataset.type === 'world') {
-                adapted = this.fromCanonicalDataset(dataset);
-                this.validateReferences(adapted);
-                return adapted;
+        validateDataset: function (dataset) {
+            if (!dataset || typeof dataset !== 'object' || dataset.type !== 'world') {
+                throw new Error('Unsupported World Dataset.');
             }
-
-            contract = dataset.dataset && typeof dataset.dataset === 'object' ? dataset.dataset : {};
-            if (contract.name !== 'elonn.world.dataset' || Number(contract.version) !== 1) {
-                throw new Error('Unsupported World Dataset contract.');
-            }
-
-            requiredSections.forEach(function (sectionName) {
-                var section = dataset[sectionName] && typeof dataset[sectionName] === 'object' ? dataset[sectionName] : {};
-                if (section.name !== sectionName || Number(section.version) !== 1) {
-                    throw new Error('Unsupported World Dataset section: ' + sectionName);
+            ['id', 'scope', 'mode', 'created'].forEach(function (field) {
+                if (String(dataset[field] || '') === '') {
+                    throw new Error('World Dataset is missing ' + field + '.');
                 }
             });
-
-            this.validateReferences(dataset);
-            return dataset;
-        },
-
-        fromCanonicalDataset: function (dataset) {
-            return {
-                dataset: {
-                    name: 'elonn.world.dataset',
-                    version: 1,
-                    runtime_session_id: String(dataset.id || '')
-                },
-                identity: this.section('identity', []),
-                context: {
-                    name: 'context',
-                    version: 1,
-                    runtime_context: this.runtimeContext(dataset)
-                },
-                objects: this.section('objects', this.objects(dataset)),
-                relationships: this.section('relationships', this.relationships(dataset)),
-                actions: this.section('actions', this.actions(dataset)),
-                collections: this.section('collections', this.collections(dataset)),
-                layout: this.layout(dataset),
-                capabilities: this.section('capabilities', []),
-                permissions: this.section('permissions', []),
-                resources: this.section('resources', this.resources(dataset)),
-                extensions: this.section('extensions', []),
-                metadata: {
-                    name: 'metadata',
-                    version: 1,
-                    canonical_dataset_id: String(dataset.id || ''),
-                    canonical_created: String(dataset.created || ''),
-                    errors: Array.isArray(dataset.errors) ? dataset.errors : []
+            ['objects', 'relationships', 'actions', 'collections', 'resources', 'placements', 'errors'].forEach(function (field) {
+                if (!Array.isArray(dataset[field])) {
+                    throw new Error('World Dataset ' + field + ' must be an array.');
                 }
-            };
-        },
-
-        section: function (name, items) {
-            return {
-                name: name,
-                version: 1,
-                items: Array.isArray(items) ? items : []
-            };
-        },
-
-        runtimeContext: function (dataset) {
-            var context = dataset.context && typeof dataset.context === 'object' ? dataset.context : {};
-            var runtime = context.runtime && typeof context.runtime === 'object' ? context.runtime : {};
-            return {
-                intent: 'overview',
-                scope: String(dataset.scope || 'full'),
-                runtime_id: String(runtime.id || 'web'),
-                runtime_session_id: String(runtime.session_id || dataset.id || '')
-            };
+            });
+            if (!dataset.context || typeof dataset.context !== 'object' || Array.isArray(dataset.context)) {
+                throw new Error('World Dataset context must be an object.');
+            }
         },
 
         objects: function (dataset) {
-            return (Array.isArray(dataset.objects) ? dataset.objects : []).filter(Boolean).map(function (object) {
-                var properties = object.properties && typeof object.properties === 'object' ? object.properties : {};
+            return dataset.objects.filter(isObject).map(function (object) {
+                var content = object.content && typeof object.content === 'object' ? object.content : {};
                 var metadata = object.metadata && typeof object.metadata === 'object' ? object.metadata : {};
+                var properties = object.properties && typeof object.properties === 'object' ? object.properties : {};
                 return {
                     id: String(object.id || ''),
                     type: String(object.type || 'object'),
-                    title: String(object.name || object.title || 'Object'),
-                    summary: String(object.description || object.summary || ''),
-                    visibility: properties.visibility && typeof properties.visibility === 'object' ? properties.visibility : {},
-                    permissions: properties.permissions && typeof properties.permissions === 'object' ? properties.permissions : {},
-                    availability: properties.availability && typeof properties.availability === 'object' ? properties.availability : {state: 'enabled', reason: null},
-                    resources: Array.isArray(object.resources) ? object.resources : [],
-                    metadata: Object.assign({}, properties, metadata)
+                    title: common.text(content.name || object.name || object.title, 'Object'),
+                    summary: common.text(content.description || object.description || object.summary, ''),
+                    visibility: object.visibility && typeof object.visibility === 'object' ? object.visibility : {},
+                    permissions: object.permissions && typeof object.permissions === 'object' ? object.permissions : {},
+                    availability: availability(object.availability || content.availability || properties.availability),
+                    resourceIds: idsFrom(object.resources || content.resources || []),
+                    metadata: Object.assign({}, properties, metadata, content)
                 };
-            }).filter(function (object) {
-                return object.id !== '';
-            });
+            }).filter(hasId);
         },
 
         actions: function (dataset) {
-            return (Array.isArray(dataset.actions) ? dataset.actions : []).filter(Boolean).map(function (action) {
-                var metadata = action.metadata && typeof action.metadata === 'object' ? action.metadata : {};
+            return dataset.actions.filter(isObject).map(function (action) {
+                var content = action.content && typeof action.content === 'object' ? action.content : {};
+                var target = action.target || content.target || content.object || content.collection || content.resource || '';
                 return {
                     id: String(action.id || ''),
                     type: String(action.type || 'action'),
-                    label: String(action.name || action.label || 'Action'),
-                    target_id: String(metadata.target_id || ''),
-                    endpoint: '',
-                    availability: {
-                        state: 'disabled',
-                        reason: 'world_action_endpoint_unavailable'
-                    }
+                    label: common.text(content.label || content.name || action.label || action.name, 'Action'),
+                    target_id: String(target || ''),
+                    availability: availability(action.availability || content.availability),
+                    source: action
                 };
             }).filter(function (action) {
                 return action.id !== '' && action.target_id !== '';
@@ -141,13 +100,13 @@
         },
 
         relationships: function (dataset) {
-            return (Array.isArray(dataset.relationships) ? dataset.relationships : []).filter(Boolean).map(function (relationship) {
+            return dataset.relationships.filter(isObject).map(function (relationship) {
                 var content = relationship.content && typeof relationship.content === 'object' ? relationship.content : {};
                 return {
                     id: String(relationship.id || ''),
                     type: String(relationship.type || 'relationship'),
-                    from_id: String(content.from_id || relationship.from_id || ''),
-                    to_id: String(content.to_id || relationship.to_id || '')
+                    from_id: String(relationship.source || content.source || ''),
+                    to_id: String(relationship.target || content.target || '')
                 };
             }).filter(function (relationship) {
                 return relationship.id !== '' && relationship.from_id !== '' && relationship.to_id !== '';
@@ -155,125 +114,86 @@
         },
 
         collections: function (dataset) {
-            return (Array.isArray(dataset.collections) ? dataset.collections : []).filter(Boolean).map(function (collection) {
+            return dataset.collections.filter(isObject).map(function (collection) {
                 var content = collection.content && typeof collection.content === 'object' ? collection.content : {};
                 return {
                     id: String(collection.id || ''),
                     type: String(collection.type || 'collection'),
-                    title: String(content.name || collection.name || 'Collection'),
-                    summary: String(content.description || collection.description || ''),
-                    availability: content.availability && typeof content.availability === 'object' ? content.availability : {state: 'enabled', reason: null},
-                    items: Array.isArray(content.items) ? content.items : []
+                    title: common.text(content.name || collection.name || collection.title, 'Collection'),
+                    summary: common.text(content.description || collection.description || collection.summary, ''),
+                    availability: availability(collection.availability || content.availability),
+                    items: idsFrom(collection.items || content.items || [])
                 };
-            }).filter(function (collection) {
-                return collection.id !== '';
-            });
+            }).filter(hasId);
         },
 
         resources: function (dataset) {
-            return (Array.isArray(dataset.resources) ? dataset.resources : []).filter(Boolean).map(function (resource) {
+            return dataset.resources.filter(isObject).map(function (resource) {
                 var content = resource.content && typeof resource.content === 'object' ? resource.content : {};
                 return {
                     id: String(resource.id || content.id || ''),
                     kind: String(content.kind || resource.type || 'resource'),
-                    media_type: String(content.media_type || ''),
-                    href: String(content.href || ''),
-                    label: String(content.label || resource.id || 'Resource'),
-                    availability: content.availability && typeof content.availability === 'object' ? content.availability : {state: 'enabled', reason: null}
+                    media_type: String(content.media_type || content.mediaType || ''),
+                    href: String(content.href || content.url || ''),
+                    label: common.text(content.label || content.name || resource.label || resource.id, 'Resource'),
+                    availability: availability(resource.availability || content.availability)
                 };
-            }).filter(function (resource) {
-                return resource.id !== '';
+            }).filter(hasId);
+        },
+
+        placements: function (dataset) {
+            return dataset.placements.filter(isObject).map(function (placement) {
+                var content = placement.content && typeof placement.content === 'object' ? placement.content : {};
+                return {
+                    id: String(placement.id || ''),
+                    type: String(placement.type || ''),
+                    object_id: String(content.object || ''),
+                    collection_id: String(content.collection || ''),
+                    resource_id: String(content.resource || '')
+                };
+            }).filter(function (placement) {
+                return placement.id !== '' && ['carry', 'field', 'findings'].indexOf(placement.type) !== -1;
             });
         },
 
-        layout: function (dataset) {
-            var collectionIds = (Array.isArray(dataset.collections) ? dataset.collections : []).map(function (collection) {
-                return String(collection.id || '');
-            }).filter(Boolean);
-            var has = function (id) {
-                return collectionIds.indexOf(id) !== -1;
-            };
-            var findings = collectionIds.filter(function (id) {
-                return id === 'world_collection_mind_results' || id === 'world_collection_search_results';
-            });
-            var field = collectionIds.filter(function (id) {
-                return id === 'world_collection_nearby_places' || id === 'world_collection_today_events';
-            });
-            return {
-                name: 'layout',
-                version: 1,
-                primary_collection_id: has('world_collection_navigation') ? 'world_collection_navigation' : (collectionIds[0] || ''),
-                primary_object_id: '',
-                relevance_order: collectionIds,
-                layers: [
-                    {id: 'carry', anchor: 'user', purpose: 'Personal carry context.', collections: []},
-                    {id: 'findings', anchor: 'user', purpose: 'Findings returned by the current world state.', collections: findings},
-                    {id: 'field', anchor: 'world', purpose: 'World-anchored field objects.', collections: field}
-                ],
-                regions: [
-                    {id: 'top_dock', layer: 'carry', purpose: 'Navigation', collection_ids: has('world_collection_navigation') ? ['world_collection_navigation'] : []},
-                    {id: 'left_panel', layer: 'carry', purpose: 'Recent context', collection_ids: collectionIds.filter(function (id) {
-                        return ['world_collection_recent_conversations', 'world_collection_suggested_people', 'world_collection_community_feed'].indexOf(id) !== -1;
-                    })},
-                    {id: 'main_content', layer: 'carry', purpose: 'Primary carry content', collection_ids: collectionIds.filter(function (id) {
-                        return ['world_collection_resources', 'world_collection_favorites'].indexOf(id) !== -1;
-                    })},
-                    {id: 'right_panel', layer: 'carry', purpose: 'Saved and temporal context', collection_ids: collectionIds.filter(function (id) {
-                        return ['world_collection_favorites', 'world_collection_today_events'].indexOf(id) !== -1;
-                    })},
-                    {id: 'bottom_dock', layer: 'carry', purpose: 'Resources', collection_ids: has('world_collection_resources') ? ['world_collection_resources'] : []}
-                ]
-            };
-        },
-
-        validateReferences: function (dataset) {
-            var objectIds = common.indexBy(common.sectionItems(dataset.objects), 'id');
-            var resourceIds = common.indexBy(common.sectionItems(dataset.resources), 'id');
-            var collectionIds = common.indexBy(common.sectionItems(dataset.collections), 'id');
-
-            common.sectionItems(dataset.collections).forEach(function (collection) {
-                common.sectionItems({items: collection.items}).forEach(function (item) {
-                    if (!objectIds[String(item.object_id || '')]) {
-                        throw new Error('Collection references a missing object.');
-                    }
-                });
-            });
-
-            common.sectionItems(dataset.relationships).forEach(function (relationship) {
-                if (!objectIds[String(relationship.from_id || '')] || !objectIds[String(relationship.to_id || '')]) {
-                    throw new Error('Relationship references a missing object.');
-                }
-            });
-
-            common.sectionItems(dataset.actions).forEach(function (action) {
-                if (!objectIds[String(action.target_id || '')]) {
-                    throw new Error('Action references a missing object.');
-                }
-            });
-
-            common.sectionItems(dataset.objects).forEach(function (object) {
-                common.sectionItems({items: object.resources}).forEach(function (reference) {
-                    if (!resourceIds[String(reference.resource_id || '')]) {
-                        throw new Error('Object references a missing resource.');
-                    }
-                });
-            });
-
-            common.sectionItems({items: dataset.layout && dataset.layout.layers}).forEach(function (layer) {
-                (Array.isArray(layer.collections) ? layer.collections : []).forEach(function (collectionId) {
-                    if (!collectionIds[String(collectionId || '')]) {
-                        throw new Error('Layer references a missing collection.');
-                    }
-                });
-            });
-
-            common.sectionItems({items: dataset.layout && dataset.layout.regions}).forEach(function (region) {
-                (Array.isArray(region.collection_ids) ? region.collection_ids : []).forEach(function (collectionId) {
-                    if (!collectionIds[String(collectionId || '')]) {
-                        throw new Error('Region references a missing collection.');
-                    }
-                });
+        errors: function (dataset) {
+            return dataset.errors.filter(isObject).map(function (error) {
+                return {
+                    code: String(error.code || ''),
+                    message: String(error.message || '')
+                };
+            }).filter(function (error) {
+                return error.code !== '' && error.message !== '';
             });
         }
     };
+
+    function availability(value) {
+        var source = value && typeof value === 'object' ? value : {};
+        return {
+            state: common.text(source.state, 'enabled'),
+            reason: common.text(source.reason, ''),
+            required_capability: common.text(source.required_capability, '')
+        };
+    }
+
+    function idsFrom(items) {
+        return (Array.isArray(items) ? items : []).map(function (item) {
+            if (typeof item === 'string') {
+                return item;
+            }
+            if (item && typeof item === 'object') {
+                return String(item.object_id || item.object || item.id || item.resource_id || item.resource || '');
+            }
+            return '';
+        }).filter(Boolean);
+    }
+
+    function isObject(value) {
+        return value && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function hasId(value) {
+        return String(value.id || '') !== '';
+    }
 }());

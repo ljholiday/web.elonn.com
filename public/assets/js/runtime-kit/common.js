@@ -8,9 +8,24 @@
 
     window.ElonnWorldRuntime.Common = {
         sectionItems: function (section) {
-            return Array.isArray(section && section.items) ? section.items.filter(function (item) {
+            var items = Array.isArray(section) ? section : (Array.isArray(section && section.items) ? section.items : []);
+            return items.filter(function (item) {
                 return item && typeof item === 'object';
-            }) : [];
+            });
+        },
+
+        itemIds: function (items) {
+            return (Array.isArray(items) ? items : []).map(function (item) {
+                if (typeof item === 'string') {
+                    return item;
+                }
+                if (item && typeof item === 'object') {
+                    return String(item.object_id || item.object || item.id || item.resource_id || item.resource || '');
+                }
+                return '';
+            }).filter(function (id) {
+                return id !== '';
+            });
         },
 
         indexBy: function (items, key) {

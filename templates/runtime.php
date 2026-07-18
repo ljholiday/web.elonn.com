@@ -25,7 +25,7 @@ $scripts = [
     'web-renderer.js',
     'web-runtime.js',
 ];
-$pageDescription = 'A web runtime projection of the canonical elonn.world.dataset v1 environment.';
+$pageDescription = 'A web runtime projection of canonical World Datasets.';
 $pageUrl = rtrim($app['url'], '/') . '/';
 ?>
 <!doctype html>
@@ -143,8 +143,9 @@ function web_runtime_fallback_collections(array $dataset): array
         $content = is_array($collection['content'] ?? null) ? $collection['content'] : [];
         $items = [];
         foreach (($content['items'] ?? []) as $item) {
-            if (is_array($item) && isset($objects[(string) ($item['object_id'] ?? '')])) {
-                $items[] = $objects[(string) $item['object_id']];
+            $objectId = is_string($item) ? $item : (is_array($item) ? (string) ($item['object_id'] ?? $item['object'] ?? $item['id'] ?? '') : '');
+            if (isset($objects[$objectId])) {
+                $items[] = $objects[$objectId];
             }
         }
         $collections[] = [

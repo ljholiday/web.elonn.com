@@ -61,7 +61,11 @@
                             return collectionView(state, state.indexes.collections[collectionId] || {});
                         }).filter(function (collection) {
                             return collection.id !== '';
-                        })
+                        }),
+                        objects: (zone.objectIds || []).map(function (objectId) {
+                            var object = state.indexes.objects[String(objectId || '')] || null;
+                            return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId) : null;
+                        }).filter(Boolean)
                     };
                 })
             };
@@ -76,8 +80,8 @@
             type: common.text(collection.type, 'collection'),
             selected: String(collection.id || '') === state.selectedCollectionId,
             availability: availability(collection.availability),
-            objects: common.sectionItems({items: collection.items}).map(function (item) {
-                var object = state.indexes.objects[String(item.object_id || '')] || null;
+            objects: common.itemIds(collection.items).map(function (objectId) {
+                var object = state.indexes.objects[String(objectId || '')] || null;
                 return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId) : null;
             }).filter(Boolean)
         };
@@ -122,12 +126,12 @@
     }
 
     function resourcesForObject(state, object) {
-        return common.sectionItems({items: object.resources}).map(function (reference) {
-            var resource = state.indexes.resources[String(reference.resource_id || '')] || {};
+        return common.itemIds(object.resourceIds || object.resources || []).map(function (resourceId) {
+            var resource = state.indexes.resources[String(resourceId || '')] || {};
             return {
-                id: String(resource.id || reference.resource_id || ''),
+                id: String(resource.id || resourceId || ''),
                 label: common.text(resource.label, 'Resource'),
-                kind: common.text(reference.kind || resource.kind, 'resource'),
+                kind: common.text(resource.kind, 'resource'),
                 mediaType: common.text(resource.media_type, ''),
                 href: common.text(resource.href, ''),
                 availability: availability(resource.availability)
@@ -151,14 +155,15 @@
     }
 
     function statusRows(state) {
-        var context = state.dataset.context && state.dataset.context.runtime_context && typeof state.dataset.context.runtime_context === 'object'
-            ? state.dataset.context.runtime_context
-            : {};
-        return [
-            {label: 'Session', value: common.text(state.runtimeSessionId, 'pending')},
-            {label: 'Intent', value: common.text(context.intent, 'overview')},
-            {label: 'Scope', value: common.text(context.scope, 'default')}
+        var rows = [
+            {label: 'Dataset', value: common.text(state.runtimeSessionId, 'pending')},
+            {label: 'Scope', value: common.text(state.dataset.scope, 'full')},
+            {label: 'Mode', value: common.text(state.dataset.mode, 'snapshot')}
         ];
+        (state.dataset.errors || []).forEach(function (error) {
+            rows.push({label: common.text(error.code, 'error'), value: common.text(error.message, 'World Dataset error.')});
+        });
+        return rows;
     }
 
     function layerHasObject(state, layer, objectId) {
@@ -168,11 +173,12 @@
     }
 
     function zoneHasObject(state, zone, objectId) {
+        if ((zone.objectIds || []).indexOf(objectId) !== -1) {
+            return true;
+        }
         return zone.collectionIds.some(function (collectionId) {
             var collection = state.indexes.collections[collectionId] || {};
-            return common.sectionItems({items: collection.items}).some(function (item) {
-                return String(item.object_id || '') === objectId;
-            });
+            return common.itemIds(collection.items).indexOf(objectId) !== -1;
         });
     }
 

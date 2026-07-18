@@ -14,9 +14,9 @@ foreach (glob($root . '/public/assets/js/runtime-kit/*.js') ?: [] as $script) {
 }
 
 $checks = [
-    'Home and runtime-dataset both serve the World Dataset runtime' => str_contains($index, "\$path !== '/' && \$path !== '/runtime-dataset'")
+    'Home and runtime-dataset both serve the canonical World Dataset runtime' => str_contains($index, "\$path !== '/' && \$path !== '/runtime-dataset'")
         && str_contains($template, 'data-world-runtime')
-        && str_contains($template, 'elonn.world.dataset v1'),
+        && str_contains($template, 'canonical World Datasets'),
     'Web configuration exposes only World as a service dependency' => str_contains($config, "'world'")
         && str_contains($config, 'ELONN_WORLD_BASE_URL')
         && !str_contains($config, 'ELONN_API_BASE_URL')
@@ -29,9 +29,11 @@ $checks = [
         && !str_contains($envExample, 'ELONN_TIME_BASE_URL'),
     'Runtime requests only the canonical World Call endpoint' => str_contains($scripts, "postJson('/world/call'")
         && str_contains($scripts, "id: 'call:runtime:web:'")
+        && str_contains($scripts, "operation: String(state.operation || 'world.compose')")
         && str_contains($scripts, 'content:')
         && str_contains($scripts, 'context:')
         && str_contains($index, "'id' => 'call:runtime:web:fallback'")
+        && str_contains($index, "'operation' => 'world.compose'")
         && str_contains($index, "/world/call")
         && !str_contains($scripts . $index, '/world/session')
         && !str_contains($scripts . $index, 'elonn.world.session_request')
@@ -53,33 +55,31 @@ $checks = [
         && str_contains($scripts, 'ActionDispatcher')
         && str_contains($scripts, 'ContinuityReconciler')
         && str_contains($scripts, 'SceneModel'),
-    'Runtime validates every independently versioned section' => str_contains($scripts, "'identity'")
+    'Runtime validates the canonical Dataset fields directly' => str_contains($scripts, "datasetFields")
         && str_contains($scripts, "'context'")
         && str_contains($scripts, "'objects'")
         && str_contains($scripts, "'relationships'")
         && str_contains($scripts, "'actions'")
         && str_contains($scripts, "'collections'")
-        && str_contains($scripts, "'layout'")
-        && str_contains($scripts, "'capabilities'")
-        && str_contains($scripts, "'permissions'")
         && str_contains($scripts, "'resources'")
-        && str_contains($scripts, "'extensions'")
-        && str_contains($scripts, "'metadata'"),
+        && str_contains($scripts, "'placements'")
+        && str_contains($scripts, "'errors'")
+        && !str_contains($scripts, "contract.name !== 'elonn.world.dataset'")
+        && !str_contains($scripts, "'layout'"),
     'Collections and resources are first-class scene inputs' => str_contains($scripts, 'state.indexes.collections[collectionId]')
         && str_contains($scripts, 'resourcesForObject')
-        && str_contains($scripts, 'resource_id'),
-    'Runtime consumes World layout as semantic layers and regions' => str_contains($scripts, 'orderedCollectionIds')
-        && str_contains($scripts, 'layout.relevance_order')
-        && str_contains($scripts, 'layout.layers')
-        && str_contains($scripts, 'layout.regions')
-        && str_contains($scripts, 'collection_ids')
+        && str_contains($scripts, 'resourceIds'),
+    'Runtime translates canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
+        && str_contains($scripts, "['carry', 'findings', 'field']")
+        && str_contains($scripts, 'objectIds')
         && str_contains($template, 'data-layer-zone="carry:main_content"')
         && str_contains($template, 'data-layer-zone="findings:findings"')
         && str_contains($template, 'data-layer-zone="field:field"'),
-    'Runtime carries continuity through World session state' => str_contains($scripts, 'runtimeSessionId')
-        && str_contains($scripts, 'runtime_session_id')
+    'Runtime carries continuity through local Dataset state' => str_contains($scripts, 'runtimeSessionId')
+        && str_contains($scripts, 'dataset_id')
         && str_contains($scripts, 'selected_collection_id')
-        && str_contains($scripts, 'selected_object_id'),
+        && str_contains($scripts, 'selectedObjectId')
+        && str_contains($scripts, 'focus.object_id'),
     'Runtime projects Carry Findings and Field as environment anchors' => str_contains($template, 'data-field-projection')
         && str_contains($template, 'carry-top')
         && str_contains($template, 'carry-bottom')
@@ -98,6 +98,7 @@ $checks = [
         && !str_contains($scripts, 'Provider dependencies'),
     'Runtime has a server-rendered no-JS World Dataset fallback' => str_contains($index, 'web_runtime_fallback_dataset')
         && str_contains($index, "'scope' => 'server_fallback'")
+        && str_contains($index, "array_key_exists('errors', \$payload)")
         && str_contains($template, 'web_runtime_fallback_collections')
         && str_contains($template, '<noscript>'),
     'Legacy runtime vocabulary is quarantined outside the new app' => !contains_any($template . $scripts . $readme, [
