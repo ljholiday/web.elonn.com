@@ -10,6 +10,10 @@
     var renderer = null;
     var dispatcher = null;
     var state = null;
+    var queryForm = null;
+    var queryInput = null;
+    var voiceButton = null;
+    var recognition = null;
 
     if (!root || !runtime) {
         return;
@@ -18,10 +22,46 @@
     client = runtime.WorldClient(root);
     renderer = runtime.WebRenderer(root);
     dispatcher = runtime.ActionDispatcher(client);
+    queryForm = root.querySelector('[data-runtime-query-form]');
+    queryInput = root.querySelector('[data-runtime-query-input]');
+    voiceButton = root.querySelector('[data-runtime-voice]');
+    recognition = speechRecognition();
 
     renderer.status('Requesting World Dataset.', 'loading');
     renderer.render(runtime.SceneModel.loading());
     loadDataset({});
+
+    if (voiceButton) {
+        voiceButton.disabled = !recognition;
+        voiceButton.title = recognition ? 'Start voice input' : 'Voice input is unavailable in this browser.';
+    }
+
+    if (queryForm) {
+        queryForm.addEventListener('submit', function (event) {
+            var text = queryInput ? String(queryInput.value || '').trim() : '';
+            event.preventDefault();
+            if (text === '') {
+                return;
+            }
+            renderer.status('Requesting World Dataset.', 'loading');
+            loadDataset({
+                inputText: text,
+                runtimeSessionId: state ? state.runtimeSessionId : '',
+                selectedObjectId: state ? state.selectedObjectId : '',
+                selectedCollectionId: state ? state.selectedCollectionId : ''
+            });
+        });
+    }
+
+    if (voiceButton && recognition) {
+        voiceButton.addEventListener('click', function () {
+            try {
+                recognition.start();
+            } catch (error) {
+                renderer.status('Voice input could not start.', 'error');
+            }
+        });
+    }
 
     root.addEventListener('click', function (event) {
         var collectionButton = event.target.closest('[data-collection-id]');
@@ -160,5 +200,35 @@
             return String(errors[0].message || 'World Dataset returned errors.');
         }
         return 'World Dataset loaded.';
+    }
+
+    function speechRecognition() {
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+        var instance = null;
+        if (!SpeechRecognition) {
+            return null;
+        }
+        instance = new SpeechRecognition();
+        instance.continuous = false;
+        instance.interimResults = false;
+        instance.lang = String(navigator.language || 'en-US');
+        instance.onstart = function () {
+            renderer.status('Listening.', 'loading');
+        };
+        instance.onerror = function () {
+            renderer.status('Voice input failed.', 'error');
+        };
+        instance.onresult = function (event) {
+            var result = event.results && event.results[0] && event.results[0][0]
+                ? String(event.results[0][0].transcript || '').trim()
+                : '';
+            if (result !== '' && queryInput) {
+                queryInput.value = result;
+                queryInput.focus();
+            }
+            renderer.status('Voice input ready.', 'ready');
+        };
+
+        return instance;
     }
 }());

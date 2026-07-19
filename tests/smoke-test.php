@@ -25,6 +25,9 @@ $checks = [
         && str_contains($template, "'scene-model.js'")
         && str_contains($template, "'web-runtime.js'")
         && str_contains($template, '/assets/js/runtime-kit/'),
+    'Runtime template exposes query composer controls' => str_contains($template, 'data-runtime-query-form')
+        && str_contains($template, 'data-runtime-query-input')
+        && str_contains($template, 'data-runtime-voice'),
     'Public routes do not expose legacy compatibility pages' => !str_contains($index, 'templates/runtime-dataset.php')
         && !str_contains($index, 'data-runtime-shell'),
 ];

@@ -65,7 +65,34 @@ $pageUrl = rtrim($app['url'], '/') . '/';
                 <p class="field-projection__status" data-runtime-status>Preparing runtime request.</p>
             </div>
 
-            <div class="carry-top" aria-label="Carry top dock" data-layer-zone="carry:top_dock"></div>
+            <form class="query-composer" data-runtime-query-form role="search">
+                <label class="visually-hidden" for="runtime-query">World query</label>
+                <div class="query-composer__field">
+                    <input
+                        id="runtime-query"
+                        class="query-composer__input"
+                        data-runtime-query-input
+                        type="search"
+                        name="query"
+                        autocomplete="off"
+                        spellcheck="true"
+                        placeholder="Ask or search"
+                    >
+                    <button
+                        class="query-composer__voice"
+                        data-runtime-voice
+                        type="button"
+                        aria-label="Start voice input"
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"></path>
+                            <path d="M5 11a7 7 0 0 0 14 0"></path>
+                            <path d="M12 18v3"></path>
+                            <path d="M8 21h8"></path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
 
             <aside class="carry-panel carry-panel--left" aria-label="Carry left panel" data-layer-zone="carry:left_panel"></aside>
             <aside class="carry-panel carry-panel--right" aria-label="Carry right panel" data-layer-zone="carry:right_panel"></aside>

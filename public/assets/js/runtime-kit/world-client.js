@@ -23,12 +23,12 @@
         function runtimeCapabilities() {
             return {
                 screen: true,
-                pointer: true,
+                pointer: false,
                 keyboard: true,
-                touch: 'ontouchstart' in window,
+                touch: false,
                 spatial_markers: false,
                 field_view: true,
-                voice: false,
+                voice: true,
                 collections: true,
                 resources: true,
                 action_dispatch: false
@@ -57,7 +57,9 @@
                     },
                     scope: String(state.scope || 'default'),
                     runtime_state: {
-                        dataset_id: String(state.runtimeSessionId || '')
+                        dataset_id: String(state.runtimeSessionId || ''),
+                        selected_object_id: String(state.selectedObjectId || ''),
+                        selected_collection_id: String(state.selectedCollectionId || '')
                     },
                     focus: {}
                 }

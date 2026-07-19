@@ -30,5 +30,12 @@ The runtime renders collections as the primary interaction unit, objects as
 selectable world primitives, resources as fetchable media or documents, and
 actions as contextual World-dispatched affordances.
 
+## Query input
+
+Web exposes a query composer in the top runtime area. Typing text and pressing
+Enter submits a canonical `world.compose` Call to World. The microphone control
+uses browser speech recognition when available and fills the query field; text
+submission still goes through the same World Call path.
+
 The previous compatibility runtime was moved to `../web.elonn.local.legacy-runtime`
 as migration evidence.

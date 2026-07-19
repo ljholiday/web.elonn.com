@@ -10,7 +10,6 @@
         var worldBaseUrl = String(root.dataset.worldBaseUrl || '').replace(/\/+$/, '');
         var nodes = {
             status: root.querySelector('[data-runtime-status]'),
-            carryTop: root.querySelector('[data-layer-zone="carry:top_dock"]'),
             carryLeft: root.querySelector('[data-layer-zone="carry:left_panel"]'),
             carryMain: root.querySelector('[data-layer-zone="carry:main_content"]'),
             carryRight: root.querySelector('[data-layer-zone="carry:right_panel"]'),
@@ -35,7 +34,6 @@
 
         function render(scene) {
             var zoneMap = zonesByKey(scene.layers || []);
-            renderZone(nodes.carryTop, zoneMap['carry:top_dock'], 'compact');
             renderZone(nodes.carryLeft, zoneMap['carry:left_panel'], 'panel');
             renderZone(nodes.carryMain, zoneMap['carry:carry'], 'panel');
             renderZone(nodes.carryRight, zoneMap['carry:right_panel'], 'panel');

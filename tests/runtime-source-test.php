@@ -36,6 +36,7 @@ $checks = [
     'Runtime requests only the canonical World Call endpoint' => str_contains($scripts, "postJson('/world/call'")
         && str_contains($scripts, "id: 'call:runtime:web:'")
         && str_contains($scripts, "operation: String(state.operation || 'world.compose')")
+        && str_contains($scripts, "text: String(state.inputText || 'Open my world.')")
         && str_contains($scripts, 'content:')
         && str_contains($scripts, 'context:')
         && str_contains($index, "'id' => 'call:runtime:web:fallback'")
@@ -46,6 +47,17 @@ $checks = [
         && !str_contains($scripts, '/world/runtime')
         && !str_contains($scripts, '/world/translated')
         && !str_contains($scripts, 'provider_source_profile'),
+    'Runtime exposes query composer input and voice control' => str_contains($template, 'data-runtime-query-form')
+        && str_contains($template, 'data-runtime-query-input')
+        && str_contains($template, 'data-runtime-voice')
+        && str_contains($template, 'type="search"')
+        && str_contains($scripts, "queryForm.addEventListener('submit'")
+        && str_contains($scripts, 'speechRecognition')
+        && str_contains($scripts, 'webkitSpeechRecognition'),
+    'Runtime capabilities advertise keyboard and voice without gestures' => str_contains($scripts, 'keyboard: true')
+        && str_contains($scripts, 'voice: true')
+        && str_contains($scripts, 'pointer: false')
+        && str_contains($scripts, 'touch: false'),
     'Runtime dispatches only through World Calls' => str_contains($scripts, 'dispatchWorldAction')
         && str_contains($scripts, "postJson('/world/call'")
         && str_contains($scripts, 'dispatchWorldAction')
@@ -87,7 +99,7 @@ $checks = [
         && str_contains($scripts, 'selectedObjectId')
         && str_contains($scripts, 'focus.object_id'),
     'Runtime projects Carry Workspace and Field as environment anchors' => str_contains($template, 'data-field-projection')
-        && str_contains($template, 'carry-top')
+        && str_contains($template, 'query-composer')
         && str_contains($template, 'carry-bottom')
         && str_contains($template, 'carry-panel--left')
         && str_contains($template, 'workspace-layer')
