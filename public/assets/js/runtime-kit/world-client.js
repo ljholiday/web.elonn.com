@@ -40,7 +40,6 @@
             var call = {
                 id: 'call:runtime:web:' + String(Date.now()),
                 content: {
-                    operation: String(state.operation || 'world.compose'),
                     input: {
                         type: 'text',
                         text: String(state.inputText || 'Open my world.')
