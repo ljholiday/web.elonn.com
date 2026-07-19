@@ -122,7 +122,7 @@
         event.preventDefault();
     });
 
-    root.addEventListener('pointermove', function (event) {
+    window.addEventListener('pointermove', function (event) {
         var panelState = null;
         var bounds = null;
         if (!drag || drag.pointerId !== event.pointerId || !state) {
@@ -139,10 +139,11 @@
             drag.node.style.left = panelState.x + 'px';
             drag.node.style.top = panelState.y + 'px';
         }
+        event.preventDefault();
     });
 
-    root.addEventListener('pointerup', endDrag);
-    root.addEventListener('pointercancel', endDrag);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
 
     function loadDataset(runtimeState) {
         client.loadDataset(runtimeState).then(function (payload) {

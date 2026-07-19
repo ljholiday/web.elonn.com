@@ -299,6 +299,7 @@ a {
     grid-template-columns: minmax(0, 1fr) 32px;
     align-items: stretch;
     border-bottom: 1px solid rgba(184, 255, 243, 0.2);
+    touch-action: none;
 }
 
 .carry-object-panel__title {
@@ -308,6 +309,7 @@ a {
     font-size: 0.95rem;
     cursor: move;
     user-select: none;
+    touch-action: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
