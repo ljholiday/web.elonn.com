@@ -17,7 +17,7 @@
             workspace: root.querySelector('[data-layer-zone="workspace:workspace"]'),
             field: root.querySelector('[data-layer-zone="field:field"]'),
             focus: root.querySelector('[data-runtime-focus]'),
-            actions: root.querySelector('[data-runtime-actions]'),
+            carryPanels: root.querySelector('[data-runtime-carry-panels]'),
             actionResult: root.querySelector('[data-runtime-action-result]'),
             resources: root.querySelector('[data-runtime-resources]'),
             related: root.querySelector('[data-runtime-related]'),
@@ -41,7 +41,7 @@
             renderZone(nodes.workspace, zoneMap['workspace:workspace'], 'overlay');
             renderField(nodes.field, zoneMap['field:field']);
             common.replaceChildren(nodes.focus, [focusNode(scene.focus)]);
-            common.replaceChildren(nodes.actions, actionNodes(scene.actions || []));
+            common.replaceChildren(nodes.carryPanels, carryPanelNodes(scene.carryPanels || []));
             common.replaceChildren(nodes.actionResult, scene.actionResult ? [actionResultNode(scene.actionResult)] : []);
             common.replaceChildren(nodes.resources, resourceNodes(scene.resources || []));
             common.replaceChildren(nodes.related, relatedNodes(scene.related || []));
@@ -222,21 +222,41 @@
             return article;
         }
 
-        function actionNodes(actions) {
-            if (actions.length === 0) {
-                return [];
-            }
-            return actions.map(function (action) {
-                var button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'world-action';
-                button.dataset.actionId = action.id;
-                button.disabled = action.availability.state !== 'enabled';
-                button.textContent = action.label;
-                if (button.disabled) {
-                    button.title = availabilityText(action.availability);
+        function carryPanelNodes(panels) {
+            return panels.map(function (panel) {
+                var article = document.createElement('article');
+                var title = document.createElement('h2');
+                var content = document.createElement('div');
+                var type = document.createElement('span');
+                var summary = document.createElement('p');
+
+                article.className = 'carry-object-panel';
+                article.dataset.carryPanelId = panel.id;
+                article.dataset.objectId = panel.object.id;
+                article.dataset.collapsed = panel.collapsed ? 'true' : 'false';
+                article.style.left = panel.x + 'px';
+                article.style.top = panel.y + 'px';
+                article.style.zIndex = String(panel.z || 1);
+
+                title.className = 'carry-object-panel__title';
+                title.dataset.carryPanelTitle = panel.id;
+                title.textContent = panel.object.title;
+
+                content.className = 'carry-object-panel__content';
+                type.className = 'object-type';
+                type.textContent = panel.object.type + ' / ' + panel.object.layer;
+                summary.textContent = panel.object.summary;
+
+                content.appendChild(type);
+                if (panel.object.summary !== '') {
+                    content.appendChild(summary);
                 }
-                return button;
+                content.appendChild(metaLine('Visibility', panel.object.visibility || 'default'));
+                content.appendChild(metaLine('Permissions', permissionsText(panel.object.permissions)));
+
+                article.appendChild(title);
+                article.appendChild(content);
+                return article;
             });
         }
 

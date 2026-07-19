@@ -9,8 +9,8 @@ $config = read_file($root . '/config/config.php');
 $envExample = read_file($root . '/.env.example');
 $readme = read_file($root . '/README.md');
 $scripts = '';
-foreach (glob($root . '/public/assets/js/runtime-kit/*.js') ?: [] as $script) {
-    $scripts .= "\n/* " . basename($script) . " */\n" . read_file($script);
+foreach (runtime_scripts($template) as $script) {
+    $scripts .= "\n/* " . $script . " */\n" . read_file($root . '/public/assets/js/runtime-kit/' . $script);
 }
 $oldWorkspaceTerms = [
     'Find' . 'ings Layer',
@@ -54,13 +54,15 @@ $checks = [
         && str_contains($scripts, "queryForm.addEventListener('submit'")
         && str_contains($scripts, 'speechRecognition')
         && str_contains($scripts, 'webkitSpeechRecognition'),
-    'Runtime capabilities advertise keyboard and voice without gestures' => str_contains($scripts, 'keyboard: true')
+    'Runtime capabilities advertise keyboard voice and pointer without action dispatch' => str_contains($scripts, 'keyboard: true')
         && str_contains($scripts, 'voice: true')
-        && str_contains($scripts, 'pointer: false')
+        && str_contains($scripts, 'pointer: true')
         && str_contains($scripts, 'touch: false'),
-    'Runtime dispatches only through World Calls' => str_contains($scripts, 'dispatchWorldAction')
-        && str_contains($scripts, "postJson('/world/call'")
-        && str_contains($scripts, 'dispatchWorldAction')
+    'Runtime does not dispatch unsupported actions as World Calls' => str_contains($scripts, "postJson('/world/call'")
+        && !str_contains($scripts, 'dispatchWorldAction')
+        && !str_contains($scripts, 'ActionDispatcher')
+        && !str_contains($scripts, 'Dispatching World action')
+        && !str_contains($scripts, "inputText: String(action.label")
         && !str_contains($scripts, '/world/actions/')
         && !str_contains($scripts, 'messages.elonn')
         && !str_contains($scripts, 'social.elonn')
@@ -70,7 +72,6 @@ $checks = [
     'Shared runtime kit has the required ABI boundaries' => str_contains($scripts, 'WorldClient')
         && str_contains($scripts, 'DatasetParser')
         && str_contains($scripts, 'StateIndexer')
-        && str_contains($scripts, 'ActionDispatcher')
         && str_contains($scripts, 'ContinuityReconciler')
         && str_contains($scripts, 'SceneModel'),
     'Runtime validates the canonical Dataset fields directly' => str_contains($scripts, "datasetFields")
@@ -87,6 +88,23 @@ $checks = [
     'Collections and resources are first-class scene inputs' => str_contains($scripts, 'state.indexes.collections[collectionId]')
         && str_contains($scripts, 'resourcesForObject')
         && str_contains($scripts, 'resourceIds'),
+    'Returned actions remain latent scene affordances instead of rendered controls' => str_contains($scripts, 'Action execution is not available yet.')
+        && str_contains($scripts, "state: 'unavailable'")
+        && !str_contains($template, 'data-runtime-actions')
+        && !str_contains($scripts, 'world-action')
+        && !str_contains($scripts, 'button.disabled = true')
+        && !str_contains($scripts, "button.setAttribute('aria-disabled', 'true')"),
+    'Carry panels are runtime-local floating objects controlled by title text' => str_contains($template, 'data-runtime-carry-panels')
+        && str_contains($scripts, 'carryStorageKey')
+        && str_contains($scripts, 'localStorage')
+        && str_contains($scripts, 'carryObject(')
+        && str_contains($scripts, "root.addEventListener('pointerdown'")
+        && str_contains($scripts, "root.addEventListener('pointermove'")
+        && str_contains($scripts, "root.addEventListener('dblclick'")
+        && str_contains($scripts, 'carryPanelTitle')
+        && str_contains($scripts, 'carryPanelNodes')
+        && str_contains($scripts, 'carry-object-panel__title')
+        && str_contains($scripts, 'carry-object-panel__content'),
     'Runtime translates canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
         && str_contains($scripts, "['carry', 'workspace', 'field']")
         && str_contains($scripts, 'objectIds')
@@ -145,6 +163,19 @@ function read_file(string $path): string
 {
     $contents = file_get_contents($path);
     return is_string($contents) ? $contents : '';
+}
+
+/**
+ * @return array<int, string>
+ */
+function runtime_scripts(string $template): array
+{
+    if (preg_match('/\\$scripts\\s*=\\s*\\[(.*?)\\];/s', $template, $matches) !== 1) {
+        return [];
+    }
+
+    preg_match_all("/'([^']+\\.js)'/", $matches[1], $scriptMatches);
+    return $scriptMatches[1] ?? [];
 }
 
 /**

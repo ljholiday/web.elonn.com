@@ -8,12 +8,13 @@
     var root = document.querySelector('[data-world-runtime]');
     var client = null;
     var renderer = null;
-    var dispatcher = null;
     var state = null;
     var queryForm = null;
     var queryInput = null;
     var voiceButton = null;
     var recognition = null;
+    var carryStorageKey = 'elonn.web.carry.panels.v1';
+    var drag = null;
 
     if (!root || !runtime) {
         return;
@@ -21,7 +22,6 @@
 
     client = runtime.WorldClient(root);
     renderer = runtime.WebRenderer(root);
-    dispatcher = runtime.ActionDispatcher(client);
     queryForm = root.querySelector('[data-runtime-query-form]');
     queryInput = root.querySelector('[data-runtime-query-input]');
     voiceButton = root.querySelector('[data-runtime-voice]');
@@ -66,11 +66,10 @@
     root.addEventListener('click', function (event) {
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('[data-object-id]');
-        var actionButton = event.target.closest('[data-action-id]');
-        var action = null;
 
         if (objectButton && state) {
             selectObject(String(objectButton.dataset.objectId || ''));
+            carryObject(String(objectButton.dataset.objectId || ''));
             renderState();
             return;
         }
@@ -79,51 +78,64 @@
             selectCollection(String(collectionButton.dataset.collectionId || ''));
             return;
         }
-
-        if (!actionButton || !state || state.actionInFlight) {
-            return;
-        }
-
-        action = state.indexes.actions[String(actionButton.dataset.actionId || '')] || null;
-        if (!action) {
-            return;
-        }
-
-        state.actionInFlight = true;
-        state.actionResult = {
-            state: 'loading',
-            status: 'dispatching',
-            outcome: 'pending',
-            message: 'Dispatching World action.'
-        };
-        renderer.status('Dispatching World action.', 'loading');
-        renderState();
-
-        dispatcher.dispatch(state, action).then(function (payload) {
-            var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
-            state.actionResult = {
-                state: errors.length === 0 ? 'success' : 'error',
-                status: errors.length === 0 ? 'dataset' : 'error',
-                outcome: errors.length === 0 ? 'updated' : 'failed',
-                message: errors.length === 0 ? 'World Dataset updated.' : String(errors[0].message || 'World action failed.')
-            };
-            if (payload && payload.type === 'world') {
-                replaceDataset(payload);
-            }
-            renderer.status(state.actionResult.message, errors.length === 0 ? 'ready' : 'error');
-        }).catch(function (error) {
-            state.actionResult = {
-                state: 'error',
-                status: 'error',
-                outcome: 'failed',
-                message: error && error.message ? error.message : 'World action failed.'
-            };
-            renderer.status(state.actionResult.message, 'error');
-        }).finally(function () {
-            state.actionInFlight = false;
-            renderState();
-        });
     });
+
+    root.addEventListener('dblclick', function (event) {
+        var title = event.target.closest('[data-carry-panel-title]');
+        if (!title || !state) {
+            return;
+        }
+        event.preventDefault();
+        toggleCarryPanel(String(title.dataset.carryPanelTitle || ''));
+    });
+
+    root.addEventListener('pointerdown', function (event) {
+        var title = event.target.closest('[data-carry-panel-title]');
+        var panel = title ? title.closest('[data-carry-panel-id]') : null;
+        var panelState = null;
+        if (!title || !panel || !state || event.button !== 0) {
+            return;
+        }
+        panelState = carryPanel(String(panel.dataset.carryPanelId || ''));
+        if (!panelState) {
+            return;
+        }
+        bringCarryPanelForward(panelState.id);
+        drag = {
+            id: panelState.id,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            panelX: Number(panelState.x || 0),
+            panelY: Number(panelState.y || 0),
+            node: panel
+        };
+        panel.style.zIndex = String(panelState.z || 1);
+        title.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    });
+
+    root.addEventListener('pointermove', function (event) {
+        var panelState = null;
+        var bounds = null;
+        if (!drag || drag.pointerId !== event.pointerId || !state) {
+            return;
+        }
+        panelState = carryPanel(drag.id);
+        if (!panelState) {
+            return;
+        }
+        bounds = carryBounds(drag.node);
+        panelState.x = clamp(drag.panelX + event.clientX - drag.startX, bounds.minX, bounds.maxX);
+        panelState.y = clamp(drag.panelY + event.clientY - drag.startY, bounds.minY, bounds.maxY);
+        if (drag.node) {
+            drag.node.style.left = panelState.x + 'px';
+            drag.node.style.top = panelState.y + 'px';
+        }
+    });
+
+    root.addEventListener('pointerup', endDrag);
+    root.addEventListener('pointercancel', endDrag);
 
     function loadDataset(runtimeState) {
         client.loadDataset(runtimeState).then(function (payload) {
@@ -140,6 +152,7 @@
         var parsed = runtime.DatasetParser.parse(payload);
         var next = runtime.StateIndexer.build(parsed, state);
         state = runtime.ContinuityReconciler.reconcile(state, next);
+        state.carryPanels = reconcileCarryPanels(loadCarryPanels());
         renderState();
     }
 
@@ -168,6 +181,154 @@
         }
         state.selectedObjectId = objectId;
         state.selectedCollectionId = collectionContainingObject(state, objectId) || state.selectedCollectionId;
+    }
+
+    function carryObject(objectId) {
+        var object = state.indexes.objects[objectId] || null;
+        var panels = state.carryPanels || [];
+        var existing = null;
+        if (!object) {
+            return;
+        }
+        panels.some(function (panel) {
+            if (String(panel.objectId || '') === objectId) {
+                existing = panel;
+                return true;
+            }
+            return false;
+        });
+        if (existing) {
+            bringCarryPanelForward(existing.id);
+            persistCarryPanels();
+            return;
+        }
+        panels.push({
+            id: 'carry-panel:' + objectId,
+            objectId: objectId,
+            object: carrySnapshot(object),
+            x: 72 + panels.length * 26,
+            y: 116 + panels.length * 26,
+            z: nextCarryZ(),
+            collapsed: false
+        });
+        state.carryPanels = panels;
+        persistCarryPanels();
+    }
+
+    function toggleCarryPanel(panelId) {
+        var panel = carryPanel(panelId);
+        if (!panel) {
+            return;
+        }
+        panel.collapsed = panel.collapsed !== true;
+        bringCarryPanelForward(panelId);
+        persistCarryPanels();
+        renderState();
+    }
+
+    function bringCarryPanelForward(panelId) {
+        var panel = carryPanel(panelId);
+        if (!panel) {
+            return;
+        }
+        panel.z = nextCarryZ();
+    }
+
+    function carryPanel(panelId) {
+        var match = null;
+        (state.carryPanels || []).some(function (panel) {
+            if (String(panel.id || '') === panelId) {
+                match = panel;
+                return true;
+            }
+            return false;
+        });
+        return match;
+    }
+
+    function nextCarryZ() {
+        var max = 20;
+        (state.carryPanels || []).forEach(function (panel) {
+            max = Math.max(max, Number(panel.z || 0));
+        });
+        return max + 1;
+    }
+
+    function carrySnapshot(object) {
+        return {
+            id: String(object.id || ''),
+            type: String(object.type || 'object'),
+            title: String(object.title || 'Object'),
+            summary: String(object.summary || ''),
+            metadata: object.metadata || {},
+            visibility: object.visibility || {},
+            permissions: object.permissions || {},
+            availability: object.availability || {}
+        };
+    }
+
+    function reconcileCarryPanels(panels) {
+        return panels.map(function (panel) {
+            var object = state.indexes.objects[String(panel.objectId || '')] || panel.object || null;
+            if (!object) {
+                return null;
+            }
+            return {
+                id: String(panel.id || 'carry-panel:' + String(panel.objectId || '')),
+                objectId: String(panel.objectId || object.id || ''),
+                object: carrySnapshot(object),
+                x: Number(panel.x || 72),
+                y: Number(panel.y || 116),
+                z: Number(panel.z || 1),
+                collapsed: panel.collapsed === true
+            };
+        }).filter(function (panel) {
+            return panel && panel.objectId !== '';
+        });
+    }
+
+    function loadCarryPanels() {
+        var stored = '';
+        try {
+            stored = window.localStorage ? window.localStorage.getItem(carryStorageKey) : '';
+            return stored ? JSON.parse(stored) : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function persistCarryPanels() {
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(carryStorageKey, JSON.stringify(state.carryPanels || []));
+            }
+        } catch (error) {
+            renderer.status('Carry panels could not be saved locally.', 'error');
+        }
+    }
+
+    function endDrag(event) {
+        if (!drag || drag.pointerId !== event.pointerId) {
+            return;
+        }
+        persistCarryPanels();
+        drag = null;
+    }
+
+    function carryBounds(panel) {
+        var width = panel ? panel.offsetWidth : 320;
+        var height = panel ? panel.offsetHeight : 160;
+        var rootBounds = root.getBoundingClientRect();
+        return {
+            minX: 8,
+            minY: 64,
+            maxX: Math.max(8, rootBounds.width - width - 8),
+            maxY: Math.max(64, rootBounds.height - height - 58)
+        };
+    }
+
+    function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
     }
 
     function collectionContainingObject(currentState, objectId) {

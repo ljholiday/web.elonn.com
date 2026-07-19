@@ -11,6 +11,7 @@
             return {
                 layers: [],
                 focus: {kind: 'empty', title: 'Requesting World Dataset.', summary: ''},
+                carryPanels: [],
                 actions: [],
                 resources: [],
                 related: [],
@@ -22,6 +23,7 @@
             return {
                 layers: [],
                 focus: {kind: 'empty', title: 'World Dataset unavailable.', summary: message},
+                carryPanels: [],
                 actions: [],
                 resources: [],
                 related: [],
@@ -34,6 +36,7 @@
             return {
                 layers: layers(state),
                 focus: selectedObject ? objectView(state, selectedObject, true) : {kind: 'empty', title: 'No object selected.', summary: ''},
+                carryPanels: carryPanels(state),
                 actions: selectedObject ? actionsForObject(state, selectedObject.id) : [],
                 resources: selectedObject ? resourcesForObject(state, selectedObject) : [],
                 related: selectedObject ? relatedObjects(state, selectedObject.id) : [],
@@ -96,7 +99,7 @@
             title: common.text(object.title, 'Object'),
             summary: common.text(object.summary, ''),
             type: common.text(object.type, 'object'),
-            layer: common.text(metadata.anchor, 'carry'),
+            layer: common.text(metadata.anchor, objectLayer(state, object.id)),
             selected: selected,
             availability: availability(object.availability),
             visibility: Array.isArray(visibility.scopes) ? visibility.scopes.join(', ') : '',
@@ -114,12 +117,17 @@
         return common.sectionItems(state.dataset.actions).filter(function (action) {
             return String(action.target_id || '') === String(objectId || '');
         }).map(function (action) {
+            var sourceAvailability = availability(action.availability);
             return {
                 id: String(action.id || ''),
                 label: common.text(action.label, 'Action'),
                 type: common.text(action.type, 'action'),
                 endpoint: String(action.endpoint || ''),
-                availability: availability(action.availability),
+                availability: {
+                    state: 'unavailable',
+                    reason: common.text(sourceAvailability.reason, 'Action execution is not available yet.'),
+                    requiredCapability: common.text(sourceAvailability.requiredCapability, 'action_dispatch')
+                },
                 source: action
             };
         });
@@ -152,6 +160,47 @@
         }).filter(function (entry) {
             return entry.object.id !== '';
         });
+    }
+
+    function carryPanels(state) {
+        return (state.carryPanels || []).map(function (panel) {
+            var object = state.indexes.objects[String(panel.objectId || '')] || panel.object || null;
+            if (!object) {
+                return null;
+            }
+            return {
+                id: String(panel.id || ''),
+                object: objectView(state, object, String(object.id || '') === state.selectedObjectId),
+                x: Number(panel.x || 0),
+                y: Number(panel.y || 0),
+                z: Number(panel.z || 1),
+                collapsed: panel.collapsed === true
+            };
+        }).filter(function (panel) {
+            return panel && panel.id !== '' && panel.object.id !== '';
+        });
+    }
+
+    function objectLayer(state, objectId) {
+        var id = String(objectId || '');
+        var dataset = state.dataset || {};
+        var placements = common.sectionItems(dataset.placements);
+        var collections = state.indexes.collections || {};
+        var collectionIds = [];
+
+        placements.forEach(function (placement) {
+            if (String(placement.object_id || '') === id) {
+                collectionIds.push(String(placement.type || ''));
+            }
+            if (placement.collection_id !== '') {
+                var collection = collections[String(placement.collection_id || '')] || {};
+                if (common.itemIds(collection.items).indexOf(id) !== -1) {
+                    collectionIds.push(String(placement.type || ''));
+                }
+            }
+        });
+
+        return collectionIds.filter(Boolean)[0] || 'workspace';
     }
 
     function statusRows(state) {

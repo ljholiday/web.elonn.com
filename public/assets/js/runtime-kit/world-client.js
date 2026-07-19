@@ -23,7 +23,7 @@
         function runtimeCapabilities() {
             return {
                 screen: true,
-                pointer: false,
+                pointer: true,
                 keyboard: true,
                 touch: false,
                 spatial_markers: false,
@@ -109,10 +109,6 @@
 
             loadDataset: function (runtimeState) {
                 return postJson('/world/call', worldCall(runtimeState));
-            },
-
-            dispatchWorldAction: function (action, body) {
-                return postJson('/world/call', body);
             }
         };
     };

@@ -70,9 +70,9 @@
             }
         });
 
-        if (collectionIds.length === 0 && objectIds.length === 0) {
+        if (placementType === 'workspace' && collectionIds.length === 0 && objectIds.length === 0) {
             dataset.collections.forEach(function (collection) {
-                if (collection.type === placementType || (placementType === 'carry' && ['field', 'workspace'].indexOf(collection.type) === -1)) {
+                if (collection.type === placementType || ['carry', 'field'].indexOf(collection.type) === -1) {
                     collectionIds.push(collection.id);
                 }
             });

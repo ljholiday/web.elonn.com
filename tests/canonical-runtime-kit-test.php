@@ -12,7 +12,7 @@ const context = {window: {}};
 context.window.ElonnWorldRuntime = {};
 vm.createContext(context);
 
-['common.js', 'dataset-parser.js', 'state-indexer.js'].forEach((file) => {
+['common.js', 'dataset-parser.js', 'state-indexer.js', 'scene-model.js'].forEach((file) => {
   vm.runInContext(fs.readFileSync(`${root}/public/assets/js/runtime-kit/${file}`, 'utf8'), context, {filename: file});
 });
 
@@ -40,6 +40,14 @@ if (parsed.actions[0].target_id !== 'object:one') throw new Error('canonical act
 
 const state = runtime.StateIndexer.build(parsed, null);
 if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Error('carry placement was not translated');
+const scene = runtime.SceneModel.fromState(state);
+if (scene.actions[0].availability.state !== 'unavailable') throw new Error('returned actions must be unavailable until Web supports execution');
+if (scene.actions[0].availability.reason !== 'Action execution is not available yet.') throw new Error('unavailable action reason was not set');
+state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, z: 23, collapsed: true}];
+const carryScene = runtime.SceneModel.fromState(state);
+if (carryScene.carryPanels[0].object.id !== 'object:one') throw new Error('carry panel object was not projected');
+if (carryScene.carryPanels[0].collapsed !== true) throw new Error('carry panel collapsed state was not projected');
+if (carryScene.carryPanels[0].x !== 42 || carryScene.carryPanels[0].y !== 84) throw new Error('carry panel position was not projected');
 
 const workspaceDataset = Object.assign({}, dataset, {
   id: 'dataset:world:workspace',
@@ -49,6 +57,9 @@ const workspaceDataset = Object.assign({}, dataset, {
 const workspaceState = runtime.StateIndexer.build(runtime.DatasetParser.parse(workspaceDataset), null);
 if (workspaceState.layers[1].id !== 'workspace') throw new Error('workspace layer was not indexed');
 if (workspaceState.layers[1].zones[0].collectionIds[0] !== 'collection:workspace') throw new Error('workspace placement was not translated');
+if (workspaceState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('workspace collection leaked into carry');
+const workspaceScene = runtime.SceneModel.fromState(workspaceState);
+if (workspaceScene.focus.layer !== 'workspace') throw new Error('selected workspace object was labeled as carry');
 
 let rejected = false;
 try {

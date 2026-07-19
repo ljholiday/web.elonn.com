@@ -19,7 +19,6 @@ $scripts = [
     'world-client.js',
     'dataset-parser.js',
     'state-indexer.js',
-    'action-dispatcher.js',
     'continuity-reconciler.js',
     'scene-model.js',
     'web-renderer.js',
@@ -100,11 +99,12 @@ $pageUrl = rtrim($app['url'], '/') . '/';
             <section class="carry-focus" aria-label="Carry main content">
                 <div class="carry-focus__context" data-layer-zone="carry:main_content"></div>
                 <div data-runtime-focus></div>
-                <div class="carry-actions" data-runtime-actions></div>
                 <div data-runtime-action-result></div>
                 <div class="carry-resources" data-runtime-resources></div>
                 <div class="carry-related" data-runtime-related></div>
             </section>
+
+            <div class="carry-panel-stage" data-runtime-carry-panels></div>
 
             <section class="workspace-layer" aria-label="Workspace" data-layer-zone="workspace:workspace"></section>
 
