@@ -16,6 +16,7 @@
     var carryStorageKey = 'elonn.web.carry.panels.v1';
     var drag = null;
     var resize = null;
+    var lastCarryTitleTap = null;
 
     if (!root || !runtime) {
         return;
@@ -84,9 +85,6 @@
 
         if (panelTitle && state) {
             event.preventDefault();
-            if (event.detail >= 2) {
-                toggleCarryPanel(String(panelTitle.dataset.carryPanelTitle || ''));
-            }
             return;
         }
 
@@ -150,7 +148,8 @@
             startY: event.clientY,
             panelX: Number(panelState.x || 0),
             panelY: Number(panelState.y || 0),
-            node: panel
+            node: panel,
+            moved: false
         };
         panel.style.zIndex = String(panelState.z || 1);
         title.setPointerCapture(event.pointerId);
@@ -181,6 +180,9 @@
         panelState = carryPanel(drag.id);
         if (!panelState) {
             return;
+        }
+        if (Math.abs(event.clientX - drag.startX) > 4 || Math.abs(event.clientY - drag.startY) > 4) {
+            drag.moved = true;
         }
         bounds = carryBounds(drag.node);
         panelState.x = clamp(drag.panelX + event.clientX - drag.startX, bounds.minX, bounds.maxX);
@@ -395,8 +397,27 @@
         if (!drag || drag.pointerId !== event.pointerId) {
             return;
         }
+        if (drag.moved !== true) {
+            recordCarryTitleTap(drag.id);
+        }
         persistCarryPanels();
         drag = null;
+    }
+
+    function recordCarryTitleTap(panelId) {
+        var now = Date.now();
+        if (lastCarryTitleTap
+            && lastCarryTitleTap.id === panelId
+            && now - lastCarryTitleTap.time <= 420
+        ) {
+            lastCarryTitleTap = null;
+            toggleCarryPanel(panelId);
+            return;
+        }
+        lastCarryTitleTap = {
+            id: panelId,
+            time: now
+        };
     }
 
     function carryBounds(panel) {
