@@ -65,12 +65,21 @@
 
     root.addEventListener('click', function (event) {
         var closeButton = event.target.closest('[data-carry-panel-close]');
+        var panelTitle = event.target.closest('[data-carry-panel-title]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('[data-object-id]');
 
         if (closeButton && state) {
             event.preventDefault();
             closeCarryPanel(String(closeButton.dataset.carryPanelClose || ''));
+            return;
+        }
+
+        if (panelTitle && state) {
+            event.preventDefault();
+            if (event.detail >= 2) {
+                toggleCarryPanel(String(panelTitle.dataset.carryPanelTitle || ''));
+            }
             return;
         }
 
@@ -87,20 +96,11 @@
         }
     });
 
-    root.addEventListener('dblclick', function (event) {
-        var title = event.target.closest('[data-carry-panel-title]');
-        if (!title || !state) {
-            return;
-        }
-        event.preventDefault();
-        toggleCarryPanel(String(title.dataset.carryPanelTitle || ''));
-    });
-
     root.addEventListener('pointerdown', function (event) {
         var title = event.target.closest('[data-carry-panel-title]');
         var panel = title ? title.closest('[data-carry-panel-id]') : null;
         var panelState = null;
-        if (!title || !panel || !state || event.button !== 0) {
+        if (event.target.closest('[data-carry-panel-close]') || !title || !panel || !state || event.button !== 0) {
             return;
         }
         panelState = carryPanel(String(panel.dataset.carryPanelId || ''));

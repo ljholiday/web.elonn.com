@@ -100,7 +100,7 @@ $checks = [
         && str_contains($scripts, 'carryObject(')
         && str_contains($scripts, "root.addEventListener('pointerdown'")
         && str_contains($scripts, "root.addEventListener('pointermove'")
-        && str_contains($scripts, "root.addEventListener('dblclick'")
+        && str_contains($scripts, 'event.detail >= 2')
         && str_contains($scripts, 'carryPanelTitle')
         && str_contains($scripts, 'carryPanelNodes')
         && str_contains($scripts, 'carry-object-panel__title')

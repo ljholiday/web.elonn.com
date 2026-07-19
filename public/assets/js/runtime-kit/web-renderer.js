@@ -263,6 +263,7 @@
                 content.appendChild(metaLine('Permissions', permissionsText(panel.object.permissions)));
 
                 header.className = 'carry-object-panel__bar';
+                header.dataset.carryPanelTitle = panel.id;
                 header.appendChild(title);
                 header.appendChild(close);
                 article.appendChild(header);
