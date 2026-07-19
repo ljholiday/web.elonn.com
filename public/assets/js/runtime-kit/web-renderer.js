@@ -225,7 +225,9 @@
         function carryPanelNodes(panels) {
             return panels.map(function (panel) {
                 var article = document.createElement('article');
+                var header = document.createElement('header');
                 var title = document.createElement('h2');
+                var close = document.createElement('button');
                 var content = document.createElement('div');
                 var type = document.createElement('span');
                 var summary = document.createElement('p');
@@ -242,6 +244,12 @@
                 title.dataset.carryPanelTitle = panel.id;
                 title.textContent = panel.object.title;
 
+                close.className = 'carry-object-panel__close';
+                close.type = 'button';
+                close.dataset.carryPanelClose = panel.id;
+                close.setAttribute('aria-label', 'Close ' + panel.object.title);
+                close.textContent = 'x';
+
                 content.className = 'carry-object-panel__content';
                 type.className = 'object-type';
                 type.textContent = panel.object.type + ' / ' + panel.object.layer;
@@ -254,7 +262,10 @@
                 content.appendChild(metaLine('Visibility', panel.object.visibility || 'default'));
                 content.appendChild(metaLine('Permissions', permissionsText(panel.object.permissions)));
 
-                article.appendChild(title);
+                header.className = 'carry-object-panel__bar';
+                header.appendChild(title);
+                header.appendChild(close);
+                article.appendChild(header);
                 article.appendChild(content);
                 return article;
             });

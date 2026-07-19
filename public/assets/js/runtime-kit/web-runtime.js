@@ -64,8 +64,15 @@
     }
 
     root.addEventListener('click', function (event) {
+        var closeButton = event.target.closest('[data-carry-panel-close]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('[data-object-id]');
+
+        if (closeButton && state) {
+            event.preventDefault();
+            closeCarryPanel(String(closeButton.dataset.carryPanelClose || ''));
+            return;
+        }
 
         if (objectButton && state) {
             selectObject(String(objectButton.dataset.objectId || ''));
@@ -222,6 +229,14 @@
         }
         panel.collapsed = panel.collapsed !== true;
         bringCarryPanelForward(panelId);
+        persistCarryPanels();
+        renderState();
+    }
+
+    function closeCarryPanel(panelId) {
+        state.carryPanels = (state.carryPanels || []).filter(function (panel) {
+            return String(panel.id || '') !== panelId;
+        });
         persistCarryPanels();
         renderState();
     }

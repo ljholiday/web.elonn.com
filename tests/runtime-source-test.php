@@ -104,7 +104,9 @@ $checks = [
         && str_contains($scripts, 'carryPanelTitle')
         && str_contains($scripts, 'carryPanelNodes')
         && str_contains($scripts, 'carry-object-panel__title')
-        && str_contains($scripts, 'carry-object-panel__content'),
+        && str_contains($scripts, 'carry-object-panel__content')
+        && str_contains($scripts, 'data-carry-panel-close')
+        && str_contains($scripts, 'closeCarryPanel'),
     'Runtime translates canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
         && str_contains($scripts, "['carry', 'workspace', 'field']")
         && str_contains($scripts, 'objectIds')
