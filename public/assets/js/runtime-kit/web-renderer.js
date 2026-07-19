@@ -10,17 +10,9 @@
         var worldBaseUrl = String(root.dataset.worldBaseUrl || '').replace(/\/+$/, '');
         var nodes = {
             status: root.querySelector('[data-runtime-status]'),
-            carryLeft: root.querySelector('[data-layer-zone="carry:left_panel"]'),
-            carryMain: root.querySelector('[data-layer-zone="carry:main_content"]'),
-            carryRight: root.querySelector('[data-layer-zone="carry:right_panel"]'),
-            carryBottom: root.querySelector('[data-layer-zone="carry:bottom_dock"]'),
             workspace: root.querySelector('[data-layer-zone="workspace:workspace"]'),
             field: root.querySelector('[data-layer-zone="field:field"]'),
-            focus: root.querySelector('[data-runtime-focus]'),
             carryPanels: root.querySelector('[data-runtime-carry-panels]'),
-            actionResult: root.querySelector('[data-runtime-action-result]'),
-            resources: root.querySelector('[data-runtime-resources]'),
-            related: root.querySelector('[data-runtime-related]'),
             statusRows: root.querySelector('[data-runtime-session]')
         };
 
@@ -34,17 +26,9 @@
 
         function render(scene) {
             var zoneMap = zonesByKey(scene.layers || []);
-            renderZone(nodes.carryLeft, zoneMap['carry:left_panel'], 'panel');
-            renderZone(nodes.carryMain, zoneMap['carry:carry'], 'panel');
-            renderZone(nodes.carryRight, zoneMap['carry:right_panel'], 'panel');
-            renderZone(nodes.carryBottom, zoneMap['carry:bottom_dock'], 'compact');
             renderZone(nodes.workspace, zoneMap['workspace:workspace'], 'overlay');
             renderField(nodes.field, zoneMap['field:field']);
-            common.replaceChildren(nodes.focus, [focusNode(scene.focus)]);
             common.replaceChildren(nodes.carryPanels, carryPanelNodes(scene.carryPanels || []));
-            common.replaceChildren(nodes.actionResult, scene.actionResult ? [actionResultNode(scene.actionResult)] : []);
-            common.replaceChildren(nodes.resources, resourceNodes(scene.resources || []));
-            common.replaceChildren(nodes.related, relatedNodes(scene.related || []));
             common.replaceChildren(nodes.statusRows, (scene.status || []).map(statusNode));
         }
 
@@ -196,32 +180,6 @@
             return positions[index % positions.length];
         }
 
-        function focusNode(object) {
-            var article = document.createElement('article');
-            var type = document.createElement('span');
-            var title = document.createElement('h2');
-            var summary = document.createElement('p');
-            article.className = 'active-object';
-            if (!object || object.kind === 'empty') {
-                return emptyNode(object ? object.title : 'No object selected.');
-            }
-            type.className = 'object-type';
-            type.textContent = object.type + ' / ' + object.layer;
-            title.textContent = object.title;
-            summary.textContent = object.summary;
-            article.appendChild(type);
-            article.appendChild(title);
-            if (object.summary !== '') {
-                article.appendChild(summary);
-            }
-            article.appendChild(metaLine('Visibility', object.visibility || 'default'));
-            article.appendChild(metaLine('Permissions', permissionsText(object.permissions)));
-            if (object.availability.state !== 'enabled') {
-                article.appendChild(metaLine('Availability', availabilityText(object.availability)));
-            }
-            return article;
-        }
-
         function carryPanelNodes(panels) {
             return panels.map(function (panel) {
                 var article = document.createElement('article');
@@ -272,45 +230,6 @@
             });
         }
 
-        function resourceNodes(resources) {
-            return resources.map(function (resource) {
-                var figure = document.createElement('figure');
-                var caption = document.createElement('figcaption');
-                figure.className = 'world-resource';
-                if (resource.href !== '' && (resource.mediaType === 'image' || resource.mediaType.indexOf('image/') === 0)) {
-                    var image = document.createElement('img');
-                    image.src = resourceUrl(resource.href);
-                    image.alt = resource.label;
-                    figure.appendChild(image);
-                } else if (resource.href !== '') {
-                    var link = document.createElement('a');
-                    link.href = resourceUrl(resource.href);
-                    link.textContent = resource.label;
-                    figure.appendChild(link);
-                }
-                caption.textContent = resource.kind + ' / ' + common.text(resource.mediaType, 'resource');
-                figure.appendChild(caption);
-                return figure;
-            });
-        }
-
-        function relatedNodes(related) {
-            return related.map(function (entry) {
-                var row = document.createElement('div');
-                row.className = 'related-object';
-                row.appendChild(metaLine(entry.type, entry.object.title));
-                row.appendChild(objectButton(entry.object, 'panel'));
-                return row;
-            });
-        }
-
-        function actionResultNode(result) {
-            var row = document.createElement('div');
-            row.className = 'action-result action-result--' + common.text(result.state, 'neutral');
-            row.textContent = common.text(result.message, 'World action returned a result.');
-            return row;
-        }
-
         function statusNode(row) {
             return metaLine(row.label, row.value);
         }
@@ -349,24 +268,6 @@
                 text += ' / requires ' + availability.requiredCapability;
             }
             return text;
-        }
-
-        function emptyNode(message) {
-            var node = document.createElement('p');
-            node.className = 'empty';
-            node.textContent = message;
-            return node;
-        }
-
-        function resourceUrl(href) {
-            var value = String(href || '');
-            if (value.indexOf('http://') === 0 || value.indexOf('https://') === 0) {
-                return value;
-            }
-            if (value.indexOf('/') === 0) {
-                return worldBaseUrl + value;
-            }
-            return value;
         }
 
         return {

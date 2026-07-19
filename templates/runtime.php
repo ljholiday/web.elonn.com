@@ -93,22 +93,9 @@ $pageUrl = rtrim($app['url'], '/') . '/';
                 </div>
             </form>
 
-            <aside class="carry-panel carry-panel--left" aria-label="Carry left panel" data-layer-zone="carry:left_panel"></aside>
-            <aside class="carry-panel carry-panel--right" aria-label="Carry right panel" data-layer-zone="carry:right_panel"></aside>
-
-            <section class="carry-focus" aria-label="Carry main content">
-                <div class="carry-focus__context" data-layer-zone="carry:main_content"></div>
-                <div data-runtime-focus></div>
-                <div data-runtime-action-result></div>
-                <div class="carry-resources" data-runtime-resources></div>
-                <div class="carry-related" data-runtime-related></div>
-            </section>
-
             <div class="carry-panel-stage" data-runtime-carry-panels></div>
 
             <section class="workspace-layer" aria-label="Workspace" data-layer-zone="workspace:workspace"></section>
-
-            <nav class="carry-bottom" aria-label="Carry bottom dock" data-layer-zone="carry:bottom_dock"></nav>
 
             <div class="runtime-session" data-runtime-session></div>
         </section>

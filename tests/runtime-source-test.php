@@ -110,7 +110,8 @@ $checks = [
     'Runtime translates canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
         && str_contains($scripts, "['carry', 'workspace', 'field']")
         && str_contains($scripts, 'objectIds')
-        && str_contains($template, 'data-layer-zone="carry:main_content"')
+        && !str_contains($template, 'data-layer-zone="carry:main_content"')
+        && !str_contains($template, 'data-layer-zone="carry:bottom_dock"')
         && str_contains($template, 'data-layer-zone="workspace:workspace"')
         && str_contains($template, 'data-layer-zone="field:field"'),
     'Runtime carries continuity through local Dataset state' => str_contains($scripts, 'runtimeSessionId')
@@ -120,13 +121,13 @@ $checks = [
         && str_contains($scripts, 'focus.object_id'),
     'Runtime projects Carry Workspace and Field as environment anchors' => str_contains($template, 'data-field-projection')
         && str_contains($template, 'query-composer')
-        && str_contains($template, 'carry-bottom')
-        && str_contains($template, 'carry-panel--left')
+        && str_contains($template, 'data-runtime-carry-panels')
         && str_contains($template, 'workspace-layer')
         && str_contains($scripts, 'fieldMarker')
-        && str_contains($scripts, 'focusNode')
-        && str_contains($scripts, 'resourceNodes')
-        && str_contains($scripts, 'relatedNodes'),
+        && str_contains($scripts, 'carryPanelNodes')
+        && !str_contains($scripts, 'focusNode')
+        && !str_contains($scripts, 'resourceNodes')
+        && !str_contains($scripts, 'relatedNodes'),
     'Runtime avoids page-section rendering of environment layers' => !str_contains($template, '<h2 id="find' . 'ings-heading"')
         && !str_contains($template, '<h2 id="field-heading"')
         && !str_contains($template, 'world-layers')
