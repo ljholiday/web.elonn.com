@@ -43,11 +43,12 @@ if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Er
 const scene = runtime.SceneModel.fromState(state);
 if (scene.actions[0].availability.state !== 'unavailable') throw new Error('returned actions must be unavailable until Web supports execution');
 if (scene.actions[0].availability.reason !== 'Action execution is not available yet.') throw new Error('unavailable action reason was not set');
-state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, z: 23, collapsed: true}];
+state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, width: 280, height: 160, z: 23, collapsed: true}];
 const carryScene = runtime.SceneModel.fromState(state);
 if (carryScene.carryPanels[0].object.id !== 'object:one') throw new Error('carry panel object was not projected');
 if (carryScene.carryPanels[0].collapsed !== true) throw new Error('carry panel collapsed state was not projected');
 if (carryScene.carryPanels[0].x !== 42 || carryScene.carryPanels[0].y !== 84) throw new Error('carry panel position was not projected');
+if (carryScene.carryPanels[0].width !== 280 || carryScene.carryPanels[0].height !== 160) throw new Error('carry panel size was not projected');
 
 const workspaceDataset = Object.assign({}, dataset, {
   id: 'dataset:world:workspace',

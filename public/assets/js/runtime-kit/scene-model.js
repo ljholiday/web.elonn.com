@@ -173,6 +173,8 @@
                 object: objectView(state, object, String(object.id || '') === state.selectedObjectId),
                 x: Number(panel.x || 0),
                 y: Number(panel.y || 0),
+                width: Number(panel.width || 320),
+                height: Number(panel.height || 180),
                 z: Number(panel.z || 1),
                 collapsed: panel.collapsed === true
             };

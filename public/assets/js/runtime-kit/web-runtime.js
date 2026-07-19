@@ -15,6 +15,7 @@
     var recognition = null;
     var carryStorageKey = 'elonn.web.carry.panels.v1';
     var drag = null;
+    var resize = null;
 
     if (!root || !runtime) {
         return;
@@ -65,6 +66,7 @@
 
     root.addEventListener('click', function (event) {
         var closeButton = event.target.closest('[data-carry-panel-close]');
+        var resizeHandle = event.target.closest('[data-carry-panel-resize]');
         var panelTitle = event.target.closest('[data-carry-panel-title]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('[data-object-id]');
@@ -72,6 +74,11 @@
         if (closeButton && state) {
             event.preventDefault();
             closeCarryPanel(String(closeButton.dataset.carryPanelClose || ''));
+            return;
+        }
+
+        if (resizeHandle && state) {
+            event.preventDefault();
             return;
         }
 
@@ -97,10 +104,38 @@
     });
 
     root.addEventListener('pointerdown', function (event) {
+        var handle = event.target.closest('[data-carry-panel-resize]');
+        var panel = handle ? handle.closest('[data-carry-panel-id]') : null;
+        var panelState = null;
+        var size = null;
+        if (!handle || !panel || !state || event.button !== 0) {
+            return;
+        }
+        panelState = carryPanel(String(panel.dataset.carryPanelId || ''));
+        if (!panelState) {
+            return;
+        }
+        bringCarryPanelForward(panelState.id);
+        size = panel.getBoundingClientRect();
+        resize = {
+            id: panelState.id,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            panelWidth: Number(panelState.width || size.width || 320),
+            panelHeight: Number(panelState.height || size.height || 180),
+            node: panel
+        };
+        panel.style.zIndex = String(panelState.z || 1);
+        handle.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    });
+
+    root.addEventListener('pointerdown', function (event) {
         var title = event.target.closest('[data-carry-panel-title]');
         var panel = title ? title.closest('[data-carry-panel-id]') : null;
         var panelState = null;
-        if (event.target.closest('[data-carry-panel-close]') || !title || !panel || !state || event.button !== 0) {
+        if (event.target.closest('[data-carry-panel-close]') || event.target.closest('[data-carry-panel-resize]') || !title || !panel || !state || event.button !== 0) {
             return;
         }
         panelState = carryPanel(String(panel.dataset.carryPanelId || ''));
@@ -125,6 +160,21 @@
     window.addEventListener('pointermove', function (event) {
         var panelState = null;
         var bounds = null;
+        if (resize && resize.pointerId === event.pointerId && state) {
+            panelState = carryPanel(resize.id);
+            if (!panelState) {
+                return;
+            }
+            bounds = resizeBounds(resize.node, panelState);
+            panelState.width = clamp(resize.panelWidth + event.clientX - resize.startX, bounds.minWidth, bounds.maxWidth);
+            panelState.height = clamp(resize.panelHeight + event.clientY - resize.startY, bounds.minHeight, bounds.maxHeight);
+            if (resize.node) {
+                resize.node.style.width = panelState.width + 'px';
+                resize.node.style.height = panelState.height + 'px';
+            }
+            event.preventDefault();
+            return;
+        }
         if (!drag || drag.pointerId !== event.pointerId || !state) {
             return;
         }
@@ -216,6 +266,8 @@
             object: carrySnapshot(object),
             x: 72 + panels.length * 26,
             y: 116 + panels.length * 26,
+            width: 320,
+            height: 180,
             z: nextCarryZ(),
             collapsed: false
         });
@@ -284,17 +336,28 @@
     }
 
     function reconcileCarryPanels(panels) {
+        var rootBounds = root.getBoundingClientRect();
         return panels.map(function (panel) {
             var object = state.indexes.objects[String(panel.objectId || '')] || panel.object || null;
+            var width = 320;
+            var height = 180;
+            var x = 72;
+            var y = 116;
             if (!object) {
                 return null;
             }
+            width = clamp(Number(panel.width || 320), 220, Math.max(220, rootBounds.width - 16));
+            height = clamp(Number(panel.height || 180), 120, Math.max(120, rootBounds.height - 122));
+            x = clamp(Number(panel.x || 72), 8, Math.max(8, rootBounds.width - width - 8));
+            y = clamp(Number(panel.y || 116), 64, Math.max(64, rootBounds.height - height - 58));
             return {
                 id: String(panel.id || 'carry-panel:' + String(panel.objectId || '')),
                 objectId: String(panel.objectId || object.id || ''),
                 object: carrySnapshot(object),
-                x: Number(panel.x || 72),
-                y: Number(panel.y || 116),
+                x: x,
+                y: y,
+                width: width,
+                height: height,
                 z: Number(panel.z || 1),
                 collapsed: panel.collapsed === true
             };
@@ -324,6 +387,11 @@
     }
 
     function endDrag(event) {
+        if (resize && resize.pointerId === event.pointerId) {
+            persistCarryPanels();
+            resize = null;
+            return;
+        }
         if (!drag || drag.pointerId !== event.pointerId) {
             return;
         }
@@ -340,6 +408,18 @@
             minY: 64,
             maxX: Math.max(8, rootBounds.width - width - 8),
             maxY: Math.max(64, rootBounds.height - height - 58)
+        };
+    }
+
+    function resizeBounds(panel, panelState) {
+        var rootBounds = root.getBoundingClientRect();
+        var x = Number(panelState.x || 0);
+        var y = Number(panelState.y || 0);
+        return {
+            minWidth: 220,
+            minHeight: 120,
+            maxWidth: Math.max(220, rootBounds.width - x - 8),
+            maxHeight: Math.max(120, rootBounds.height - y - 58)
         };
     }
 

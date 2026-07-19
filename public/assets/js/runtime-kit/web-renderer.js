@@ -187,6 +187,7 @@
                 var title = document.createElement('h2');
                 var close = document.createElement('button');
                 var content = document.createElement('div');
+                var resize = document.createElement('span');
                 var type = document.createElement('span');
                 var summary = document.createElement('p');
 
@@ -196,6 +197,10 @@
                 article.dataset.collapsed = panel.collapsed ? 'true' : 'false';
                 article.style.left = panel.x + 'px';
                 article.style.top = panel.y + 'px';
+                article.style.width = panel.width + 'px';
+                if (!panel.collapsed) {
+                    article.style.height = panel.height + 'px';
+                }
                 article.style.zIndex = String(panel.z || 1);
 
                 title.className = 'carry-object-panel__title';
@@ -220,12 +225,17 @@
                 content.appendChild(metaLine('Visibility', panel.object.visibility || 'default'));
                 content.appendChild(metaLine('Permissions', permissionsText(panel.object.permissions)));
 
+                resize.className = 'carry-object-panel__resize';
+                resize.dataset.carryPanelResize = panel.id;
+                resize.setAttribute('aria-hidden', 'true');
+
                 header.className = 'carry-object-panel__bar';
                 header.dataset.carryPanelTitle = panel.id;
                 header.appendChild(title);
                 header.appendChild(close);
                 article.appendChild(header);
                 article.appendChild(content);
+                article.appendChild(resize);
                 return article;
             });
         }

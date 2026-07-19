@@ -287,11 +287,14 @@ a {
 }
 
 .carry-object-panel {
-    width: min(320px, calc(100vw - 24px));
     min-height: 0;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 72px);
     overflow: hidden;
     border-radius: 8px;
     pointer-events: auto;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
 }
 
 .carry-object-panel__bar {
@@ -335,8 +338,31 @@ a {
 
 .carry-object-panel__content {
     display: grid;
+    align-content: start;
     gap: 8px;
+    overflow: auto;
     padding: 10px 12px 12px;
+}
+
+.carry-object-panel__resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22px;
+    height: 22px;
+    cursor: nwse-resize;
+    touch-action: none;
+}
+
+.carry-object-panel__resize::after {
+    content: "";
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid rgba(184, 255, 243, 0.72);
+    border-bottom: 2px solid rgba(184, 255, 243, 0.72);
 }
 
 .carry-object-panel[data-collapsed="true"] .carry-object-panel__bar {
@@ -344,6 +370,10 @@ a {
 }
 
 .carry-object-panel[data-collapsed="true"] .carry-object-panel__content {
+    display: none;
+}
+
+.carry-object-panel[data-collapsed="true"] .carry-object-panel__resize {
     display: none;
 }
 
