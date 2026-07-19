@@ -41,6 +41,15 @@ if (parsed.actions[0].target_id !== 'object:one') throw new Error('canonical act
 const state = runtime.StateIndexer.build(parsed, null);
 if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Error('carry placement was not translated');
 
+const workspaceDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:workspace',
+  collections: [{id: 'collection:workspace', type: 'collection', content: {items: ['object:one']}}],
+  placements: [{id: 'placement:one:workspace', type: 'workspace', content: {collection: 'collection:workspace'}}]
+});
+const workspaceState = runtime.StateIndexer.build(runtime.DatasetParser.parse(workspaceDataset), null);
+if (workspaceState.layers[1].id !== 'workspace') throw new Error('workspace layer was not indexed');
+if (workspaceState.layers[1].zones[0].collectionIds[0] !== 'collection:workspace') throw new Error('workspace placement was not translated');
+
 let rejected = false;
 try {
   runtime.DatasetParser.parse({dataset: {name: 'elonn.world.dataset', version: 1}});
@@ -49,9 +58,10 @@ try {
 }
 if (!rejected) throw new Error('old wrapper payload was accepted');
 
-const errorDataset = Object.assign({}, dataset, {id: 'dataset:world:error', errors: [{code: 'contract_violation', message: 'Bad call.'}]});
+const errorDataset = Object.assign({}, dataset, {id: 'dataset:world:error', errors: [{code: 'contract_violation', class: 'contract', message: 'Bad call.'}]});
 const parsedError = runtime.DatasetParser.parse(errorDataset);
 if (parsedError.errors[0].code !== 'contract_violation') throw new Error('canonical errors were not parsed');
+if (parsedError.errors[0].class !== 'contract') throw new Error('canonical error classes were not parsed');
 JS;
 
 $temp = tempnam(sys_get_temp_dir(), 'web-runtime-kit-');

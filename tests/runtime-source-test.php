@@ -12,6 +12,12 @@ $scripts = '';
 foreach (glob($root . '/public/assets/js/runtime-kit/*.js') ?: [] as $script) {
     $scripts .= "\n/* " . basename($script) . " */\n" . read_file($script);
 }
+$oldWorkspaceTerms = [
+    'Find' . 'ings Layer',
+    'find' . 'ing-overlay',
+    'find' . 'ings:find' . 'ings',
+    "'find" . "ings'",
+];
 
 $checks = [
     'Home and runtime-dataset both serve the canonical World Dataset runtime' => str_contains($index, "\$path !== '/' && \$path !== '/runtime-dataset'")
@@ -70,26 +76,26 @@ $checks = [
         && str_contains($scripts, 'resourcesForObject')
         && str_contains($scripts, 'resourceIds'),
     'Runtime translates canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
-        && str_contains($scripts, "['carry', 'findings', 'field']")
+        && str_contains($scripts, "['carry', 'workspace', 'field']")
         && str_contains($scripts, 'objectIds')
         && str_contains($template, 'data-layer-zone="carry:main_content"')
-        && str_contains($template, 'data-layer-zone="findings:findings"')
+        && str_contains($template, 'data-layer-zone="workspace:workspace"')
         && str_contains($template, 'data-layer-zone="field:field"'),
     'Runtime carries continuity through local Dataset state' => str_contains($scripts, 'runtimeSessionId')
         && str_contains($scripts, 'dataset_id')
         && str_contains($scripts, 'selected_collection_id')
         && str_contains($scripts, 'selectedObjectId')
         && str_contains($scripts, 'focus.object_id'),
-    'Runtime projects Carry Findings and Field as environment anchors' => str_contains($template, 'data-field-projection')
+    'Runtime projects Carry Workspace and Field as environment anchors' => str_contains($template, 'data-field-projection')
         && str_contains($template, 'carry-top')
         && str_contains($template, 'carry-bottom')
         && str_contains($template, 'carry-panel--left')
-        && str_contains($template, 'finding-overlay')
+        && str_contains($template, 'workspace-layer')
         && str_contains($scripts, 'fieldMarker')
         && str_contains($scripts, 'focusNode')
         && str_contains($scripts, 'resourceNodes')
         && str_contains($scripts, 'relatedNodes'),
-    'Runtime avoids page-section rendering of environment layers' => !str_contains($template, '<h2 id="findings-heading"')
+    'Runtime avoids page-section rendering of environment layers' => !str_contains($template, '<h2 id="find' . 'ings-heading"')
         && !str_contains($template, '<h2 id="field-heading"')
         && !str_contains($template, 'world-layers')
         && !str_contains($template, 'carry-center'),
@@ -109,6 +115,7 @@ $checks = [
         'loadMessages',
         'loadSocial',
         'loadTime',
+        ...$oldWorkspaceTerms,
     ]),
     'Legacy app is documented as moved aside' => is_dir(dirname($root) . '/web.elonn.local.legacy-runtime')
         && str_contains($readme, 'web.elonn.local.legacy-runtime'),

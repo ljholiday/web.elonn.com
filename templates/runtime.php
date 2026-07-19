@@ -6,8 +6,8 @@ declare(strict_types=1);
  * Web runtime shell for the World Dataset.
  *
  * Web projects the World environment into a browser: Field remains the
- * world-anchored layer, Carry remains the user-anchored workspace, and Findings
- * remain discovered user-anchored objects.
+ * world-anchored layer, Workspace is the transient current-intent layer, and
+ * Carry remains the member-following layer for selected objects and controls.
  */
 /** @var array{base_url:string} $world */
 /** @var array{environment:string, debug:bool, url:string} $app */
@@ -79,7 +79,7 @@ $pageUrl = rtrim($app['url'], '/') . '/';
                 <div class="carry-related" data-runtime-related></div>
             </section>
 
-            <section class="finding-overlay" aria-label="Findings" data-layer-zone="findings:findings"></section>
+            <section class="workspace-layer" aria-label="Workspace" data-layer-zone="workspace:workspace"></section>
 
             <nav class="carry-bottom" aria-label="Carry bottom dock" data-layer-zone="carry:bottom_dock"></nav>
 

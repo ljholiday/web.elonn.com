@@ -193,7 +193,7 @@ a {
 .carry-bottom,
 .carry-panel,
 .carry-focus,
-.finding-overlay {
+.workspace-layer {
     position: absolute;
     z-index: 10;
     border: 1px solid rgba(184, 255, 243, 0.28);
@@ -254,7 +254,7 @@ a {
     border-radius: 8px;
 }
 
-.finding-overlay {
+.workspace-layer {
     right: 18px;
     top: 156px;
     width: min(360px, calc(100vw - 36px));
@@ -264,7 +264,7 @@ a {
     border-radius: 8px;
 }
 
-.finding-overlay:empty,
+.workspace-layer:empty,
 .carry-panel:empty,
 .carry-focus__context:empty {
     display: none;
@@ -458,7 +458,7 @@ figure {
         bottom: 86px;
     }
 
-    .finding-overlay {
+    .workspace-layer {
         left: 12px;
         right: 12px;
         width: auto;

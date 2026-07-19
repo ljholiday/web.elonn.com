@@ -152,7 +152,7 @@
                     resource_id: String(content.resource || '')
                 };
             }).filter(function (placement) {
-                return placement.id !== '' && ['carry', 'field', 'findings'].indexOf(placement.type) !== -1;
+                return placement.id !== '' && ['carry', 'field', 'workspace'].indexOf(placement.type) !== -1;
             });
         },
 
@@ -160,10 +160,11 @@
             return dataset.errors.filter(isObject).map(function (error) {
                 return {
                     code: String(error.code || ''),
+                    class: String(error.class || ''),
                     message: String(error.message || '')
                 };
             }).filter(function (error) {
-                return error.code !== '' && error.message !== '';
+                return error.code !== '' && error.class !== '' && error.message !== '';
             });
         }
     };
@@ -196,4 +197,5 @@
     function hasId(value) {
         return String(value.id || '') !== '';
     }
+
 }());

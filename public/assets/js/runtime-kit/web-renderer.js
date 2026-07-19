@@ -15,7 +15,7 @@
             carryMain: root.querySelector('[data-layer-zone="carry:main_content"]'),
             carryRight: root.querySelector('[data-layer-zone="carry:right_panel"]'),
             carryBottom: root.querySelector('[data-layer-zone="carry:bottom_dock"]'),
-            findings: root.querySelector('[data-layer-zone="findings:findings"]'),
+            workspace: root.querySelector('[data-layer-zone="workspace:workspace"]'),
             field: root.querySelector('[data-layer-zone="field:field"]'),
             focus: root.querySelector('[data-runtime-focus]'),
             actions: root.querySelector('[data-runtime-actions]'),
@@ -40,7 +40,7 @@
             renderZone(nodes.carryMain, zoneMap['carry:carry'], 'panel');
             renderZone(nodes.carryRight, zoneMap['carry:right_panel'], 'panel');
             renderZone(nodes.carryBottom, zoneMap['carry:bottom_dock'], 'compact');
-            renderZone(nodes.findings, zoneMap['findings:findings'], 'overlay');
+            renderZone(nodes.workspace, zoneMap['workspace:workspace'], 'overlay');
             renderField(nodes.field, zoneMap['field:field']);
             common.replaceChildren(nodes.focus, [focusNode(scene.focus)]);
             common.replaceChildren(nodes.actions, actionNodes(scene.actions || []));

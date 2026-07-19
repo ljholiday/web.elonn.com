@@ -22,10 +22,9 @@ Time, provider endpoints, or service loaders.
 
 Web translates semantic Placement as a flat-screen runtime:
 
-- Carry Layer: persistent user-anchored workspace with top, side, main, and
-  bottom zones.
-- Findings Layer: user-anchored discovery collections.
-- Field Layer: world-anchored surroundings projected for a browser.
+- Field Layer: persistent world anchored to reality.
+- Workspace Layer: transient manifestation of the member's current intent.
+- Carry Layer: member-following objects and controls.
 
 The runtime renders collections as the primary interaction unit, objects as
 selectable world primitives, resources as fetchable media or documents, and

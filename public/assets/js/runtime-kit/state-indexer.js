@@ -43,7 +43,7 @@
     };
 
     function layers(dataset, indexes) {
-        return ['carry', 'findings', 'field'].map(function (placementType) {
+        return ['carry', 'workspace', 'field'].map(function (placementType) {
             return {
                 id: placementType,
                 label: placementType,
@@ -72,7 +72,7 @@
 
         if (collectionIds.length === 0 && objectIds.length === 0) {
             dataset.collections.forEach(function (collection) {
-                if (collection.type === placementType || (placementType === 'carry' && ['field', 'findings'].indexOf(collection.type) === -1)) {
+                if (collection.type === placementType || (placementType === 'carry' && ['field', 'workspace'].indexOf(collection.type) === -1)) {
                     collectionIds.push(collection.id);
                 }
             });
@@ -98,4 +98,5 @@
             return true;
         });
     }
+
 }());
