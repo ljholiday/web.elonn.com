@@ -49,7 +49,7 @@ if ($path === '/ready') {
 }
 
 if ($path === '/login' && $method === 'GET') {
-    if (web_runtime_current_identity($config['api']) !== null) {
+    if (web_runtime_auth_token() !== null) {
         web_runtime_redirect('/');
         return;
     }
@@ -114,41 +114,6 @@ if ($path === '/logout' && $method === 'POST') {
     return;
 }
 
-if ($path === '/world/call' && $method === 'POST') {
-    $identity = web_runtime_current_identity($config['api']);
-    if ($identity === null) {
-        web_runtime_json([
-            'errors' => [[
-                'code' => 'web.auth_required',
-                'class' => 'auth',
-                'message' => 'Authenticated member session is required.',
-            ]],
-        ], 401);
-        return;
-    }
-
-    $call = web_runtime_json_input();
-    if ($call === null) {
-        web_runtime_json([
-            'errors' => [[
-                'code' => 'web.invalid_call_json',
-                'class' => 'contract',
-                'message' => 'World Call request body must be a JSON object.',
-            ]],
-        ], 400);
-        return;
-    }
-
-    $response = web_runtime_world_call(
-        $config['world'],
-        $config['service_auth']['world'],
-        $identity,
-        $call
-    );
-    web_runtime_json($response['json'], $response['status']);
-    return;
-}
-
 if ($path !== '/' && $path !== '/runtime-dataset') {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
@@ -156,8 +121,7 @@ if ($path !== '/' && $path !== '/runtime-dataset') {
     return;
 }
 
-$identity = web_runtime_current_identity($config['api']);
-if ($identity === null) {
+if (web_runtime_auth_token() === null) {
     $title = 'Log in to Elonn Web';
     $app = $config['app'];
     $api = $config['api'];
@@ -174,7 +138,7 @@ $title = 'Elonn Web';
 $app = $config['app'];
 $world = $config['world'];
 $canonicalPath = $path;
-$fallbackDataset = web_runtime_fallback_dataset($config['world'], $config['service_auth']['world'], $identity);
+$fallbackDataset = web_runtime_fallback_dataset($world, web_runtime_auth_token());
 
 require BASE_PATH . '/templates/runtime.php';
 
@@ -182,9 +146,9 @@ require BASE_PATH . '/templates/runtime.php';
  * @param array{base_url:string} $world
  * @return array<string, mixed>|null
  */
-function web_runtime_fallback_dataset(array $world, array $serviceAuth, array $identity): ?array
+function web_runtime_fallback_dataset(array $world, ?string $token): ?array
 {
-    $call = [
+    $body = json_encode([
         'id' => 'call:runtime:web:fallback',
         'content' => [
             'operation' => 'world.compose',
@@ -209,159 +173,38 @@ function web_runtime_fallback_dataset(array $world, array $serviceAuth, array $i
             'scope' => 'server_fallback',
             'runtime_state' => [],
         ],
-    ];
+    ], JSON_UNESCAPED_SLASHES);
 
-    $response = web_runtime_world_call($world, $serviceAuth, $identity, $call, 2);
-    $payload = $response['json'];
-    if ($response['status'] < 200 || $response['status'] >= 300 || !is_array($payload)) {
+    if (!is_string($body) || $token === null) {
         return null;
-    }
-
-    if (($payload['type'] ?? '') !== 'world' || !array_key_exists('errors', $payload)) {
-        return null;
-    }
-
-    return $payload;
-}
-
-/**
- * @param array{base_url:string} $world
- * @param array{service_name:string, token:string} $serviceAuth
- * @param array{id:string, email:string, username:string|null, display_name:string|null} $identity
- * @param array<string, mixed> $call
- * @return array{status:int,json:mixed}
- */
-function web_runtime_world_call(array $world, array $serviceAuth, array $identity, array $call, int $timeoutSeconds = 8): array
-{
-    $body = json_encode($call, JSON_UNESCAPED_SLASHES);
-    if (!is_string($body)) {
-        return [
-            'status' => 500,
-            'json' => [
-                'errors' => [[
-                    'code' => 'web.world_call_encoding_failed',
-                    'class' => 'processing',
-                    'message' => 'Web could not encode the World Call.',
-                ]],
-            ],
-        ];
-    }
-
-    $token = trim((string) ($serviceAuth['token'] ?? ''));
-    if ($token === '') {
-        return [
-            'status' => 503,
-            'json' => [
-                'errors' => [[
-                    'code' => 'web.world_service_auth_not_configured',
-                    'class' => 'configuration',
-                    'message' => 'World service authentication is not configured.',
-                ]],
-            ],
-        ];
     }
 
     $headers = [
         'Accept: application/json',
         'Content-Type: application/json',
-        'Authorization: Bearer ' . $token,
-        'X-Elonn-Service: ' . trim((string) ($serviceAuth['service_name'] ?? 'web.elonn')),
-        'X-Elonn-Service-Token: ' . $token,
-        'X-Elonn-Member-Id: ' . $identity['id'],
-        'X-Elonn-Member-Email: ' . $identity['email'],
+        'Cookie: elonn_api_token=' . rawurlencode($token),
     ];
-    if (is_string($identity['display_name']) && $identity['display_name'] !== '') {
-        $headers[] = 'X-Elonn-Member-Display-Name: ' . $identity['display_name'];
-    }
 
     $response = @file_get_contents(rtrim($world['base_url'], '/') . '/world/call', false, stream_context_create([
         'http' => [
             'method' => 'POST',
             'header' => $headers,
             'content' => $body,
-            'timeout' => $timeoutSeconds,
+            'timeout' => 2,
             'ignore_errors' => true,
         ],
     ]));
 
-    $status = 0;
-    foreach ($http_response_header ?? [] as $header) {
-        if (preg_match('#^HTTP/\S+\s+(\d{3})#', $header, $matches) === 1) {
-            $status = (int) $matches[1];
-            break;
-        }
-    }
-
     if (!is_string($response) || $response === '') {
-        return [
-            'status' => $status > 0 ? $status : 502,
-            'json' => [
-                'errors' => [[
-                    'code' => 'web.world_unavailable',
-                    'class' => 'dependency',
-                    'message' => 'World endpoint is unavailable.',
-                ]],
-            ],
-        ];
-    }
-
-    return [
-        'status' => $status > 0 ? $status : 502,
-        'json' => json_decode($response, true),
-    ];
-}
-
-/**
- * @return array<string, mixed>|null
- */
-function web_runtime_json_input(): ?array
-{
-    $raw = file_get_contents('php://input');
-    if (!is_string($raw) || trim($raw) === '') {
         return null;
     }
 
-    $decoded = json_decode($raw, true);
-    return is_array($decoded) ? $decoded : null;
-}
-
-function web_runtime_json(mixed $payload, int $status = 200): void
-{
-    http_response_code($status);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
-}
-
-/**
- * @param array{base_url:string} $api
- * @return array{id:string, email:string, username:string|null, display_name:string|null}|null
- */
-function web_runtime_current_identity(array $api): ?array
-{
-    $token = web_runtime_auth_token();
-    if ($token === null) {
+    $payload = json_decode($response, true);
+    if (!is_array($payload) || ($payload['type'] ?? '') !== 'world' || !array_key_exists('errors', $payload)) {
         return null;
     }
 
-    $response = web_runtime_api_request($api, 'GET', '/identity/me', null, $token);
-    if ($response['status'] !== 200 || !is_array($response['json'])) {
-        return null;
-    }
-
-    $id = $response['json']['id'] ?? null;
-    $email = $response['json']['email'] ?? null;
-    if ((!is_string($id) && !is_int($id)) || !is_string($email)) {
-        return null;
-    }
-
-    $username = $response['json']['username'] ?? null;
-    $displayName = $response['json']['display_name'] ?? null;
-    return [
-        'id' => (string) $id,
-        'email' => $email,
-        'username' => is_string($username) ? $username : null,
-        'display_name' => is_string($displayName) ? $displayName : null,
-    ];
+    return $payload;
 }
 
 function web_runtime_auth_token(): ?string

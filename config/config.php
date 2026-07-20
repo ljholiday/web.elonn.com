@@ -23,12 +23,6 @@ return [
     'api' => [
         'base_url' => rtrim(web_string_config('ELONN_API_BASE_URL', $local ? 'https://api.elonn.local' : 'https://api.elonn.com'), '/'),
     ],
-    'service_auth' => [
-        'world' => [
-            'service_name' => web_string_config('ELONN_WORLD_SERVICE_CALLER', 'web.elonn'),
-            'token' => web_string_config('ELONN_WORLD_SERVICE_TOKEN'),
-        ],
-    ],
     'world' => [
         'base_url' => rtrim(web_string_config('ELONN_WORLD_BASE_URL', $local ? 'https://world.elonn.local' : 'https://world.elonn.com'), '/'),
     ],

@@ -30,11 +30,9 @@ continues into the runtime at `/`.
 The account front door at `elonn.local` is not required to enter the web
 runtime.
 
-After member authentication, browser World Calls go to Web's same-origin
-`POST /world/call` proxy. Web validates the member auth session with API,
-authenticates itself to World as `web.elonn`, and forwards member identity as
-internal request metadata. The browser never receives the Web→World service
-token.
+After member authentication, browser World Calls go directly to World with the
+API-issued signed access token cookie. World validates that token locally; API
+is not part of the normal runtime request path.
 
 ## Runtime projection
 
