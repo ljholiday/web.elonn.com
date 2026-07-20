@@ -6,7 +6,8 @@ declare(strict_types=1);
  * Web runtime configuration.
  *
  * This file is the only deployment environment reader for the browser runtime.
- * The runtime itself consumes only the configured World endpoint.
+ * The runtime consumes normalized API and World endpoints. Authentication
+ * remains API-owned while the web runtime owns the browser login surface.
  */
 $local = str_contains((string) ($_SERVER['HTTP_HOST'] ?? ''), 'elonn.local');
 
@@ -15,6 +16,18 @@ return [
         'environment' => web_string_config('APP_ENV', 'production'),
         'debug' => web_bool_config('APP_DEBUG', false),
         'url' => rtrim(web_string_config('APP_URL', $local ? 'https://web.elonn.local' : 'https://web.elonn.com'), '/'),
+    ],
+    'auth' => [
+        'cookie_domain' => web_string_config('ELONN_COOKIE_DOMAIN', $local ? '.elonn.local' : '.elonn.com'),
+    ],
+    'api' => [
+        'base_url' => rtrim(web_string_config('ELONN_API_BASE_URL', $local ? 'https://api.elonn.local' : 'https://api.elonn.com'), '/'),
+    ],
+    'service_auth' => [
+        'world' => [
+            'service_name' => web_string_config('ELONN_WORLD_SERVICE_CALLER', 'web.elonn'),
+            'token' => web_string_config('ELONN_WORLD_SERVICE_TOKEN'),
+        ],
     ],
     'world' => [
         'base_url' => rtrim(web_string_config('ELONN_WORLD_BASE_URL', $local ? 'https://world.elonn.local' : 'https://world.elonn.com'), '/'),

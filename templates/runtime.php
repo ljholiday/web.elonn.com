@@ -49,7 +49,7 @@ $pageUrl = rtrim($app['url'], '/') . '/';
     <main
         class="runtime-shell"
         data-world-runtime
-        data-world-base-url="<?= htmlspecialchars($world['base_url'], ENT_QUOTES, 'UTF-8') ?>"
+        data-world-base-url=""
         data-runtime-name="web"
     >
         <h1 class="visually-hidden">Elonn Web Runtime</h1>

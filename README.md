@@ -15,8 +15,26 @@ only the data published by World:
 - errors
 - context
 
-World is the only dependency. Web does not call Social, Find, Maps, Messages,
-Time, provider endpoints, or service loaders.
+Web uses API only for runtime-owned authentication and World for runtime data.
+Web does not call Social, Find, Maps, Messages, Time, provider endpoints, or
+service loaders.
+
+## Authentication
+
+`web.elonn.local` is independently launchable. When the browser runtime starts,
+it validates the existing `elonn_api_token` auth session with API. If the token
+is missing or invalid, Web renders its own `/login` screen. Successful login
+posts credentials to API, stores the issued shared auth token cookie, and
+continues into the runtime at `/`.
+
+The account front door at `elonn.local` is not required to enter the web
+runtime.
+
+After member authentication, browser World Calls go to Web's same-origin
+`POST /world/call` proxy. Web validates the member auth session with API,
+authenticates itself to World as `web.elonn`, and forwards member identity as
+internal request metadata. The browser never receives the Web→World service
+token.
 
 ## Runtime projection
 

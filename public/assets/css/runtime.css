@@ -25,6 +25,10 @@ a {
     color: #b8fff3;
 }
 
+input {
+    font: inherit;
+}
+
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -45,6 +49,107 @@ a {
     min-height: 100vh;
     min-height: 100dvh;
     overflow: hidden;
+}
+
+.runtime-login {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background: #050809;
+}
+
+.runtime-login__field {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+.runtime-login__panel {
+    position: relative;
+    z-index: 5;
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    width: min(420px, calc(100vw - 32px));
+    margin: 0 auto;
+    padding-top: max(84px, 18vh);
+}
+
+.runtime-login__eyebrow,
+.runtime-login__copy,
+.runtime-login__error,
+.runtime-login__panel h1 {
+    margin: 0;
+}
+
+.runtime-login__eyebrow {
+    color: #b8fff3;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+}
+
+.runtime-login__panel h1 {
+    color: #eefaf8;
+    font-size: 2.4rem;
+    font-weight: 680;
+    line-height: 1;
+}
+
+.runtime-login__copy {
+    max-width: 34ch;
+    color: #d0ddd5;
+}
+
+.runtime-login__error {
+    border: 1px solid rgba(255, 184, 184, 0.42);
+    border-radius: 8px;
+    background: rgba(88, 22, 22, 0.42);
+    color: #ffd6d6;
+    padding: 10px 12px;
+}
+
+.runtime-login__form {
+    display: grid;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.runtime-login__form label {
+    display: grid;
+    gap: 6px;
+    color: #d0ddd5;
+    font-size: 0.86rem;
+}
+
+.runtime-login__form input {
+    width: 100%;
+    border: 1px solid rgba(184, 255, 243, 0.32);
+    border-radius: 8px;
+    background: rgba(6, 12, 13, 0.9);
+    color: #eefaf8;
+    padding: 12px 13px;
+    outline: none;
+}
+
+.runtime-login__form input:focus {
+    border-color: rgba(184, 255, 243, 0.78);
+}
+
+.runtime-login__form button {
+    min-height: 46px;
+    border: 1px solid rgba(184, 255, 243, 0.54);
+    border-radius: 8px;
+    background: #b8fff3;
+    color: #061011;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.runtime-login__form button:hover,
+.runtime-login__form button:focus {
+    background: #eefaf8;
+    outline: none;
 }
 
 .field-projection {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $template = read_file($root . '/templates/runtime.php');
+$loginTemplate = read_file($root . '/templates/login.php');
 $index = read_file($root . '/public/index.php');
 $config = read_file($root . '/config/config.php');
 $envExample = read_file($root . '/.env.example');
@@ -23,16 +24,43 @@ $checks = [
     'Home and runtime-dataset both serve the canonical World Dataset runtime' => str_contains($index, "\$path !== '/' && \$path !== '/runtime-dataset'")
         && str_contains($template, 'data-world-runtime')
         && str_contains($template, 'canonical World Datasets'),
-    'Web configuration exposes only World as a service dependency' => str_contains($config, "'world'")
+    'Web configuration exposes API for auth and World for runtime data' => str_contains($config, "'api'")
+        && str_contains($config, "'auth'")
+        && str_contains($config, "'service_auth'")
+        && str_contains($config, 'ELONN_API_BASE_URL')
+        && str_contains($config, 'ELONN_COOKIE_DOMAIN')
+        && str_contains($config, 'ELONN_WORLD_SERVICE_TOKEN')
+        && str_contains($envExample, 'ELONN_WORLD_SERVICE_TOKEN=')
+        && str_contains($envExample, 'ELONN_API_BASE_URL')
+        && str_contains($envExample, 'ELONN_COOKIE_DOMAIN')
+        && str_contains($config, "'world'")
         && str_contains($config, 'ELONN_WORLD_BASE_URL')
-        && !str_contains($config, 'ELONN_API_BASE_URL')
         && !str_contains($config, 'ELONN_FIND_BASE_URL')
         && !str_contains($config, 'ELONN_SOCIAL_BASE_URL')
         && !str_contains($config, 'ELONN_TIME_BASE_URL')
-        && !str_contains($envExample, 'ELONN_API_BASE_URL')
         && !str_contains($envExample, 'ELONN_FIND_BASE_URL')
         && !str_contains($envExample, 'ELONN_SOCIAL_BASE_URL')
         && !str_contains($envExample, 'ELONN_TIME_BASE_URL'),
+    'Runtime authentication is owned by Web and backed by API' => str_contains($index, 'web_runtime_current_identity')
+        && str_contains($index, "web_runtime_api_request(\$api, 'GET', '/identity/me'")
+        && str_contains($index, "web_runtime_api_request(\$api, 'POST', '/identity/login'")
+        && str_contains($index, "web_runtime_api_request(\$api, 'POST', '/identity/logout'")
+        && str_contains($index, 'elonn_api_token')
+        && str_contains($index, "\$path === '/login'")
+        && str_contains($index, "\$path === '/logout'")
+        && str_contains($loginTemplate, 'Runtime-owned login for Elonn Web')
+        && str_contains($loginTemplate, 'action="/login"')
+        && !str_contains($index . $template . $loginTemplate, 'elonn.local/account/login')
+        && !str_contains($index . $template . $loginTemplate, 'elonn.com/account/login'),
+    'Web authenticates to World server-side only' => str_contains($index, "\$path === '/world/call'")
+        && str_contains($index, 'web_runtime_world_call')
+        && str_contains($index, "'Authorization: Bearer ' . \$token")
+        && str_contains($index, "'X-Elonn-Service: '")
+        && str_contains($index, "'X-Elonn-Member-Id: ' . \$identity['id']")
+        && str_contains($index, "'X-Elonn-Member-Email: ' . \$identity['email']")
+        && str_contains($template, 'data-world-base-url=""')
+        && !str_contains($scripts, 'ELONN_WORLD_SERVICE_TOKEN')
+        && !str_contains($scripts, 'Authorization: Bearer'),
     'Runtime requests only the canonical World Call endpoint' => str_contains($scripts, "postJson('/world/call'")
         && str_contains($scripts, "id: 'call:runtime:web:'")
         && str_contains($scripts, "operation: String(state.operation || 'world.compose')")

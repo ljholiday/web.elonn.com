@@ -14,12 +14,13 @@ $ready = ob_get_clean();
 $readyPayload = json_decode(is_string($ready) ? $ready : '', true);
 
 $template = file_get_contents($root . '/templates/runtime.php') ?: '';
+$loginTemplate = file_get_contents($root . '/templates/login.php') ?: '';
 $index = file_get_contents($root . '/public/index.php') ?: '';
 
 $checks = [
     'Ready endpoint identifies the fresh Web runtime' => is_array($readyPayload)
         && ($readyPayload['service'] ?? '') === 'elonn_web_runtime'
-        && array_keys($readyPayload['dependencies'] ?? []) === ['world'],
+        && array_keys($readyPayload['dependencies'] ?? []) === ['api', 'world'],
     'Runtime template includes the complete runtime kit' => str_contains($template, "'world-client.js'")
         && str_contains($template, "'dataset-parser.js'")
         && str_contains($template, "'scene-model.js'")
@@ -28,6 +29,11 @@ $checks = [
     'Runtime template exposes query composer controls' => str_contains($template, 'data-runtime-query-form')
         && str_contains($template, 'data-runtime-query-input')
         && str_contains($template, 'data-runtime-voice'),
+    'Runtime owns its login screen' => str_contains($index, "\$path === '/login'")
+        && str_contains($index, 'web_runtime_api_login')
+        && str_contains($index, 'web_runtime_set_auth_cookie')
+        && str_contains($loginTemplate, 'Elonn Web')
+        && str_contains($loginTemplate, 'action="/login"'),
     'Public routes do not expose legacy compatibility pages' => !str_contains($index, 'templates/runtime-dataset.php')
         && !str_contains($index, 'data-runtime-shell'),
 ];
