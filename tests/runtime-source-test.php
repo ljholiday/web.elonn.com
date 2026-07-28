@@ -116,6 +116,10 @@ $checks = [
         && str_contains($scripts, "'errors'")
         && !str_contains($scripts, "contract.name !== 'elonn.world.dataset'")
         && !str_contains($scripts, "'layout'"),
+    'Runtime treats dependency Dataset errors as degraded loaded state' => str_contains($scripts, 'datasetStatusState')
+        && str_contains($scripts, "error.class === 'dependency'")
+        && str_contains($scripts, "return 'ready';")
+        && str_contains($scripts, "return 'error';"),
     'Collections and resources are first-class scene inputs' => str_contains($scripts, 'state.indexes.collections[collectionId]')
         && str_contains($scripts, 'resourcesForObject')
         && str_contains($scripts, 'resourceIds'),

@@ -194,7 +194,7 @@
     function loadDataset(runtimeState) {
         client.loadDataset(runtimeState).then(function (payload) {
             replaceDataset(payload);
-            renderer.status(datasetStatus(payload), (payload.errors || []).length === 0 ? 'ready' : 'error');
+            renderer.status(datasetStatus(payload), datasetStatusState(payload));
         }).catch(function (error) {
             var message = error && error.message ? error.message : 'World Dataset unavailable.';
             renderer.status(message, 'error');
@@ -526,6 +526,19 @@
             return String(errors[0].message || 'World Dataset returned errors.');
         }
         return 'World Dataset loaded.';
+    }
+
+    function datasetStatusState(payload) {
+        var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
+        if (errors.length === 0) {
+            return 'ready';
+        }
+        if (errors.every(function (error) {
+            return error && error.class === 'dependency';
+        })) {
+            return 'ready';
+        }
+        return 'error';
     }
 
     function speechRecognition() {
