@@ -8,11 +8,23 @@ const fs = require('fs');
 const vm = require('vm');
 
 const root = process.argv[2];
-const context = {window: {}};
+const context = {
+  window: {},
+  navigator: {language: 'en-US'},
+  Intl: {
+    DateTimeFormat: function () {
+      return {
+        resolvedOptions: function () {
+          return {timeZone: 'America/Los_Angeles'};
+        }
+      };
+    }
+  }
+};
 context.window.ElonnWorldRuntime = {};
 vm.createContext(context);
 
-['common.js', 'dataset-parser.js', 'state-indexer.js', 'scene-model.js'].forEach((file) => {
+['common.js', 'world-client.js', 'dataset-parser.js', 'state-indexer.js', 'scene-model.js'].forEach((file) => {
   vm.runInContext(fs.readFileSync(`${root}/public/assets/js/runtime-kit/${file}`, 'utf8'), context, {filename: file});
 });
 
@@ -69,6 +81,19 @@ try {
   rejected = true;
 }
 if (!rejected) throw new Error('old wrapper payload was accepted');
+
+const worldClientRoot = {dataset: {worldBaseUrl: 'https://world.elonn.local', runtimeName: 'web'}};
+const worldClient = runtime.WorldClient(worldClientRoot);
+const worldCall = worldClient.worldCall({
+  inputText: 'coffee near me',
+  origin: {latitude: 47.6062, longitude: -122.3321},
+  radiusMeters: 1000
+});
+if (worldCall.content.origin.latitude !== 47.6062 || worldCall.content.origin.longitude !== -122.3321) {
+  throw new Error('browser origin was not included in the canonical World Call');
+}
+if (worldCall.content.radius_meters !== 1000) throw new Error('nearby radius was not included in the canonical World Call');
+if (worldCall.context.runtime.id !== 'web') throw new Error('runtime identity was not preserved in the World Call');
 
 const errorDataset = Object.assign({}, dataset, {id: 'dataset:world:error', errors: [{code: 'contract_violation', class: 'contract', message: 'Bad call.'}]});
 const parsedError = runtime.DatasetParser.parse(errorDataset);

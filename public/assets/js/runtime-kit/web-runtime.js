@@ -45,13 +45,7 @@
             if (text === '') {
                 return;
             }
-            renderer.status('Requesting World Dataset.', 'loading');
-            loadDataset({
-                inputText: text,
-                runtimeSessionId: state ? state.runtimeSessionId : '',
-                selectedObjectId: state ? state.selectedObjectId : '',
-                selectedCollectionId: state ? state.selectedCollectionId : ''
-            });
+            submitQuery(text);
         });
     }
 
@@ -205,6 +199,61 @@
             var message = error && error.message ? error.message : 'World Dataset unavailable.';
             renderer.status(message, 'error');
             renderer.render(runtime.SceneModel.error(message));
+        });
+    }
+
+    function submitQuery(text) {
+        var request = {
+            inputText: text,
+            runtimeSessionId: state ? state.runtimeSessionId : '',
+            selectedObjectId: state ? state.selectedObjectId : '',
+            selectedCollectionId: state ? state.selectedCollectionId : ''
+        };
+
+        renderer.status('Requesting World Dataset.', 'loading');
+        if (!needsBrowserOrigin(text)) {
+            loadDataset(request);
+            return;
+        }
+
+        browserOrigin().then(function (origin) {
+            request.origin = origin;
+            request.radiusMeters = 1000;
+            loadDataset(request);
+        }).catch(function (error) {
+            renderer.status(error && error.message ? error.message : 'Location is required for nearby requests.', 'error');
+        });
+    }
+
+    function needsBrowserOrigin(text) {
+        return /\b(near me|nearby|around me|close to me|in my area)\b/i.test(String(text || ''));
+    }
+
+    function browserOrigin() {
+        return new Promise(function (resolve, reject) {
+            if (!navigator.geolocation) {
+                reject(new Error('Location is required for nearby requests.'));
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var coords = position && position.coords ? position.coords : {};
+                var latitude = Number(coords.latitude);
+                var longitude = Number(coords.longitude);
+                if (!isFinite(latitude) || !isFinite(longitude)) {
+                    reject(new Error('Location is required for nearby requests.'));
+                    return;
+                }
+                resolve({
+                    latitude: latitude,
+                    longitude: longitude
+                });
+            }, function () {
+                reject(new Error('Location is required for nearby requests.'));
+            }, {
+                enableHighAccuracy: false,
+                maximumAge: 60000,
+                timeout: 8000
+            });
         });
     }
 

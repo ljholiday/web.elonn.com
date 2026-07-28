@@ -37,6 +37,7 @@
 
         function worldCall(runtimeState) {
             var state = runtimeState && typeof runtimeState === 'object' ? runtimeState : {};
+            var origin = state.origin && typeof state.origin === 'object' ? state.origin : null;
             var call = {
                 id: 'call:runtime:web:' + String(Date.now()),
                 content: {
@@ -65,6 +66,15 @@
                 }
             };
 
+            if (origin && isFinite(Number(origin.latitude)) && isFinite(Number(origin.longitude))) {
+                call.content.origin = {
+                    latitude: Number(origin.latitude),
+                    longitude: Number(origin.longitude)
+                };
+            }
+            if (isFinite(Number(state.radiusMeters)) && Number(state.radiusMeters) > 0) {
+                call.content.radius_meters = Math.round(Number(state.radiusMeters));
+            }
             if (String(state.selectedObjectId || '') !== '') {
                 call.context.focus.object_id = String(state.selectedObjectId);
             }
