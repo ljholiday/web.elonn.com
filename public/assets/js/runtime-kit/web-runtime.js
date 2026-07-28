@@ -211,17 +211,16 @@
         };
 
         renderer.status('Requesting World Dataset.', 'loading');
-        if (!needsBrowserOrigin(text)) {
-            loadDataset(request);
-            return;
-        }
-
         browserOrigin().then(function (origin) {
             request.origin = origin;
             request.radiusMeters = 1000;
             loadDataset(request);
         }).catch(function (error) {
-            renderer.status(error && error.message ? error.message : 'Location is required for nearby requests.', 'error');
+            if (needsBrowserOrigin(text)) {
+                renderer.status(error && error.message ? error.message : 'Location is required for nearby requests.', 'error');
+                return;
+            }
+            loadDataset(request);
         });
     }
 

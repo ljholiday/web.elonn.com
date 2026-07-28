@@ -53,7 +53,9 @@ Enter submits a canonical `world.compose` Call to World. The microphone control
 uses browser speech recognition when available and fills the query field; text
 submission still goes through the same World Call path.
 
-Nearby-shaped text such as "near me" asks the browser for coordinates during
-the submit gesture. When coordinates are available, Web includes them as
-`content.origin` in the canonical World Call. Web still calls only World; Mind
-and Maps decide the Service path downstream.
+Query submission asks the browser for coordinates during the submit gesture.
+When coordinates are available, Web includes them as `content.origin` in the
+canonical World Call. Nearby-shaped text such as "near me" requires
+coordinates; other text continues without coordinates if the browser cannot
+provide them. Web still calls only World; Mind and Maps decide the Service path
+downstream.

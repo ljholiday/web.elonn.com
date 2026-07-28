@@ -76,12 +76,13 @@ $checks = [
         && str_contains($scripts, 'submitQuery')
         && str_contains($scripts, 'speechRecognition')
         && str_contains($scripts, 'webkitSpeechRecognition'),
-    'Nearby-shaped runtime queries include browser origin for World' => str_contains($scripts, 'needsBrowserOrigin')
+    'Runtime queries include browser origin for World when available' => str_contains($scripts, 'needsBrowserOrigin')
         && str_contains($scripts, 'navigator.geolocation.getCurrentPosition')
         && str_contains($scripts, 'call.content.origin')
         && str_contains($scripts, 'call.content.radius_meters')
         && str_contains($scripts, 'radiusMeters')
         && str_contains($scripts, 'Location is required for nearby requests.')
+        && str_contains($scripts, 'loadDataset(request)')
         && str_contains($scripts, 'near me|nearby|around me|close to me|in my area')
         && !str_contains($scripts, '/maps/call'),
     'Runtime capabilities advertise keyboard voice and pointer without action dispatch' => str_contains($scripts, 'keyboard: true')
