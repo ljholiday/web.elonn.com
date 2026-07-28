@@ -191,8 +191,6 @@ $checks = [
         'loadTime',
         ...$oldWorkspaceTerms,
     ]),
-    'Legacy app is documented as moved aside' => is_dir(dirname($root) . '/web.elonn.local.legacy-runtime')
-        && str_contains($readme, 'web.elonn.local.legacy-runtime'),
 ];
 
 $failed = 0;

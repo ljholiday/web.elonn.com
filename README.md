@@ -57,6 +57,3 @@ Nearby-shaped text such as "near me" asks the browser for coordinates during
 the submit gesture. When coordinates are available, Web includes them as
 `content.origin` in the canonical World Call. Web still calls only World; Mind
 and Maps decide the Service path downstream.
-
-The previous compatibility runtime was moved to `../web.elonn.local.legacy-runtime`
-as migration evidence.
