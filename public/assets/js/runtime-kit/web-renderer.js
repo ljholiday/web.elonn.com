@@ -222,8 +222,7 @@
                 if (panel.object.summary !== '') {
                     content.appendChild(summary);
                 }
-                content.appendChild(metaLine('Visibility', panel.object.visibility || 'default'));
-                content.appendChild(metaLine('Permissions', permissionsText(panel.object.permissions)));
+                content.appendChild(objectSurface(panel.object));
 
                 resize.className = 'carry-object-panel__resize';
                 resize.dataset.carryPanelResize = panel.id;
@@ -242,6 +241,42 @@
 
         function statusNode(row) {
             return metaLine(row.label, row.value);
+        }
+
+        function objectSurface(object) {
+            if (object.surface && object.surface.mode === 'hosted') {
+                return hostedSurface(object);
+            }
+
+            return genericPreview(object);
+        }
+
+        function hostedSurface(object) {
+            var surface = object.surface || {};
+            var content = object.content || {};
+            var frame = document.createElement('section');
+            var preview = document.createElement('div');
+            var width = Number(content.width || 0);
+            var height = Number(content.height || 0);
+            frame.className = 'hosted-object-surface';
+            frame.dataset.surfaceMode = surface.mode || '';
+            frame.dataset.surfaceService = surface.service || '';
+            frame.dataset.surfaceKind = surface.kind || '';
+            frame.dataset.sourceResource = String((surface.resources && surface.resources.source) || content.source_resource || '');
+            frame.dataset.previewResource = String((surface.resources && surface.resources.preview) || content.preview_resource || '');
+            preview.className = 'hosted-object-surface__preview';
+            if (width > 0 && height > 0) {
+                preview.style.aspectRatio = String(width) + ' / ' + String(height);
+            }
+            frame.appendChild(preview);
+            return frame;
+        }
+
+        function genericPreview(object) {
+            var fragment = document.createDocumentFragment();
+            fragment.appendChild(metaLine('Visibility', object.visibility || 'default'));
+            fragment.appendChild(metaLine('Permissions', permissionsText(object.permissions)));
+            return fragment;
         }
 
         function metaLine(label, value) {

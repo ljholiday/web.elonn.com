@@ -92,6 +92,7 @@
 
     function objectView(state, object, selected) {
         var metadata = object.metadata && typeof object.metadata === 'object' ? object.metadata : {};
+        var content = object.content && typeof object.content === 'object' ? object.content : {};
         var visibility = object.visibility && typeof object.visibility === 'object' ? object.visibility : {};
         var permissions = object.permissions && typeof object.permissions === 'object' ? object.permissions : {};
         return {
@@ -100,6 +101,8 @@
             summary: common.text(object.summary, ''),
             type: common.text(object.type, 'object'),
             layer: common.text(metadata.anchor, objectLayer(state, object.id)),
+            content: content,
+            surface: surface(content.surface),
             selected: selected,
             availability: availability(object.availability),
             visibility: Array.isArray(visibility.scopes) ? visibility.scopes.join(', ') : '',
@@ -110,6 +113,19 @@
                 reason: common.text(permissions.reason, '')
             },
             resources: resourcesForObject(state, object)
+        };
+    }
+
+    function surface(candidate) {
+        if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+            return null;
+        }
+
+        return {
+            mode: common.text(candidate.mode, ''),
+            service: common.text(candidate.service, ''),
+            kind: common.text(candidate.kind, ''),
+            resources: candidate.resources && typeof candidate.resources === 'object' ? candidate.resources : {}
         };
     }
 

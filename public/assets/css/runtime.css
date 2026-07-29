@@ -449,6 +449,28 @@ input {
     padding: 10px 12px 12px;
 }
 
+.hosted-object-surface {
+    display: grid;
+    gap: 8px;
+    min-height: 0;
+}
+
+.hosted-object-surface__preview {
+    width: 100%;
+    min-height: 120px;
+    max-height: 42dvh;
+    border: 1px solid rgba(184, 255, 243, 0.28);
+    border-radius: 6px;
+    background:
+        linear-gradient(45deg, rgba(238, 250, 248, 0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(238, 250, 248, 0.08) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(238, 250, 248, 0.08) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(238, 250, 248, 0.08) 75%);
+    background-color: rgba(7, 12, 14, 0.76);
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    background-size: 16px 16px;
+}
+
 .carry-object-panel__resize {
     position: absolute;
     right: 0;

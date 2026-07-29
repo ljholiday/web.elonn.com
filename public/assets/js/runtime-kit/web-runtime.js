@@ -378,10 +378,13 @@
             type: String(object.type || 'object'),
             title: String(object.title || 'Object'),
             summary: String(object.summary || ''),
+            content: object.content || {},
+            surface: object.surface || null,
             metadata: object.metadata || {},
             visibility: object.visibility || {},
             permissions: object.permissions || {},
-            availability: object.availability || {}
+            availability: object.availability || {},
+            resources: object.resources || []
         };
     }
 

@@ -73,6 +73,7 @@
                     type: String(object.type || 'object'),
                     title: common.text(content.name || object.name || object.title, 'Object'),
                     summary: common.text(content.description || object.description || object.summary, ''),
+                    content: content,
                     visibility: object.visibility && typeof object.visibility === 'object' ? object.visibility : {},
                     permissions: object.permissions && typeof object.permissions === 'object' ? object.permissions : {},
                     availability: availability(object.availability || content.availability || properties.availability),

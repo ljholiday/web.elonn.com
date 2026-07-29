@@ -165,6 +165,13 @@ $checks = [
         && str_contains($scripts, 'selected_collection_id')
         && str_contains($scripts, 'selectedObjectId')
         && str_contains($scripts, 'focus.object_id'),
+    'Runtime hosts service-provided Object surfaces generically' => str_contains($scripts, 'object.surface && object.surface.mode')
+        && str_contains($scripts, 'hostedSurface(object)')
+        && str_contains($scripts, 'surfaceService')
+        && str_contains($scripts, 'surface.resources')
+        && str_contains($scripts, 'content.width')
+        && str_contains(read_file($root . '/public/assets/css/runtime.css'), 'hosted-object-surface__preview')
+        && !str_contains($scripts, "object.type === 'paint.document'"),
     'Runtime projects Carry Workspace and Field as environment anchors' => str_contains($template, 'data-field-projection')
         && str_contains($template, 'query-composer')
         && str_contains($template, 'data-runtime-carry-panels')

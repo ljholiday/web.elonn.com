@@ -45,6 +45,49 @@ const dataset = {
   context: {}
 };
 
+const paintDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:paint',
+  objects: [{
+    id: 'paint.document:test',
+    type: 'paint.document',
+    title: 'Sketch',
+    summary: 'Paint document',
+    content: {
+      name: 'Sketch',
+      description: 'Paint document',
+      width: 1024,
+      height: 768,
+      source_resource: 'resource:11111111111111111111111111111111',
+      preview_resource: 'resource:22222222222222222222222222222222',
+      storage_state: 'ready',
+      surface: {
+        mode: 'hosted',
+        service: 'paint',
+        kind: 'editor',
+        resources: {
+          source: 'resource:11111111111111111111111111111111',
+          preview: 'resource:22222222222222222222222222222222'
+        }
+      }
+    },
+    resources: [
+      'resource:11111111111111111111111111111111',
+      'resource:22222222222222222222222222222222'
+    ]
+  }],
+  collections: [{id: 'collection:paint', type: 'collection', content: {items: ['paint.document:test']}}],
+  resources: [{
+    id: 'resource:11111111111111111111111111111111',
+    type: 'application/vnd.elonn.paint+json',
+    content: {kind: 'paint.source', label: 'Paint source'}
+  }, {
+    id: 'resource:22222222222222222222222222222222',
+    type: 'image/png',
+    content: {kind: 'paint.preview', label: 'Paint preview'}
+  }],
+  placements: [{id: 'placement:paint:workspace', type: 'workspace', content: {object: 'paint.document:test'}}]
+});
+
 const parsed = runtime.DatasetParser.parse(dataset);
 if (parsed.errors.length !== 0) throw new Error('errors array was not preserved');
 if (parsed.collections[0].items[0] !== 'object:one') throw new Error('canonical collection item ids were not preserved');
@@ -55,6 +98,16 @@ if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Er
 const scene = runtime.SceneModel.fromState(state);
 if (scene.actions[0].availability.state !== 'unavailable') throw new Error('returned actions must be unavailable until Web supports execution');
 if (scene.actions[0].availability.reason !== 'Action execution is not available yet.') throw new Error('unavailable action reason was not set');
+
+const paintState = runtime.StateIndexer.build(runtime.DatasetParser.parse(paintDataset), null);
+const paintScene = runtime.SceneModel.fromState(paintState);
+if (paintScene.focus.surface.mode !== 'hosted') throw new Error('hosted Object surface was not projected');
+if (paintScene.focus.surface.service !== 'paint') throw new Error('hosted Object surface service was not projected');
+if (paintScene.focus.content.width !== 1024 || paintScene.focus.content.height !== 768) throw new Error('hosted Object dimensions were not preserved');
+if (paintScene.focus.resources.length !== 2) throw new Error('hosted Object Resources were not projected');
+paintState.carryPanels = [{id: 'carry-panel:paint.document:test', objectId: 'paint.document:test', x: 10, y: 10, width: 360, height: 240, z: 24, collapsed: false}];
+const paintCarryScene = runtime.SceneModel.fromState(paintState);
+if (paintCarryScene.carryPanels[0].object.surface.kind !== 'editor') throw new Error('hosted Object surface was not available in carry panel');
 state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, width: 280, height: 160, z: 23, collapsed: true}];
 const carryScene = runtime.SceneModel.fromState(state);
 if (carryScene.carryPanels[0].object.id !== 'object:one') throw new Error('carry panel object was not projected');
