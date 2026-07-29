@@ -480,9 +480,30 @@ input {
 
 .paint-editor__bar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
+}
+
+.paint-editor__tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.paint-editor__color {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(184, 255, 243, 0.28);
+    border-radius: 4px;
+    background: rgba(6, 12, 13, 0.82);
+    padding: 2px;
+}
+
+.paint-editor__width {
+    width: 72px;
+    accent-color: #b8fff3;
 }
 
 .paint-editor__title {
@@ -505,6 +526,7 @@ input {
     color: #b8fff3;
     font-size: 0.72rem;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .paint-editor__save-state[data-state="saving"] {

@@ -6,6 +6,7 @@
 
     var runtime = window.ElonnWorldRuntime;
     var localOperations = {};
+    var documentSettings = {};
     var activeStroke = null;
 
     function sourceDocument(object) {
@@ -29,13 +30,38 @@
         var height = Number(content.height || 768);
         var shell = document.createElement('div');
         var toolbar = document.createElement('form');
+        var tools = document.createElement('div');
+        var color = document.createElement('input');
+        var width = document.createElement('input');
         var title = document.createElement('input');
         var saveState = document.createElement('span');
         var canvas = document.createElement('canvas');
+        var settings = settingsFor(object);
 
         shell.className = 'paint-editor';
         toolbar.className = 'paint-editor__bar';
         toolbar.dataset.paintRenameForm = 'true';
+        tools.className = 'paint-editor__tools';
+
+        color.className = 'paint-editor__color';
+        color.type = 'color';
+        color.name = 'color';
+        color.value = settings.color;
+        color.title = 'Pencil color';
+        color.setAttribute('aria-label', 'Pencil color');
+        color.dataset.paintColor = 'true';
+
+        width.className = 'paint-editor__width';
+        width.type = 'range';
+        width.name = 'width';
+        width.min = '1';
+        width.max = '48';
+        width.step = '1';
+        width.value = String(settings.width);
+        width.title = 'Pencil width';
+        width.setAttribute('aria-label', 'Pencil width');
+        width.dataset.paintWidth = 'true';
+
         title.className = 'paint-editor__title';
         title.type = 'text';
         title.name = 'title';
@@ -58,6 +84,9 @@
             canvas.style.aspectRatio = String(width) + ' / ' + String(height);
         }
 
+        tools.appendChild(color);
+        tools.appendChild(width);
+        toolbar.appendChild(tools);
         toolbar.appendChild(title);
         toolbar.appendChild(saveState);
         shell.appendChild(toolbar);
@@ -78,8 +107,14 @@
                 title.blur();
             }
         });
+        color.addEventListener('input', function () {
+            updateSettings(object, color, width);
+        });
+        width.addEventListener('input', function () {
+            updateSettings(object, color, width);
+        });
         canvas.addEventListener('pointerdown', function (event) {
-            beginStroke(event, canvas, object, saveState, context);
+            beginStroke(event, canvas, object, color, width, saveState, context);
         });
         canvas.addEventListener('pointermove', function (event) {
             appendStrokePoint(event);
@@ -114,12 +149,14 @@
         context.restore();
     }
 
-    function beginStroke(event, canvas, object, saveState, context) {
+    function beginStroke(event, canvas, object, color, width, saveState, context) {
         var drawingContext = canvas.getContext ? canvas.getContext('2d') : null;
         var objectId = String(object.id || '');
+        var settings = null;
         if (objectId === '' || !drawingContext || event.button !== 0) {
             return;
         }
+        settings = updateSettings(object, color, width);
         if (typeof context.selectObject === 'function') {
             context.selectObject(objectId);
         }
@@ -129,8 +166,8 @@
             canvas: canvas,
             context: drawingContext,
             points: [point(event, canvas)],
-            color: '#000000',
-            width: 4,
+            color: settings.color,
+            width: settings.width,
             saveState: saveState
         };
         canvas.setPointerCapture(event.pointerId);
@@ -310,6 +347,50 @@
         }
         node.textContent = text;
         node.dataset.state = text.toLowerCase();
+    }
+
+    function settingsFor(object) {
+        var objectId = String(object.id || '');
+        var settings = documentSettings[objectId] || null;
+        if (!settings) {
+            settings = {
+                color: '#000000',
+                width: 4
+            };
+            documentSettings[objectId] = settings;
+        }
+
+        return {
+            color: normalizeColor(settings.color),
+            width: normalizeWidth(settings.width)
+        };
+    }
+
+    function updateSettings(object, color, width) {
+        var objectId = String(object.id || '');
+        var settings = {
+            color: normalizeColor(color ? color.value : '#000000'),
+            width: normalizeWidth(width ? width.value : 4)
+        };
+        if (objectId !== '') {
+            documentSettings[objectId] = settings;
+        }
+
+        return settings;
+    }
+
+    function normalizeColor(value) {
+        value = String(value || '').trim().toLowerCase();
+        return /^#[0-9a-f]{6}$/.test(value) ? value : '#000000';
+    }
+
+    function normalizeWidth(value) {
+        var width = Number(value || 4);
+        if (!isFinite(width)) {
+            return 4;
+        }
+
+        return Math.round(clamp(width, 1, 48));
     }
 
     function clamp(value, min, max) {
