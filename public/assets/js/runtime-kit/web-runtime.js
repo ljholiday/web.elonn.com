@@ -63,6 +63,7 @@
         var closeButton = event.target.closest('[data-carry-panel-close]');
         var resizeHandle = event.target.closest('[data-carry-panel-resize]');
         var panelTitle = event.target.closest('[data-carry-panel-title]');
+        var hostedSurface = event.target.closest('[data-hosted-surface]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('[data-object-id]');
 
@@ -79,6 +80,10 @@
 
         if (panelTitle && state) {
             event.preventDefault();
+            return;
+        }
+
+        if (hostedSurface && state) {
             return;
         }
 

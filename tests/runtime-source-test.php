@@ -113,6 +113,9 @@ $checks = [
         && str_contains($webRuntime, 'dispatchSurfaceCommand')
         && str_contains($webRuntime, 'removeObjectSurface')
         && str_contains($webRenderer, 'dataset.hostedSurface'),
+    'Runtime leaves hosted surface interaction events to adapters' => str_contains($webRuntime, "event.target.closest('[data-hosted-surface]')")
+        && strpos($webRuntime, 'if (hostedSurface && state)') !== false
+        && strpos($webRuntime, 'if (hostedSurface && state)') < strpos($webRuntime, 'if (objectButton && state)'),
     'Paint interaction lives in a runtime adapter instead of Web core' => str_contains($template, 'adapters/paint-editor.js')
         && str_contains($paintAdapter, "register('paint', 'editor'")
         && str_contains($paintAdapter, "operation: 'paint.draw'")
