@@ -147,6 +147,25 @@ if (worldCall.content.origin.latitude !== 47.6062 || worldCall.content.origin.lo
 }
 if (worldCall.content.radius_meters !== 1000) throw new Error('nearby radius was not included in the canonical World Call');
 if (worldCall.context.runtime.id !== 'web') throw new Error('runtime identity was not preserved in the World Call');
+const paintWorldCall = worldClient.worldCall({
+  inputText: 'draw stroke',
+  selectedObjectId: 'paint.document:test',
+  surfaceCommand: {
+    service: 'paint',
+    operation: 'paint.draw',
+    object_id: 'paint.document:test',
+    payload: {
+      stroke: {
+        tool: 'pencil',
+        style: {color: '#000000', width: 4},
+        geometry: {points: [{x: 1, y: 2}, {x: 3, y: 4}]}
+      }
+    }
+  }
+});
+if (paintWorldCall.content.surface_command.operation !== 'paint.draw') throw new Error('surface command operation was not preserved');
+if (paintWorldCall.content.surface_command.payload.stroke.geometry.points.length !== 2) throw new Error('surface command stroke was not preserved');
+if (paintWorldCall.context.focus.object_id !== 'paint.document:test') throw new Error('surface command focus Object was not preserved');
 
 const errorDataset = Object.assign({}, dataset, {id: 'dataset:world:error', errors: [{code: 'contract_violation', class: 'contract', message: 'Bad call.'}]});
 const parsedError = runtime.DatasetParser.parse(errorDataset);

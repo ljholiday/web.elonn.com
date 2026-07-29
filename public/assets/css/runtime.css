@@ -471,6 +471,30 @@ input {
     background-size: 16px 16px;
 }
 
+.paint-surface {
+    display: block;
+    width: 100%;
+    min-height: 120px;
+    max-height: 42dvh;
+    border: 1px solid rgba(184, 255, 243, 0.34);
+    border-radius: 6px;
+    background:
+        linear-gradient(45deg, rgba(238, 250, 248, 0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(238, 250, 248, 0.08) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(238, 250, 248, 0.08) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(238, 250, 248, 0.08) 75%);
+    background-color: rgba(255, 255, 255, 0.96);
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    background-size: 16px 16px;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.paint-surface:focus {
+    outline: 2px solid rgba(184, 255, 243, 0.78);
+    outline-offset: 2px;
+}
+
 .carry-object-panel__resize {
     position: absolute;
     right: 0;

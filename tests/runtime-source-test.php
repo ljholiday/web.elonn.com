@@ -100,6 +100,11 @@ $checks = [
         && !str_contains($scripts, 'find.elonn')
         && !str_contains($scripts, 'time.elonn')
         && !str_contains($scripts, 'maps.elonn'),
+    'Runtime sends hosted Paint strokes as surface commands through World' => str_contains($scripts, 'data-paint-surface')
+        && str_contains($scripts, 'surfaceCommand')
+        && str_contains($scripts, "operation: 'paint.draw'")
+        && str_contains($scripts, "service: 'paint'")
+        && str_contains($scripts, "postJson('/world/call'"),
     'Shared runtime kit has the required ABI boundaries' => str_contains($scripts, 'WorldClient')
         && str_contains($scripts, 'DatasetParser')
         && str_contains($scripts, 'StateIndexer')
