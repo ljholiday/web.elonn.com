@@ -210,6 +210,7 @@
     function loadDataset(runtimeState) {
         client.loadDataset(runtimeState).then(function (payload) {
             replaceDataset(payload);
+            handleStalePaintDocument(payload, runtimeState);
             renderer.status(datasetStatus(payload), datasetStatusState(payload));
         }).catch(function (error) {
             var message = error && error.message ? error.message : 'World Dataset unavailable.';
@@ -277,6 +278,32 @@
         var next = runtime.StateIndexer.build(parsed, state);
         state = runtime.ContinuityReconciler.reconcile(state, next);
         state.carryPanels = reconcileCarryPanels(loadCarryPanels());
+        persistCarryPanels();
+        renderState();
+    }
+
+    function handleStalePaintDocument(payload, runtimeState) {
+        var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
+        var surfaceCommand = runtimeState && runtimeState.surfaceCommand && typeof runtimeState.surfaceCommand === 'object' ? runtimeState.surfaceCommand : null;
+        var objectId = surfaceCommand ? String(surfaceCommand.object_id || '') : '';
+        var stale = errors.some(function (error) {
+            var code = String(error && error.code || '');
+            var message = String(error && error.message || '');
+            return code === 'mind.paint_document_not_found'
+                || code === 'paint.document_not_found'
+                || (message.indexOf('Paint endpoint returned HTTP 404.') !== -1 && message.indexOf('Paint document was not found.') !== -1);
+        });
+        if (!stale || objectId === '' || !state) {
+            return;
+        }
+
+        state.carryPanels = (state.carryPanels || []).filter(function (panel) {
+            return String(panel.objectId || '') !== objectId;
+        });
+        delete paintLocalOperations[objectId];
+        if (state.selectedObjectId === objectId) {
+            state.selectedObjectId = '';
+        }
         persistCarryPanels();
         renderState();
     }

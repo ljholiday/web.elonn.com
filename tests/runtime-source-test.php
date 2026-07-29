@@ -105,6 +105,11 @@ $checks = [
         && str_contains($scripts, "operation: 'paint.draw'")
         && str_contains($scripts, "service: 'paint'")
         && str_contains($scripts, "postJson('/world/call'"),
+    'Runtime removes stale Paint panels after not_found responses' => str_contains($scripts, 'handleStalePaintDocument')
+        && str_contains($scripts, 'mind.paint_document_not_found')
+        && str_contains($scripts, 'Paint endpoint returned HTTP 404.')
+        && str_contains($scripts, 'delete paintLocalOperations[objectId]')
+        && str_contains($scripts, 'persistCarryPanels();'),
     'Shared runtime kit has the required ABI boundaries' => str_contains($scripts, 'WorldClient')
         && str_contains($scripts, 'DatasetParser')
         && str_contains($scripts, 'StateIndexer')
