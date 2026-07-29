@@ -277,6 +277,7 @@
         var next = runtime.StateIndexer.build(parsed, state);
         state = runtime.ContinuityReconciler.reconcile(state, next);
         state.carryPanels = reconcileCarryPanels(loadCarryPanels());
+        persistCarryPanels();
         renderState();
     }
 
@@ -288,7 +289,10 @@
     function renderPaintCanvases() {
         root.querySelectorAll('[data-paint-surface]').forEach(function (canvas) {
             var context = canvas.getContext ? canvas.getContext('2d') : null;
-            var operations = paintLocalOperations[String(canvas.dataset.objectId || '')] || [];
+            var objectId = String(canvas.dataset.objectId || '');
+            var source = paintSourceDocument(canvas);
+            var persisted = Array.isArray(source.operations) ? source.operations : null;
+            var operations = persisted !== null ? persisted : (paintLocalOperations[objectId] || []);
             if (!context) {
                 return;
             }
@@ -297,6 +301,19 @@
                 drawPaintStroke(context, operation);
             });
         });
+    }
+
+    function paintSourceDocument(canvas) {
+        var source = String(canvas.dataset.paintSource || '');
+        if (source === '') {
+            return {};
+        }
+        try {
+            source = JSON.parse(source);
+        } catch (error) {
+            return {};
+        }
+        return source && typeof source === 'object' && !Array.isArray(source) ? source : {};
     }
 
     function clearPaintCanvas(canvas, context) {

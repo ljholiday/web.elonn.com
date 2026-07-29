@@ -79,7 +79,21 @@ const paintDataset = Object.assign({}, dataset, {
   resources: [{
     id: 'resource:11111111111111111111111111111111',
     type: 'application/vnd.elonn.paint+json',
-    content: {kind: 'paint.source', label: 'Paint source'}
+    content: {
+      kind: 'paint.source',
+      label: 'Paint source',
+      source: {
+        type: 'paint.source',
+        width: 1024,
+        height: 768,
+        operations: [{
+          type: 'stroke',
+          tool: 'pencil',
+          style: {color: '#000000', width: 4},
+          geometry: {points: [{x: 1, y: 2}, {x: 3, y: 4}]}
+        }]
+      }
+    }
   }, {
     id: 'resource:22222222222222222222222222222222',
     type: 'image/png',
@@ -105,6 +119,7 @@ if (paintScene.focus.surface.mode !== 'hosted') throw new Error('hosted Object s
 if (paintScene.focus.surface.service !== 'paint') throw new Error('hosted Object surface service was not projected');
 if (paintScene.focus.content.width !== 1024 || paintScene.focus.content.height !== 768) throw new Error('hosted Object dimensions were not preserved');
 if (paintScene.focus.resources.length !== 2) throw new Error('hosted Object Resources were not projected');
+if (paintScene.focus.resources[0].content.source.operations.length !== 1) throw new Error('Paint source Resource content was not projected');
 paintState.carryPanels = [{id: 'carry-panel:paint.document:test', objectId: 'paint.document:test', x: 10, y: 10, width: 360, height: 240, z: 24, collapsed: false}];
 const paintCarryScene = runtime.SceneModel.fromState(paintState);
 if (paintCarryScene.carryPanels[0].object.surface.kind !== 'editor') throw new Error('hosted Object surface was not available in carry panel');

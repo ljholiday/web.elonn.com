@@ -137,6 +137,7 @@
                     media_type: String(content.media_type || content.mediaType || ''),
                     href: String(content.href || content.url || ''),
                     label: common.text(content.label || content.name || resource.label || resource.id, 'Resource'),
+                    content: content,
                     availability: availability(resource.availability || content.availability)
                 };
             }).filter(hasId);

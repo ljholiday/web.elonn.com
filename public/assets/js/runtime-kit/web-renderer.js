@@ -272,6 +272,7 @@
                 canvas.className = 'paint-surface';
                 canvas.dataset.paintSurface = 'true';
                 canvas.dataset.objectId = object.id || '';
+                canvas.dataset.paintSource = paintSource(object);
                 canvas.width = width > 0 ? Math.round(width) : 1024;
                 canvas.height = height > 0 ? Math.round(height) : 768;
                 canvas.setAttribute('aria-label', object.title + ' canvas');
@@ -289,6 +290,21 @@
             }
             frame.appendChild(preview);
             return frame;
+        }
+
+        function paintSource(object) {
+            var resources = Array.isArray(object.resources) ? object.resources : [];
+            var source = null;
+            resources.some(function (resource) {
+                var content = resource && typeof resource.content === 'object' ? resource.content : {};
+                if (String(content.kind || resource.kind || '') === 'paint.source' && content.source && typeof content.source === 'object') {
+                    source = content.source;
+                    return true;
+                }
+                return false;
+            });
+
+            return source ? JSON.stringify(source) : '';
         }
 
         function genericPreview(object) {
