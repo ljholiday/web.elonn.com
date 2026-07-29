@@ -61,6 +61,7 @@ $checks = [
     'Runtime requests only the canonical World Call endpoint' => str_contains($scripts, "postJson('/world/call'")
         && str_contains($scripts, "id: 'call:runtime:web:'")
         && str_contains($scripts, "operation: String(state.operation || 'world.compose')")
+        && str_contains($webRuntime, "loadDataset({operation: 'world.restore'})")
         && str_contains($scripts, "text: String(state.inputText || 'Open my world.')")
         && str_contains($scripts, 'content:')
         && str_contains($scripts, 'context:')

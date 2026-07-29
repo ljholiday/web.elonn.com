@@ -31,7 +31,7 @@
 
     renderer.status('Requesting World Dataset.', 'loading');
     renderer.render(runtime.SceneModel.loading());
-    loadDataset({});
+    loadDataset({operation: 'world.restore'});
 
     if (voiceButton) {
         voiceButton.disabled = !recognition;
