@@ -27,7 +27,26 @@
         var content = object.content || {};
         var width = Number(content.width || 1024);
         var height = Number(content.height || 768);
+        var shell = document.createElement('div');
+        var toolbar = document.createElement('form');
+        var title = document.createElement('input');
+        var saveState = document.createElement('span');
         var canvas = document.createElement('canvas');
+
+        shell.className = 'paint-editor';
+        toolbar.className = 'paint-editor__bar';
+        toolbar.dataset.paintRenameForm = 'true';
+        title.className = 'paint-editor__title';
+        title.type = 'text';
+        title.name = 'title';
+        title.value = String(object.title || 'Untitled Paint');
+        title.maxLength = 120;
+        title.autocomplete = 'off';
+        title.spellcheck = false;
+        title.setAttribute('aria-label', 'Paint document title');
+        saveState.className = 'paint-editor__save-state';
+        saveState.dataset.paintSaveState = 'true';
+        saveState.textContent = 'Saved';
 
         canvas.className = 'paint-surface';
         canvas.dataset.paintSurface = 'true';
@@ -39,11 +58,28 @@
             canvas.style.aspectRatio = String(width) + ' / ' + String(height);
         }
 
-        runtime.Common.replaceChildren(frame, [canvas]);
+        toolbar.appendChild(title);
+        toolbar.appendChild(saveState);
+        shell.appendChild(toolbar);
+        shell.appendChild(canvas);
+        runtime.Common.replaceChildren(frame, [shell]);
         render(canvas, object);
 
+        toolbar.addEventListener('submit', function (event) {
+            event.preventDefault();
+            renameDocument(object, title, saveState, context);
+        });
+        title.addEventListener('blur', function () {
+            renameDocument(object, title, saveState, context);
+        });
+        title.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                title.value = String(object.title || 'Untitled Paint');
+                title.blur();
+            }
+        });
         canvas.addEventListener('pointerdown', function (event) {
-            beginStroke(event, canvas, object, context);
+            beginStroke(event, canvas, object, saveState, context);
         });
         canvas.addEventListener('pointermove', function (event) {
             appendStrokePoint(event);
@@ -78,7 +114,7 @@
         context.restore();
     }
 
-    function beginStroke(event, canvas, object, context) {
+    function beginStroke(event, canvas, object, saveState, context) {
         var drawingContext = canvas.getContext ? canvas.getContext('2d') : null;
         var objectId = String(object.id || '');
         if (objectId === '' || !drawingContext || event.button !== 0) {
@@ -94,7 +130,8 @@
             context: drawingContext,
             points: [point(event, canvas)],
             color: '#000000',
-            width: 4
+            width: 4,
+            saveState: saveState
         };
         canvas.setPointerCapture(event.pointerId);
         event.preventDefault();
@@ -136,7 +173,7 @@
             }
         };
         if (stroke.geometry.points.length >= 2) {
-            persistStroke(activeStroke.objectId, stroke, context);
+            persistStroke(activeStroke.objectId, stroke, activeStroke.saveState, context);
         }
         activeStroke = null;
         event.preventDefault();
@@ -149,8 +186,9 @@
         }
     }
 
-    function persistStroke(objectId, stroke, context) {
+    function persistStroke(objectId, stroke, saveState, context) {
         localOperations[objectId] = (localOperations[objectId] || []).concat([stroke]);
+        setSaveState(saveState, 'Saving');
         context.status('Saving Paint stroke.', 'loading');
         context.dispatchSurfaceCommand({
             service: 'paint',
@@ -159,6 +197,36 @@
             object_id: objectId,
             payload: {
                 stroke: stroke
+            }
+        });
+    }
+
+    function renameDocument(object, title, saveState, context) {
+        var objectId = String(object.id || '');
+        var nextTitle = String(title.value || '').trim();
+        var currentTitle = String(object.title || 'Untitled Paint').trim();
+        if (objectId === '') {
+            return;
+        }
+        if (nextTitle === '') {
+            title.value = currentTitle;
+            setSaveState(saveState, 'Saved');
+            return;
+        }
+        if (nextTitle === currentTitle) {
+            setSaveState(saveState, 'Saved');
+            return;
+        }
+
+        setSaveState(saveState, 'Saving');
+        context.status('Saving Paint title.', 'loading');
+        context.dispatchSurfaceCommand({
+            service: 'paint',
+            kind: 'editor',
+            operation: 'paint.rename',
+            object_id: objectId,
+            payload: {
+                title: nextTitle
             }
         });
     }
@@ -219,11 +287,29 @@
                 || (message.indexOf('Paint endpoint returned HTTP 404.') !== -1 && message.indexOf('Paint document was not found.') !== -1);
         });
         if (!stale || objectId === '') {
+            if (errors.length === 0 && objectId !== '' && String(command.operation || '') === 'paint.draw') {
+                delete localOperations[objectId];
+                context.status('Paint stroke saved.', 'ready');
+            }
+            if (errors.length === 0 && objectId !== '' && String(command.operation || '') === 'paint.rename') {
+                context.status('Paint title saved.', 'ready');
+            }
+            if (errors.length > 0 && objectId !== '') {
+                context.status(String(errors[0].message || 'Paint save failed.'), 'error');
+            }
             return;
         }
 
         delete localOperations[objectId];
         context.removeObjectSurface(objectId);
+    }
+
+    function setSaveState(node, text) {
+        if (!node) {
+            return;
+        }
+        node.textContent = text;
+        node.dataset.state = text.toLowerCase();
     }
 
     function clamp(value, min, max) {

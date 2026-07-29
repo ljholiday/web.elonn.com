@@ -471,6 +471,46 @@ input {
     background-size: 16px 16px;
 }
 
+.paint-editor {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px;
+    min-height: 100%;
+}
+
+.paint-editor__bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.paint-editor__title {
+    min-width: 0;
+    width: 100%;
+    border: 1px solid rgba(184, 255, 243, 0.22);
+    border-radius: 4px;
+    background: rgba(6, 12, 13, 0.82);
+    color: #eefaf8;
+    padding: 7px 8px;
+    font-size: 0.86rem;
+}
+
+.paint-editor__title:focus {
+    border-color: rgba(184, 255, 243, 0.76);
+    outline: none;
+}
+
+.paint-editor__save-state {
+    color: #b8fff3;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+}
+
+.paint-editor__save-state[data-state="saving"] {
+    color: #ffe7a8;
+}
+
 .paint-surface {
     display: block;
     width: 100%;
