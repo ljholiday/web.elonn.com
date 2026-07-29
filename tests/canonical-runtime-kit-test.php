@@ -97,7 +97,11 @@ const paintDataset = Object.assign({}, dataset, {
   }, {
     id: 'resource:22222222222222222222222222222222',
     type: 'image/png',
-    content: {kind: 'paint.preview', label: 'Paint preview'}
+    content: {
+      kind: 'paint.preview',
+      label: 'Paint preview',
+      data_url: 'data:image/png;base64,iVBORw0KGgo='
+    }
   }],
   placements: [{id: 'placement:paint:workspace', type: 'workspace', content: {object: 'paint.document:test'}}]
 });
@@ -120,6 +124,7 @@ if (paintScene.focus.surface.service !== 'paint') throw new Error('hosted Object
 if (paintScene.focus.content.width !== 1024 || paintScene.focus.content.height !== 768) throw new Error('hosted Object dimensions were not preserved');
 if (paintScene.focus.resources.length !== 2) throw new Error('hosted Object Resources were not projected');
 if (paintScene.focus.resources[0].content.source.operations.length !== 1) throw new Error('Paint source Resource content was not projected');
+if (paintScene.focus.resources[1].content.data_url.indexOf('data:image/png;base64,') !== 0) throw new Error('Paint preview Resource data URL was not projected');
 paintState.carryPanels = [{id: 'carry-panel:paint.document:test', objectId: 'paint.document:test', x: 10, y: 10, width: 360, height: 240, z: 24, collapsed: false}];
 const paintCarryScene = runtime.SceneModel.fromState(paintState);
 if (paintCarryScene.carryPanels[0].object.surface.kind !== 'editor') throw new Error('hosted Object surface was not available in carry panel');

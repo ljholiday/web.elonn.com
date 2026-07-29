@@ -194,6 +194,11 @@ $checks = [
         && str_contains($scripts, 'content.width')
         && str_contains(read_file($root . '/public/assets/css/runtime.css'), 'hosted-object-surface__preview')
         && !str_contains($scripts, "object.type === 'paint.document'"),
+    'Runtime renders Resource image previews generically' => str_contains($webRenderer, 'imagePreview(object)')
+        && str_contains($webRenderer, 'data:image/')
+        && str_contains($webRenderer, 'object-preview')
+        && str_contains(read_file($root . '/public/assets/css/runtime.css'), '.object-preview')
+        && !str_contains($webRenderer, 'paint.preview'),
     'Runtime projects Carry Workspace and Field as environment anchors' => str_contains($template, 'data-field-projection')
         && str_contains($template, 'query-composer')
         && str_contains($template, 'data-runtime-carry-panels')

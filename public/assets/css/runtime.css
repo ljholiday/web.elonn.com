@@ -604,6 +604,23 @@ figure {
     font-size: 0.78rem;
 }
 
+.object-preview {
+    display: block;
+    width: 100%;
+    max-height: 120px;
+    object-fit: contain;
+    border: 1px solid rgba(184, 255, 243, 0.18);
+    border-radius: 4px;
+    background:
+        linear-gradient(45deg, rgba(238, 250, 248, 0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(238, 250, 248, 0.08) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(238, 250, 248, 0.08) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(238, 250, 248, 0.08) 75%);
+    background-color: rgba(255, 255, 255, 0.94);
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    background-size: 12px 12px;
+}
+
 .object-badge {
     border: 1px solid rgba(255, 184, 184, 0.4);
     color: #ffc8c8;

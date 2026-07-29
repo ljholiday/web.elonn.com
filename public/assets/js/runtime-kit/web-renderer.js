@@ -119,6 +119,7 @@
             var type = document.createElement('span');
             var title = document.createElement('strong');
             var summary = document.createElement('span');
+            var preview = imagePreview(object);
             button.type = 'button';
             button.className = 'world-object world-object--' + common.text(mode, 'panel');
             button.dataset.objectId = object.id;
@@ -133,6 +134,9 @@
             if (mode !== 'compact') {
                 button.appendChild(type);
             }
+            if (preview && mode !== 'compact') {
+                button.appendChild(preview);
+            }
             button.appendChild(title);
             if (object.summary !== '' && mode !== 'compact') {
                 button.appendChild(summary);
@@ -141,6 +145,26 @@
                 button.appendChild(badge(object.availability.state));
             }
             return button;
+        }
+
+        function imagePreview(object) {
+            var resources = Array.isArray(object.resources) ? object.resources : [];
+            var image = null;
+            resources.some(function (resource) {
+                var content = resource && typeof resource.content === 'object' ? resource.content : {};
+                var dataUrl = String(content.data_url || '');
+                if (dataUrl.indexOf('data:image/') === 0) {
+                    image = document.createElement('img');
+                    image.className = 'object-preview';
+                    image.src = dataUrl;
+                    image.alt = '';
+                    image.loading = 'lazy';
+                    return true;
+                }
+                return false;
+            });
+
+            return image;
         }
 
         function fieldMarker(object, index) {
