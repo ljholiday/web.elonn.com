@@ -134,6 +134,13 @@ if (carryScene.carryPanels[0].object.id !== 'object:one') throw new Error('carry
 if (carryScene.carryPanels[0].collapsed !== true) throw new Error('carry panel collapsed state was not projected');
 if (carryScene.carryPanels[0].x !== 42 || carryScene.carryPanels[0].y !== 84) throw new Error('carry panel position was not projected');
 if (carryScene.carryPanels[0].width !== 280 || carryScene.carryPanels[0].height !== 160) throw new Error('carry panel size was not projected');
+state.carryPanels = [{
+  id: 'carry-panel:paint.document:stale',
+  objectId: 'paint.document:stale',
+  object: {id: 'paint.document:stale', type: 'paint.document', title: 'Stale Paint'}
+}];
+const staleCarryScene = runtime.SceneModel.fromState(state);
+if (staleCarryScene.carryPanels.length !== 0) throw new Error('stale local carry panel snapshot was rendered without a Dataset Object');
 
 const workspaceDataset = Object.assign({}, dataset, {
   id: 'dataset:world:workspace',

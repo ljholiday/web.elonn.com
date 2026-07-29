@@ -431,7 +431,7 @@
     function reconcileCarryPanels(panels) {
         var rootBounds = root.getBoundingClientRect();
         return panels.map(function (panel) {
-            var object = state.indexes.objects[String(panel.objectId || '')] || panel.object || null;
+            var object = state.indexes.objects[String(panel.objectId || '')] || null;
             var width = 320;
             var height = 180;
             var x = 72;

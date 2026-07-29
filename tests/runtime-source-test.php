@@ -175,6 +175,13 @@ $checks = [
         && str_contains($scripts, 'carry-object-panel__content')
         && str_contains($scripts, 'data-carry-panel-close')
         && str_contains($scripts, 'closeCarryPanel'),
+    'Runtime does not revive stale local carry panel Object snapshots' => str_contains($webRuntime, 'state.indexes.objects[String(panel.objectId || \'\')] || null')
+        && str_contains($webRuntime, 'reconcileCarryPanels(loadCarryPanels())')
+        && str_contains($webRuntime, 'object: carrySnapshot(object)')
+        && str_contains($webRenderer, 'carryPanelNodes')
+        && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'stale local carry panel snapshot')
+        && !str_contains($webRuntime, '|| panel.object || null')
+        && !str_contains(read_file($root . '/public/assets/js/runtime-kit/scene-model.js'), '|| panel.object || null'),
     'Runtime translates canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
         && str_contains($scripts, "['carry', 'workspace', 'field']")
         && str_contains($scripts, 'objectIds')
