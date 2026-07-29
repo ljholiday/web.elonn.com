@@ -255,56 +255,24 @@
             var surface = object.surface || {};
             var content = object.content || {};
             var frame = document.createElement('section');
-            var preview = null;
-            var canvas = null;
+            var preview = document.createElement('div');
             var width = Number(content.width || 0);
             var height = Number(content.height || 0);
             frame.className = 'hosted-object-surface';
+            frame.dataset.hostedSurface = 'true';
             frame.dataset.surfaceMode = surface.mode || '';
             frame.dataset.surfaceService = surface.service || '';
             frame.dataset.surfaceKind = surface.kind || '';
             frame.dataset.objectId = object.id || '';
             frame.dataset.sourceResource = String((surface.resources && surface.resources.source) || content.source_resource || '');
             frame.dataset.previewResource = String((surface.resources && surface.resources.preview) || content.preview_resource || '');
-
-            if (surface.service === 'paint' && surface.kind === 'editor') {
-                canvas = document.createElement('canvas');
-                canvas.className = 'paint-surface';
-                canvas.dataset.paintSurface = 'true';
-                canvas.dataset.objectId = object.id || '';
-                canvas.dataset.paintSource = paintSource(object);
-                canvas.width = width > 0 ? Math.round(width) : 1024;
-                canvas.height = height > 0 ? Math.round(height) : 768;
-                canvas.setAttribute('aria-label', object.title + ' canvas');
-                if (width > 0 && height > 0) {
-                    canvas.style.aspectRatio = String(width) + ' / ' + String(height);
-                }
-                frame.appendChild(canvas);
-                return frame;
-            }
-
-            preview = document.createElement('div');
+            frame.dataset.hostedObject = JSON.stringify(object);
             preview.className = 'hosted-object-surface__preview';
             if (width > 0 && height > 0) {
                 preview.style.aspectRatio = String(width) + ' / ' + String(height);
             }
             frame.appendChild(preview);
             return frame;
-        }
-
-        function paintSource(object) {
-            var resources = Array.isArray(object.resources) ? object.resources : [];
-            var source = null;
-            resources.some(function (resource) {
-                var content = resource && typeof resource.content === 'object' ? resource.content : {};
-                if (String(content.kind || resource.kind || '') === 'paint.source' && content.source && typeof content.source === 'object') {
-                    source = content.source;
-                    return true;
-                }
-                return false;
-            });
-
-            return source ? JSON.stringify(source) : '';
         }
 
         function genericPreview(object) {

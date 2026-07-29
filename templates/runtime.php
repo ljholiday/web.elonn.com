@@ -21,6 +21,8 @@ $scripts = [
     'state-indexer.js',
     'continuity-reconciler.js',
     'scene-model.js',
+    'adapter-registry.js',
+    'adapters/paint-editor.js',
     'web-renderer.js',
     'web-runtime.js',
 ];

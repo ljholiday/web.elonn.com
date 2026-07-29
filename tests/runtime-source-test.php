@@ -13,6 +13,10 @@ $scripts = '';
 foreach (runtime_scripts($template) as $script) {
     $scripts .= "\n/* " . $script . " */\n" . read_file($root . '/public/assets/js/runtime-kit/' . $script);
 }
+$webRuntime = read_file($root . '/public/assets/js/runtime-kit/web-runtime.js');
+$webRenderer = read_file($root . '/public/assets/js/runtime-kit/web-renderer.js');
+$adapterRegistry = read_file($root . '/public/assets/js/runtime-kit/adapter-registry.js');
+$paintAdapter = read_file($root . '/public/assets/js/runtime-kit/adapters/paint-editor.js');
 $oldWorkspaceTerms = [
     'Find' . 'ings Layer',
     'find' . 'ing-overlay',
@@ -100,16 +104,24 @@ $checks = [
         && !str_contains($scripts, 'find.elonn')
         && !str_contains($scripts, 'time.elonn')
         && !str_contains($scripts, 'maps.elonn'),
-    'Runtime sends hosted Paint strokes as surface commands through World' => str_contains($scripts, 'data-paint-surface')
-        && str_contains($scripts, 'surfaceCommand')
-        && str_contains($scripts, "operation: 'paint.draw'")
-        && str_contains($scripts, "service: 'paint'")
-        && str_contains($scripts, "postJson('/world/call'"),
-    'Runtime removes stale Paint panels after not_found responses' => str_contains($scripts, 'handleStalePaintDocument')
-        && str_contains($scripts, 'mind.paint_document_not_found')
-        && str_contains($scripts, 'Paint endpoint returned HTTP 404.')
-        && str_contains($scripts, 'delete paintLocalOperations[objectId]')
-        && str_contains($scripts, 'persistCarryPanels();'),
+    'Runtime publishes a hosted surface adapter registry' => str_contains($template, 'adapter-registry.js')
+        && str_contains($adapterRegistry, 'AdapterRegistry')
+        && str_contains($adapterRegistry, 'register')
+        && str_contains($adapterRegistry, 'mountAll')
+        && str_contains($adapterRegistry, 'handleResponse')
+        && str_contains($webRuntime, 'dispatchSurfaceCommand')
+        && str_contains($webRuntime, 'removeObjectSurface')
+        && str_contains($webRenderer, 'dataset.hostedSurface'),
+    'Paint interaction lives in a runtime adapter instead of Web core' => str_contains($template, 'adapters/paint-editor.js')
+        && str_contains($paintAdapter, "register('paint', 'editor'")
+        && str_contains($paintAdapter, "operation: 'paint.draw'")
+        && str_contains($paintAdapter, 'dataset.paintSurface')
+        && str_contains($paintAdapter, 'mind.paint_document_not_found')
+        && !str_contains($webRuntime, 'paint.draw')
+        && !str_contains($webRuntime, 'Paint endpoint returned HTTP 404.')
+        && !str_contains($webRuntime, 'paintLocalOperations')
+        && !str_contains($webRenderer, 'paint.source')
+        && !str_contains($webRenderer, 'paint-surface'),
     'Shared runtime kit has the required ABI boundaries' => str_contains($scripts, 'WorldClient')
         && str_contains($scripts, 'DatasetParser')
         && str_contains($scripts, 'StateIndexer')

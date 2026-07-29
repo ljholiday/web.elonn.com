@@ -16,8 +16,6 @@
     var carryStorageKey = 'elonn.web.carry.panels.v1';
     var drag = null;
     var resize = null;
-    var paintStroke = null;
-    var paintLocalOperations = {};
     var lastCarryTitleTap = null;
 
     if (!root || !runtime) {
@@ -98,14 +96,6 @@
     });
 
     root.addEventListener('pointerdown', function (event) {
-        var canvas = event.target.closest('[data-paint-surface]');
-        if (canvas && state && event.button === 0) {
-            beginPaintStroke(event, canvas);
-            return;
-        }
-    });
-
-    root.addEventListener('pointerdown', function (event) {
         var handle = event.target.closest('[data-carry-panel-resize]');
         var panel = handle ? handle.closest('[data-carry-panel-id]') : null;
         var panelState = null;
@@ -179,10 +169,6 @@
             return;
         }
         if (!drag || drag.pointerId !== event.pointerId || !state) {
-            if (paintStroke && paintStroke.pointerId === event.pointerId) {
-                appendPaintPoint(event);
-                event.preventDefault();
-            }
             return;
         }
         panelState = carryPanel(drag.id);
@@ -204,13 +190,11 @@
 
     window.addEventListener('pointerup', endDrag);
     window.addEventListener('pointercancel', endDrag);
-    window.addEventListener('pointerup', endPaintStroke);
-    window.addEventListener('pointercancel', cancelPaintStroke);
 
     function loadDataset(runtimeState) {
         client.loadDataset(runtimeState).then(function (payload) {
             replaceDataset(payload);
-            handleStalePaintDocument(payload, runtimeState);
+            runtime.AdapterRegistry.handleResponse(payload, runtimeState, adapterContext());
             renderer.status(datasetStatus(payload), datasetStatusState(payload));
         }).catch(function (error) {
             var message = error && error.message ? error.message : 'World Dataset unavailable.';
@@ -282,205 +266,46 @@
         renderState();
     }
 
-    function handleStalePaintDocument(payload, runtimeState) {
-        var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
-        var surfaceCommand = runtimeState && runtimeState.surfaceCommand && typeof runtimeState.surfaceCommand === 'object' ? runtimeState.surfaceCommand : null;
-        var objectId = surfaceCommand ? String(surfaceCommand.object_id || '') : '';
-        var stale = errors.some(function (error) {
-            var code = String(error && error.code || '');
-            var message = String(error && error.message || '');
-            return code === 'mind.paint_document_not_found'
-                || code === 'paint.document_not_found'
-                || (message.indexOf('Paint endpoint returned HTTP 404.') !== -1 && message.indexOf('Paint document was not found.') !== -1);
+    function renderState() {
+        renderer.render(runtime.SceneModel.fromState(state));
+        runtime.AdapterRegistry.mountAll(root, adapterContext());
+    }
+
+    function adapterContext() {
+        return {
+            status: renderer.status,
+            dispatchSurfaceCommand: dispatchSurfaceCommand,
+            removeObjectSurface: removeObjectSurface,
+            selectObject: function (objectId) {
+                selectObject(objectId);
+            }
+        };
+    }
+
+    function dispatchSurfaceCommand(command) {
+        var objectId = String(command && command.object_id || '');
+        loadDataset({
+            runtimeSessionId: state ? state.runtimeSessionId : '',
+            selectedObjectId: objectId,
+            selectedCollectionId: state ? state.selectedCollectionId : '',
+            inputText: String(command && command.input_text || 'surface command'),
+            surfaceCommand: command
         });
-        if (!stale || objectId === '' || !state) {
+    }
+
+    function removeObjectSurface(objectId) {
+        objectId = String(objectId || '');
+        if (objectId === '' || !state) {
             return;
         }
-
         state.carryPanels = (state.carryPanels || []).filter(function (panel) {
             return String(panel.objectId || '') !== objectId;
         });
-        delete paintLocalOperations[objectId];
         if (state.selectedObjectId === objectId) {
             state.selectedObjectId = '';
         }
         persistCarryPanels();
         renderState();
-    }
-
-    function renderState() {
-        renderer.render(runtime.SceneModel.fromState(state));
-        renderPaintCanvases();
-    }
-
-    function renderPaintCanvases() {
-        root.querySelectorAll('[data-paint-surface]').forEach(function (canvas) {
-            var context = canvas.getContext ? canvas.getContext('2d') : null;
-            var objectId = String(canvas.dataset.objectId || '');
-            var source = paintSourceDocument(canvas);
-            var persisted = Array.isArray(source.operations) ? source.operations : null;
-            var operations = persisted !== null ? persisted : (paintLocalOperations[objectId] || []);
-            if (!context) {
-                return;
-            }
-            clearPaintCanvas(canvas, context);
-            operations.forEach(function (operation) {
-                drawPaintStroke(context, operation);
-            });
-        });
-    }
-
-    function paintSourceDocument(canvas) {
-        var source = String(canvas.dataset.paintSource || '');
-        if (source === '') {
-            return {};
-        }
-        try {
-            source = JSON.parse(source);
-        } catch (error) {
-            return {};
-        }
-        return source && typeof source === 'object' && !Array.isArray(source) ? source : {};
-    }
-
-    function clearPaintCanvas(canvas, context) {
-        context.save();
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.fillStyle = 'rgba(255, 255, 255, 0)';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        context.restore();
-    }
-
-    function beginPaintStroke(event, canvas) {
-        var objectId = String(canvas.dataset.objectId || '');
-        var context = canvas.getContext ? canvas.getContext('2d') : null;
-        if (objectId === '' || !context) {
-            return;
-        }
-        selectObject(objectId);
-        paintStroke = {
-            pointerId: event.pointerId,
-            objectId: objectId,
-            canvas: canvas,
-            context: context,
-            points: [paintPoint(event, canvas)],
-            color: '#000000',
-            width: 4
-        };
-        canvas.setPointerCapture(event.pointerId);
-        event.preventDefault();
-    }
-
-    function appendPaintPoint(event) {
-        var point = null;
-        if (!paintStroke) {
-            return;
-        }
-        point = paintPoint(event, paintStroke.canvas);
-        paintStroke.points.push(point);
-        drawPaintStroke(paintStroke.context, {
-            style: {
-                color: paintStroke.color,
-                width: paintStroke.width
-            },
-            geometry: {
-                points: paintStroke.points.slice(-2)
-            }
-        });
-    }
-
-    function endPaintStroke(event) {
-        var stroke = null;
-        if (!paintStroke || paintStroke.pointerId !== event.pointerId) {
-            return;
-        }
-        appendPaintPoint(event);
-        stroke = {
-            tool: 'pencil',
-            style: {
-                color: paintStroke.color,
-                width: paintStroke.width
-            },
-            geometry: {
-                points: simplifyPaintPoints(paintStroke.points)
-            }
-        };
-        if (stroke.geometry.points.length >= 2) {
-            persistPaintStroke(paintStroke.objectId, stroke);
-        }
-        paintStroke = null;
-        event.preventDefault();
-    }
-
-    function cancelPaintStroke(event) {
-        if (paintStroke && paintStroke.pointerId === event.pointerId) {
-            paintStroke = null;
-            renderPaintCanvases();
-        }
-    }
-
-    function persistPaintStroke(objectId, stroke) {
-        paintLocalOperations[objectId] = (paintLocalOperations[objectId] || []).concat([stroke]);
-        renderer.status('Saving Paint stroke.', 'loading');
-        loadDataset({
-            runtimeSessionId: state ? state.runtimeSessionId : '',
-            selectedObjectId: objectId,
-            selectedCollectionId: state ? state.selectedCollectionId : '',
-            inputText: 'draw stroke',
-            surfaceCommand: {
-                service: 'paint',
-                operation: 'paint.draw',
-                object_id: objectId,
-                payload: {
-                    stroke: stroke
-                }
-            }
-        });
-    }
-
-    function paintPoint(event, canvas) {
-        var rect = canvas.getBoundingClientRect();
-        var x = rect.width > 0 ? ((event.clientX - rect.left) / rect.width) * canvas.width : 0;
-        var y = rect.height > 0 ? ((event.clientY - rect.top) / rect.height) * canvas.height : 0;
-        return {
-            x: clamp(x, 0, canvas.width),
-            y: clamp(y, 0, canvas.height)
-        };
-    }
-
-    function simplifyPaintPoints(points) {
-        var output = [];
-        points.forEach(function (point) {
-            var previous = output[output.length - 1] || null;
-            if (!previous || Math.abs(previous.x - point.x) >= 0.5 || Math.abs(previous.y - point.y) >= 0.5) {
-                output.push({
-                    x: Math.round(point.x * 100) / 100,
-                    y: Math.round(point.y * 100) / 100
-                });
-            }
-        });
-        return output;
-    }
-
-    function drawPaintStroke(context, stroke) {
-        var style = stroke.style || {};
-        var geometry = stroke.geometry || {};
-        var points = Array.isArray(geometry.points) ? geometry.points : [];
-        if (points.length < 2) {
-            return;
-        }
-        context.save();
-        context.strokeStyle = String(style.color || '#000000');
-        context.lineWidth = Number(style.width || 4);
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        context.beginPath();
-        context.moveTo(Number(points[0].x || 0), Number(points[0].y || 0));
-        points.slice(1).forEach(function (point) {
-            context.lineTo(Number(point.x || 0), Number(point.y || 0));
-        });
-        context.stroke();
-        context.restore();
     }
 
     function selectCollection(collectionId) {
