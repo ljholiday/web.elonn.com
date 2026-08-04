@@ -15,6 +15,7 @@ foreach (runtime_scripts($template) as $script) {
 }
 $webRuntime = read_file($root . '/public/assets/js/runtime-kit/web-runtime.js');
 $webRenderer = read_file($root . '/public/assets/js/runtime-kit/web-renderer.js');
+$runtimeCss = read_file($root . '/public/assets/css/runtime.css');
 $adapterRegistry = read_file($root . '/public/assets/js/runtime-kit/adapter-registry.js');
 $paintAdapter = read_file($root . '/public/assets/js/runtime-kit/adapters/paint-editor.js');
 $oldWorkspaceTerms = [
@@ -184,6 +185,10 @@ $checks = [
         && str_contains($scripts, "linkLine('Action'")
         && str_contains($scripts, "href !== '' ? 'enabled' : 'unavailable'")
         && !str_contains($scripts, 'dispatchWorldAction'),
+    'Runtime shows source links on result entries' => str_contains($scripts, 'cardLinks')
+        && str_contains($scripts, 'world-object-link')
+        && str_contains($runtimeCss, '.world-object-link')
+        && str_contains($scripts, "wrapper.appendChild(button)"),
     'Carry panels are runtime-local floating objects controlled by title text' => str_contains($template, 'data-runtime-carry-panels')
         && str_contains($scripts, 'carryStorageKey')
         && str_contains($scripts, 'localStorage')

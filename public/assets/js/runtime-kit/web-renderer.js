@@ -126,11 +126,13 @@
         }
 
         function objectButton(object, mode) {
+            var wrapper = document.createElement('div');
             var button = document.createElement('button');
             var type = document.createElement('span');
             var title = document.createElement('strong');
             var summary = document.createElement('span');
             var preview = imagePreview(object);
+            wrapper.className = 'world-object-entry';
             button.type = 'button';
             button.className = 'world-object world-object--' + common.text(mode, 'panel');
             button.dataset.objectId = object.id;
@@ -155,7 +157,43 @@
             if (object.availability.state !== 'enabled') {
                 button.appendChild(badge(object.availability.state));
             }
-            return button;
+            wrapper.appendChild(button);
+            if (mode !== 'compact') {
+                cardLinks(object).forEach(function (link) {
+                    wrapper.appendChild(link);
+                });
+            }
+            return wrapper;
+        }
+
+        function cardLinks(object) {
+            var links = [];
+            firstHref(object.resources, 'Source', links);
+            firstHref(object.actions, 'Action', links);
+            return links;
+        }
+
+        function firstHref(items, label, output) {
+            (Array.isArray(items) ? items : []).some(function (item) {
+                var href = common.text(item && item.href, '');
+                if (href === '') {
+                    return false;
+                }
+                output.push(cardLink(label, common.text(item.label, href), href));
+                return true;
+            });
+        }
+
+        function cardLink(label, text, href) {
+            var link = document.createElement('a');
+            link.className = 'world-object-link';
+            link.href = href;
+            link.rel = 'noopener noreferrer';
+            if (/^https?:\/\//.test(href)) {
+                link.target = '_blank';
+            }
+            link.textContent = label + ': ' + text;
+            return link;
         }
 
         function imagePreview(object) {

@@ -630,6 +630,11 @@ figure {
     gap: 8px;
 }
 
+.world-object-entry {
+    display: grid;
+    gap: 4px;
+}
+
 .world-object {
     width: 100%;
     min-height: 72px;
@@ -664,6 +669,19 @@ figure {
 .object-summary {
     color: #d0ddd5;
     font-size: 0.78rem;
+}
+
+.world-object-link {
+    width: fit-content;
+    color: #b8fff3;
+    font-size: 0.76rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.world-object-link:hover,
+.world-object-link:focus {
+    color: #eefaf8;
 }
 
 .object-preview {
