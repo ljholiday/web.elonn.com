@@ -169,6 +169,8 @@ $checks = [
     'Collections and resources are first-class scene inputs' => str_contains($scripts, 'state.indexes.collections[collectionId]')
         && str_contains($scripts, 'resourcesForObject')
         && str_contains($scripts, 'resourceIds'),
+    'Runtime renders empty collection notices where results appear' => str_contains($scripts, 'emptyCollectionNotice')
+        && str_contains($scripts, "collection.summary || 'No results.'"),
     'Returned actions remain latent scene affordances instead of rendered controls' => str_contains($scripts, 'Action execution is not available yet.')
         && str_contains($scripts, "state: 'unavailable'")
         && !str_contains($template, 'data-runtime-actions')

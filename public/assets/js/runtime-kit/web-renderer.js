@@ -106,12 +106,23 @@
                 header.appendChild(summary);
             }
             list.className = 'world-object-list';
-            collection.objects.forEach(function (object) {
-                list.appendChild(objectButton(object, mode));
-            });
+            if (collection.objects.length === 0) {
+                list.appendChild(emptyCollectionNotice(collection));
+            } else {
+                collection.objects.forEach(function (object) {
+                    list.appendChild(objectButton(object, mode));
+                });
+            }
             section.appendChild(header);
             section.appendChild(list);
             return section;
+        }
+
+        function emptyCollectionNotice(collection) {
+            var notice = document.createElement('p');
+            notice.className = 'empty';
+            notice.textContent = collection.summary || 'No results.';
+            return notice;
         }
 
         function objectButton(object, mode) {
