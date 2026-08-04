@@ -16,11 +16,10 @@ if (
     (($_SERVER['HTTPS'] ?? '') !== 'on')
     && (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') !== 'https')
 ) {
-    $host = $_SERVER['HTTP_HOST'] ?? '';
-    if (is_string($host) && $host !== '') {
-        $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $target = web_runtime_https_redirect_target($config['app']['url']);
+    if ($target !== null) {
         http_response_code(308);
-        header('Location: https://' . $host . (is_string($uri) ? $uri : '/'));
+        header('Location: ' . $target);
         exit;
     }
 }
@@ -337,6 +336,21 @@ function web_runtime_is_https(): bool
 {
     return ($_SERVER['HTTPS'] ?? '') === 'on'
         || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+}
+
+function web_runtime_https_redirect_target(string $canonicalUrl): ?string
+{
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $path = is_string($uri) && str_starts_with($uri, '/') ? $uri : '/';
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    $host = is_string($host) ? strtolower(explode(':', $host, 2)[0]) : '';
+
+    if (in_array($host, ['web.elonn.local', 'web.elonn.com'], true)) {
+        return 'https://' . $host . $path;
+    }
+
+    $canonical = rtrim($canonicalUrl, '/');
+    return $canonical === '' ? null : $canonical . $path;
 }
 
 function web_runtime_redirect(string $path): void

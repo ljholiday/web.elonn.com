@@ -36,6 +36,9 @@ $checks = [
         && str_contains($loginTemplate, 'action="/login"'),
     'Public routes do not expose legacy compatibility pages' => !str_contains($index, 'templates/runtime-dataset.php')
         && !str_contains($index, 'data-runtime-shell'),
+    'HTTPS redirects are canonical-host bounded' => str_contains($index, 'web_runtime_https_redirect_target')
+        && str_contains($index, "'web.elonn.local', 'web.elonn.com'")
+        && !str_contains($index, "header('Location: https://' . \$host"),
 ];
 
 $failed = 0;
