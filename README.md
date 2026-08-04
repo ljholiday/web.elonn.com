@@ -19,6 +19,10 @@ Web uses API only for runtime-owned authentication and World for runtime data.
 Web does not call Social, Find, Maps, Messages, Time, provider endpoints, or
 service loaders.
 
+The next composition target is for Time, Messages, and Social to appear in Web
+as World-published canonical content. Web should render that content generically
+from the World Dataset instead of adding direct Service integrations.
+
 ## Authentication
 
 `web.elonn.local` is independently launchable. When the browser runtime starts,
