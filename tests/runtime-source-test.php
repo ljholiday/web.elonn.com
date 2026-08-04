@@ -166,6 +166,9 @@ $checks = [
         && str_contains($scripts, "error.class === 'dependency'")
         && str_contains($scripts, "return 'ready';")
         && str_contains($scripts, "return 'error';"),
+    'Runtime does not repeat provider diagnostics in the status line' => str_contains($scripts, 'Some results could not be loaded.')
+        && str_contains($scripts, 'World Dataset returned errors.')
+        && !str_contains($scripts, "return String(errors[0].message || 'World Dataset returned errors.');"),
     'Collections and resources are first-class scene inputs' => str_contains($scripts, 'state.indexes.collections[collectionId]')
         && str_contains($scripts, 'resourcesForObject')
         && str_contains($scripts, 'resourceIds'),

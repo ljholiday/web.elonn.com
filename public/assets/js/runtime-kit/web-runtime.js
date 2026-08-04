@@ -571,7 +571,12 @@
     function datasetStatus(payload) {
         var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
         if (errors.length > 0) {
-            return String(errors[0].message || 'World Dataset returned errors.');
+            if (errors.every(function (error) {
+                return error && error.class === 'dependency';
+            })) {
+                return 'Some results could not be loaded.';
+            }
+            return 'World Dataset returned errors.';
         }
         return 'World Dataset loaded.';
     }
