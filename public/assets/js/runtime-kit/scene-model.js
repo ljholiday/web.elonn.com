@@ -112,7 +112,8 @@
                 canShare: permissions.can_share === true,
                 reason: common.text(permissions.reason, '')
             },
-            resources: resourcesForObject(state, object)
+            resources: resourcesForObject(state, object),
+            actions: actionsForObject(state, object.id)
         };
     }
 
@@ -134,15 +135,17 @@
             return String(action.target_id || '') === String(objectId || '');
         }).map(function (action) {
             var sourceAvailability = availability(action.availability);
+            var href = common.text(action.href || (action.source && action.source.href), '');
             return {
                 id: String(action.id || ''),
                 label: common.text(action.label, 'Action'),
                 type: common.text(action.type, 'action'),
                 endpoint: String(action.endpoint || ''),
+                href: href,
                 availability: {
-                    state: 'unavailable',
-                    reason: common.text(sourceAvailability.reason, 'Action execution is not available yet.'),
-                    requiredCapability: common.text(sourceAvailability.requiredCapability, 'action_dispatch')
+                    state: href !== '' ? 'enabled' : 'unavailable',
+                    reason: href !== '' ? '' : common.text(sourceAvailability.reason, 'Action execution is not available yet.'),
+                    requiredCapability: href !== '' ? '' : common.text(sourceAvailability.requiredCapability, 'action_dispatch')
                 },
                 source: action
             };

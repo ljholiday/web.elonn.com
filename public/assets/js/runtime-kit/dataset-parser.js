@@ -68,6 +68,9 @@
                 var content = object.content && typeof object.content === 'object' ? object.content : {};
                 var metadata = object.metadata && typeof object.metadata === 'object' ? object.metadata : {};
                 var properties = object.properties && typeof object.properties === 'object' ? object.properties : {};
+                var permissions = object.permissions && typeof object.permissions === 'object'
+                    ? object.permissions
+                    : (object.domain_permissions && typeof object.domain_permissions === 'object' ? object.domain_permissions : {});
                 return {
                     id: String(object.id || ''),
                     type: String(object.type || 'object'),
@@ -75,7 +78,7 @@
                     summary: common.text(content.description || object.description || object.summary, ''),
                     content: content,
                     visibility: object.visibility && typeof object.visibility === 'object' ? object.visibility : {},
-                    permissions: object.permissions && typeof object.permissions === 'object' ? object.permissions : {},
+                    permissions: permissions,
                     availability: availability(object.availability || content.availability || properties.availability),
                     resourceIds: idsFrom(object.resources || content.resources || []),
                     metadata: Object.assign({}, properties, metadata, content)
@@ -92,6 +95,7 @@
                     type: String(action.type || 'action'),
                     label: common.text(content.label || content.name || action.label || action.name, 'Action'),
                     target_id: String(target || ''),
+                    href: String(content.href || content.url || action.href || ''),
                     availability: availability(action.availability || content.availability),
                     source: action
                 };

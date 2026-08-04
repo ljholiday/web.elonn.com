@@ -174,12 +174,16 @@ $checks = [
         && str_contains($scripts, 'resourceIds'),
     'Runtime renders empty collection notices where results appear' => str_contains($scripts, 'emptyCollectionNotice')
         && str_contains($scripts, "collection.summary || 'No results.'"),
-    'Returned actions remain latent scene affordances instead of rendered controls' => str_contains($scripts, 'Action execution is not available yet.')
-        && str_contains($scripts, "state: 'unavailable'")
+    'Returned remote actions remain unavailable without dispatch controls' => str_contains($scripts, 'Action execution is not available yet.')
+        && str_contains($scripts, "href !== '' ? 'enabled' : 'unavailable'")
         && !str_contains($template, 'data-runtime-actions')
         && !str_contains($scripts, 'world-action')
         && !str_contains($scripts, 'button.disabled = true')
         && !str_contains($scripts, "button.setAttribute('aria-disabled', 'true')"),
+    'Runtime renders safe action links without dispatching remote actions' => str_contains($scripts, 'actionLinks')
+        && str_contains($scripts, "linkLine('Action'")
+        && str_contains($scripts, "href !== '' ? 'enabled' : 'unavailable'")
+        && !str_contains($scripts, 'dispatchWorldAction'),
     'Carry panels are runtime-local floating objects controlled by title text' => str_contains($template, 'data-runtime-carry-panels')
         && str_contains($scripts, 'carryStorageKey')
         && str_contains($scripts, 'localStorage')

@@ -312,9 +312,113 @@
 
         function genericPreview(object) {
             var fragment = document.createDocumentFragment();
+            detailRows(object).forEach(function (row) {
+                fragment.appendChild(metaLine(row.label, row.value));
+            });
+            resourceLinks(object).forEach(function (link) {
+                fragment.appendChild(link);
+            });
+            actionLinks(object).forEach(function (link) {
+                fragment.appendChild(link);
+            });
             fragment.appendChild(metaLine('Visibility', object.visibility || 'default'));
             fragment.appendChild(metaLine('Permissions', permissionsText(object.permissions)));
             return fragment;
+        }
+
+        function detailRows(object) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var rows = [];
+            addRow(rows, 'Source', content.source_domain || domainFromUrl(content.source_url || content.canonical_url));
+            addRow(rows, 'Rank', content.rank);
+            addRow(rows, 'Category', content.category || content.component_type);
+            addRow(rows, 'When', content.starts_at || content.due_at || content.last_message_at || content.published_at);
+            addRow(rows, 'Location', locationText(content));
+            addRow(rows, 'Distance', distanceText(content.distance_meters));
+            addRow(rows, 'Messages', content.message_count);
+            addRow(rows, 'Participants', content.participant_count);
+            if (content.search && typeof content.search === 'object') {
+                addRow(rows, 'Match', content.search.why);
+            }
+            return rows;
+        }
+
+        function addRow(rows, label, value) {
+            var text = '';
+            if (typeof value === 'number' && isFinite(value)) {
+                text = String(value);
+            } else {
+                text = common.text(value, '');
+            }
+            if (text !== '') {
+                rows.push({label: label, value: text});
+            }
+        }
+
+        function locationText(content) {
+            if (typeof content.location === 'string') {
+                return content.location;
+            }
+            if (content.address && typeof content.address === 'object') {
+                return Object.keys(content.address).map(function (key) {
+                    return common.text(content.address[key], '');
+                }).filter(Boolean).join(', ');
+            }
+            if (content.location && typeof content.location === 'object') {
+                var latitude = common.text(content.location.latitude, '');
+                var longitude = common.text(content.location.longitude, '');
+                return latitude !== '' && longitude !== '' ? latitude + ', ' + longitude : '';
+            }
+            return '';
+        }
+
+        function distanceText(value) {
+            var meters = Number(value || 0);
+            if (!isFinite(meters) || meters <= 0) {
+                return '';
+            }
+            return meters >= 1000 ? (meters / 1000).toFixed(1) + ' km' : Math.round(meters) + ' m';
+        }
+
+        function resourceLinks(object) {
+            return (Array.isArray(object.resources) ? object.resources : []).filter(function (resource) {
+                return common.text(resource.href, '') !== '';
+            }).map(function (resource) {
+                return linkLine('Resource', resource.label, resource.href);
+            });
+        }
+
+        function actionLinks(object) {
+            return (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
+                return action.availability && action.availability.state === 'enabled' && common.text(action.href, '') !== '';
+            }).map(function (action) {
+                return linkLine('Action', action.label, action.href);
+            });
+        }
+
+        function linkLine(label, text, href) {
+            var row = document.createElement('p');
+            var strong = document.createElement('strong');
+            var link = document.createElement('a');
+            row.className = 'meta-line';
+            strong.textContent = label;
+            link.textContent = common.text(text, href);
+            link.href = href;
+            link.rel = 'noopener noreferrer';
+            if (/^https?:\/\//.test(href)) {
+                link.target = '_blank';
+            }
+            row.appendChild(strong);
+            row.appendChild(link);
+            return row;
+        }
+
+        function domainFromUrl(value) {
+            try {
+                return value ? (new URL(value, window.location.origin)).hostname : '';
+            } catch (error) {
+                return '';
+            }
         }
 
         function metaLine(label, value) {
