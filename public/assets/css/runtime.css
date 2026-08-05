@@ -752,6 +752,67 @@ figure {
     outline: none;
 }
 
+.object-segment {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 10px;
+}
+
+.object-segment h4,
+.object-segment h5,
+.object-segment p {
+    margin: 0;
+}
+
+.object-segment h4 {
+    color: #eefaf8;
+    font-size: 0.98rem;
+}
+
+.object-segment__parts {
+    display: grid;
+    gap: 8px;
+}
+
+.object-segment__part {
+    display: grid;
+    gap: 5px;
+    border: 1px solid rgba(184, 255, 243, 0.16);
+    border-radius: 7px;
+    background: rgba(8, 18, 20, 0.46);
+    padding: 9px;
+}
+
+.object-segment__part h5 {
+    color: #b8fff3;
+    font-size: 0.78rem;
+}
+
+.object-segment__part p {
+    color: #d0ddd5;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.object-segment__part button {
+    width: fit-content;
+    appearance: none;
+    border: 1px solid rgba(184, 255, 243, 0.18);
+    border-radius: 7px;
+    background: transparent;
+    color: #cfe7e0;
+    cursor: pointer;
+    font-size: 0.72rem;
+    padding: 4px 7px;
+}
+
+.object-segment__part button:hover,
+.object-segment__part button:focus {
+    border-color: rgba(184, 255, 243, 0.52);
+    color: #eefaf8;
+    outline: none;
+}
+
 .website-document {
     display: grid;
     gap: 10px;

@@ -356,8 +356,11 @@
 
         function genericPreview(object) {
             var fragment = document.createDocumentFragment();
-            var website = websiteDocument(object);
-            if (website) {
+            var segment = segmentNode(object);
+            var website = segment ? null : websiteDocument(object);
+            if (segment) {
+                fragment.appendChild(segment);
+            } else if (website) {
                 fragment.appendChild(websiteNode(website, object));
             }
             containedObjectNodes(object).forEach(function (node) {
@@ -381,6 +384,9 @@
 
         function websiteDocument(object) {
             var match = null;
+            if (isDecomposedObject(object)) {
+                return null;
+            }
             (Array.isArray(object.resources) ? object.resources : []).some(function (resource) {
                 var content = resource && typeof resource.content === 'object' ? resource.content : {};
                 if (resource.kind === 'website.document' || content.kind === 'website.document') {
@@ -390,6 +396,71 @@
                 return false;
             });
             return match;
+        }
+
+        function segmentNode(object) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var parts = Array.isArray(content.parts) ? content.parts : [];
+            var section = null;
+            var title = null;
+            var list = null;
+            if (!isDecomposedObject(object) || parts.length === 0) {
+                return null;
+            }
+            section = document.createElement('section');
+            title = document.createElement('h4');
+            list = document.createElement('div');
+            section.className = 'object-segment';
+            title.textContent = object.title;
+            list.className = 'object-segment__parts';
+            parts.forEach(function (part) {
+                var node = segmentPartNode(part, object);
+                if (node) {
+                    list.appendChild(node);
+                }
+            });
+            section.appendChild(title);
+            if (list.childNodes.length > 0) {
+                section.appendChild(list);
+            }
+            return section;
+        }
+
+        function segmentPartNode(part, object) {
+            var kind = common.text(part && part.kind, '');
+            var title = common.text(part && part.title, '');
+            var text = common.text(part && part.text, '');
+            var href = common.text(part && part.href, '');
+            var node = document.createElement('section');
+            var heading = document.createElement('h5');
+            var paragraph = document.createElement('p');
+            var button = null;
+            if (title === '' && text === '' && href === '') {
+                return null;
+            }
+            node.className = 'object-segment__part';
+            heading.textContent = title !== '' ? title : (kind !== '' ? kind : 'Part');
+            node.appendChild(heading);
+            if (text !== '') {
+                paragraph.textContent = text;
+                node.appendChild(paragraph);
+            }
+            if (href !== '') {
+                button = document.createElement('button');
+                button.type = 'button';
+                button.dataset.runtimeUrl = href;
+                button.dataset.runtimeUrlLabel = title !== '' ? title : domainFromUrl(href);
+                button.dataset.runtimeUrlParent = common.text(object && object.id, '');
+                button.textContent = button.dataset.runtimeUrlLabel;
+                button.title = href;
+                node.appendChild(button);
+            }
+            return node;
+        }
+
+        function isDecomposedObject(object) {
+            var content = object && typeof object.content === 'object' ? object.content : {};
+            return common.text(content.parent_resource_object_id, '') !== '';
         }
 
         function containedObjectNodes(object) {
@@ -566,7 +637,10 @@
 
         function resourceLinks(object) {
             return (Array.isArray(object.resources) ? object.resources : []).filter(function (resource) {
-                return common.text(resource.href, '') !== '';
+                return common.text(resource.href, '') !== ''
+                    && resource.kind !== 'website.document'
+                    && (resource.content && resource.content.kind) !== 'website.document'
+                    && !isDecomposedObject(object);
             }).map(function (resource) {
                 return linkLine('Resource', resource.label, resource.href, object.id);
             });

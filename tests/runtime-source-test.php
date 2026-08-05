@@ -178,6 +178,13 @@ $checks = [
         && str_contains($webRenderer, 'object-decomposition')
         && str_contains($runtimeCss, '.object-decomposition')
         && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'segmented resource children were rendered as first-level result cards'),
+    'Runtime renders decomposed object parts instead of parent website documents' => str_contains($webRenderer, 'segmentNode')
+        && str_contains($webRenderer, 'segmentPartNode')
+        && str_contains($webRenderer, 'isDecomposedObject')
+        && str_contains($webRenderer, "var website = segment ? null : websiteDocument(object)")
+        && str_contains($webRenderer, "resource.kind !== 'website.document'")
+        && str_contains($runtimeCss, '.object-segment')
+        && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'segmented resource child parts were not projected'),
     'Runtime renders empty collection notices where results appear' => str_contains($scripts, 'emptyCollectionNotice')
         && str_contains($scripts, "collection.summary || 'No results.'"),
     'Returned remote actions remain unavailable without dispatch controls' => str_contains($scripts, 'Action execution is not available yet.')
