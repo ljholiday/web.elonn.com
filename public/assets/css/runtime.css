@@ -684,6 +684,11 @@ figure {
     color: #eefaf8;
 }
 
+.world-object-link--inert {
+    cursor: default;
+    text-decoration: none;
+}
+
 .object-preview {
     display: block;
     width: 100%;

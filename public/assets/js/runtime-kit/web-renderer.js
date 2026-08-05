@@ -188,12 +188,14 @@
         }
 
         function cardLink(label, text, href) {
-            var link = document.createElement('a');
+            var link = externalHref(href) ? document.createElement('span') : document.createElement('a');
             link.className = 'world-object-link';
-            link.href = href;
-            link.rel = 'noopener noreferrer';
-            if (/^https?:\/\//.test(href)) {
-                link.target = '_blank';
+            if (externalHref(href)) {
+                link.className += ' world-object-link--inert';
+                link.title = href;
+            } else {
+                link.href = href;
+                link.rel = 'noopener noreferrer';
             }
             link.textContent = label + ': ' + text;
             return link;
@@ -536,18 +538,23 @@
         function linkLine(label, text, href) {
             var row = document.createElement('p');
             var strong = document.createElement('strong');
-            var link = document.createElement('a');
+            var link = externalHref(href) ? document.createElement('span') : document.createElement('a');
             row.className = 'meta-line';
             strong.textContent = label;
             link.textContent = common.text(text, href);
-            link.href = href;
-            link.rel = 'noopener noreferrer';
-            if (/^https?:\/\//.test(href)) {
-                link.target = '_blank';
+            if (externalHref(href)) {
+                link.title = href;
+            } else {
+                link.href = href;
+                link.rel = 'noopener noreferrer';
             }
             row.appendChild(strong);
             row.appendChild(link);
             return row;
+        }
+
+        function externalHref(href) {
+            return /^https?:\/\//i.test(common.text(href, ''));
         }
 
         function domainFromUrl(value) {

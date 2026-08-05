@@ -189,6 +189,10 @@ $checks = [
         && str_contains($scripts, 'world-object-link')
         && str_contains($runtimeCss, '.world-object-link')
         && str_contains($scripts, "wrapper.appendChild(button)"),
+    'Runtime does not open external result URLs in a browser' => str_contains($webRenderer, 'externalHref')
+        && str_contains($webRenderer, "document.createElement('span') : document.createElement('a')")
+        && str_contains($runtimeCss, '.world-object-link--inert')
+        && !str_contains($webRenderer, "target = '_blank'"),
     'Runtime renders website JSON resources inside Web' => str_contains($webRenderer, 'websiteDocument')
         && str_contains($webRenderer, 'websiteNode')
         && str_contains($webRenderer, 'website-document__sections')
