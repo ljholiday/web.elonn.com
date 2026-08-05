@@ -389,11 +389,14 @@
 
     function openRuntimeUrl(control) {
         var url = String(control.dataset.runtimeUrl || '').trim();
-        var objectId = ensureRuntimeUrlObject({
-            url: url,
-            label: String(control.dataset.runtimeUrlLabel || ''),
-            parentObjectId: String(control.dataset.runtimeUrlParent || '')
-        });
+        var objectId = objectIdForRuntimeUrl(url, String(control.dataset.runtimeUrlParent || ''));
+        if (objectId === '') {
+            objectId = ensureRuntimeUrlObject({
+                url: url,
+                label: String(control.dataset.runtimeUrlLabel || ''),
+                parentObjectId: String(control.dataset.runtimeUrlParent || '')
+            });
+        }
         if (objectId === '') {
             return;
         }
@@ -401,6 +404,87 @@
         carryObject(objectId);
         persistCarryPanels();
         renderState();
+    }
+
+    function objectIdForRuntimeUrl(url, parentObjectId) {
+        var normalizedUrl = normalizeRuntimeUrl(url);
+        var parent = state && state.indexes ? state.indexes.objects[String(parentObjectId || '')] || null : null;
+        var objects = state && state.dataset ? state.dataset.objects || [] : [];
+        var resources = state && state.indexes ? state.indexes.resources || {} : {};
+        var matchedResourceIds = [];
+        if (normalizedUrl === '') {
+            return '';
+        }
+        if (parent && objectOwnsRuntimeUrl(parent, normalizedUrl, resources)) {
+            return String(parent.id || '');
+        }
+        Object.keys(resources).forEach(function (resourceId) {
+            if (resourceOwnsRuntimeUrl(resources[resourceId], normalizedUrl)) {
+                matchedResourceIds.push(String(resourceId || ''));
+            }
+        });
+        for (var index = 0; index < objects.length; index += 1) {
+            if (objectOwnsRuntimeUrl(objects[index], normalizedUrl, resources, matchedResourceIds)) {
+                return String(objects[index].id || '');
+            }
+        }
+        return '';
+    }
+
+    function objectOwnsRuntimeUrl(object, normalizedUrl, resources, matchedResourceIds) {
+        var content = object && typeof object.content === 'object' ? object.content : {};
+        var resourceIds = common.itemIds(object.resourceIds || object.resources || []);
+        if (runtimeUrlMatches(normalizedUrl, [content.source_url, content.canonical_url, content.url])) {
+            return true;
+        }
+        if (Array.isArray(matchedResourceIds)) {
+            for (var index = 0; index < matchedResourceIds.length; index += 1) {
+                if (resourceIds.indexOf(matchedResourceIds[index]) !== -1) {
+                    return true;
+                }
+            }
+        }
+        for (var resourceIndex = 0; resourceIndex < resourceIds.length; resourceIndex += 1) {
+            if (resourceOwnsRuntimeUrl(resources[String(resourceIds[resourceIndex] || '')], normalizedUrl)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function resourceOwnsRuntimeUrl(resource, normalizedUrl) {
+        var content = resource && typeof resource.content === 'object' ? resource.content : {};
+        return runtimeUrlMatches(normalizedUrl, [
+            resource && resource.href,
+            content.href,
+            content.url,
+            content.source_url,
+            content.canonical_url
+        ]);
+    }
+
+    function runtimeUrlMatches(normalizedUrl, candidates) {
+        return candidates.some(function (candidate) {
+            return normalizeRuntimeUrl(candidate) === normalizedUrl;
+        });
+    }
+
+    function normalizeRuntimeUrl(value) {
+        var text = String(value || '').trim();
+        var parsed = null;
+        if (text === '') {
+            return '';
+        }
+        try {
+            parsed = new URL(text, window.location.origin);
+            parsed.hash = '';
+            if (parsed.pathname !== '/') {
+                parsed.pathname = parsed.pathname.replace(/\/+$/, '');
+            }
+            return parsed.protocol.toLowerCase() + '//' + parsed.hostname.toLowerCase() + parsed.pathname + parsed.search;
+        } catch (error) {
+            return text.replace(/\/+$/, '').toLowerCase();
+        }
     }
 
     function ensureRuntimeUrlObject(details) {

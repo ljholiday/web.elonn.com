@@ -151,7 +151,7 @@ const websiteDataset = Object.assign({}, dataset, {
       parent_resource_object_id: 'finding:website',
       segment_order: 1
     },
-    resources: []
+    resources: ['resource:finding:website:source', 'resource:finding:website:document']
   }],
   resources: [{
     id: 'resource:finding:website:source',
@@ -185,6 +185,7 @@ const websiteScene = runtime.SceneModel.fromState(websiteState);
 if (websiteScene.focus.resources[1].kind !== 'website.document') throw new Error('website JSON Resource was not projected');
 if (websiteScene.focus.resources[1].content.sections[0].text !== 'Wood-fired pizza.') throw new Error('website JSON sections were not preserved');
 if (websiteScene.layers[1].zones[0].collections[0].objects[1].type !== 'menu') throw new Error('segmented resource child object was not projected');
+if (websiteScene.layers[1].zones[0].collections[0].objects[1].resources[1].kind !== 'website.document') throw new Error('segmented resource child object did not keep website JSON Resource');
 
 state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, width: 280, height: 160, z: 23, collapsed: true}];
 const carryScene = runtime.SceneModel.fromState(state);
