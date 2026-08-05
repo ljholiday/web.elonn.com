@@ -201,6 +201,8 @@ $checks = [
         && !str_contains($webRenderer, "target = '_blank'")
         && strpos($webRuntime, 'if (runtimeUrl && state)') < strpos($webRuntime, 'if (panelTitle && state)')
         && strpos($webRuntime, 'if (runtimeUrl && state)') < strpos($webRuntime, 'if (hostedSurface && state)'),
+    'Runtime does not treat carry panel content as an object selection button' => str_contains($webRuntime, "closest('button[data-object-id]')")
+        && !str_contains($webRuntime, "closest('[data-object-id]')"),
     'Runtime renders website JSON resources inside Web' => str_contains($webRenderer, 'websiteDocument')
         && str_contains($webRenderer, 'websiteNode')
         && str_contains($webRenderer, 'website-document__sections')

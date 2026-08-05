@@ -66,7 +66,7 @@
         var hostedSurface = event.target.closest('[data-hosted-surface]');
         var runtimeUrl = event.target.closest('[data-runtime-url]');
         var collectionButton = event.target.closest('[data-collection-id]');
-        var objectButton = event.target.closest('[data-object-id]');
+        var objectButton = event.target.closest('button[data-object-id]');
 
         if (closeButton && state) {
             event.preventDefault();

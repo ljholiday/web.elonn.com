@@ -447,6 +447,12 @@ input {
     gap: 8px;
     overflow: auto;
     padding: 10px 12px 12px;
+    user-select: text;
+}
+
+.carry-object-panel__content button,
+.carry-object-panel__content [role="button"] {
+    user-select: none;
 }
 
 .hosted-object-surface {
