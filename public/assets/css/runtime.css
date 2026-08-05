@@ -684,8 +684,12 @@ figure {
     color: #eefaf8;
 }
 
-.world-object-link--inert {
-    cursor: default;
+.world-object-link--runtime {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
     text-decoration: none;
 }
 
@@ -765,12 +769,22 @@ figure {
     padding: 0;
 }
 
-.website-document__links li {
+.website-document__links button {
+    appearance: none;
+    background: transparent;
     border: 1px solid rgba(184, 255, 243, 0.18);
     border-radius: 999px;
     color: #cfe7e0;
+    cursor: pointer;
     font-size: 0.72rem;
     padding: 3px 7px;
+}
+
+.website-document__links button:hover,
+.website-document__links button:focus {
+    border-color: rgba(184, 255, 243, 0.52);
+    color: #eefaf8;
+    outline: none;
 }
 
 .object-badge {

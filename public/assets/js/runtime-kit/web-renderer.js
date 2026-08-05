@@ -171,27 +171,31 @@
             if (websiteDocument(object)) {
                 return links;
             }
-            firstHref(object.resources, 'Source', links);
-            firstHref(object.actions, 'Action', links);
+            firstHref(object.resources, 'Source', links, object.id);
+            firstHref(object.actions, 'Action', links, object.id);
             return links;
         }
 
-        function firstHref(items, label, output) {
+        function firstHref(items, label, output, objectId) {
             (Array.isArray(items) ? items : []).some(function (item) {
                 var href = common.text(item && item.href, '');
                 if (href === '') {
                     return false;
                 }
-                output.push(cardLink(label, common.text(item.label, href), href));
+                output.push(cardLink(label, common.text(item.label, href), href, objectId));
                 return true;
             });
         }
 
-        function cardLink(label, text, href) {
-            var link = externalHref(href) ? document.createElement('span') : document.createElement('a');
+        function cardLink(label, text, href, objectId) {
+            var link = externalHref(href) ? document.createElement('button') : document.createElement('a');
             link.className = 'world-object-link';
             if (externalHref(href)) {
-                link.className += ' world-object-link--inert';
+                link.type = 'button';
+                link.className += ' world-object-link--runtime';
+                link.dataset.runtimeUrl = href;
+                link.dataset.runtimeUrlLabel = common.text(text, href);
+                link.dataset.runtimeUrlObject = common.text(objectId, '');
                 link.title = href;
             } else {
                 link.href = href;
@@ -357,7 +361,7 @@
             var fragment = document.createDocumentFragment();
             var website = websiteDocument(object);
             if (website) {
-                fragment.appendChild(websiteNode(website));
+                fragment.appendChild(websiteNode(website, object));
             }
             detailRows(object).forEach(function (row) {
                 fragment.appendChild(metaLine(row.label, row.value));
@@ -388,7 +392,7 @@
             return match;
         }
 
-        function websiteNode(website) {
+        function websiteNode(website, object) {
             var article = document.createElement('article');
             var header = document.createElement('header');
             var title = document.createElement('h4');
@@ -419,7 +423,7 @@
             }
             article.appendChild(header);
             article.appendChild(sections);
-            websiteLinks(website).forEach(function (link) {
+            websiteLinks(website, object).forEach(function (link) {
                 article.appendChild(link);
             });
             return article;
@@ -439,7 +443,7 @@
             return node;
         }
 
-        function websiteLinks(website) {
+        function websiteLinks(website, object) {
             var links = Array.isArray(website.links) ? website.links : [];
             if (links.length === 0) {
                 return [];
@@ -448,12 +452,16 @@
             list.className = 'website-document__links';
             links.slice(0, 8).forEach(function (link) {
                 var item = document.createElement('li');
+                var button = document.createElement('button');
                 var label = common.text(link && link.label, '');
                 var href = common.text(link && link.href, '');
-                item.textContent = label !== '' ? label : domainFromUrl(href);
-                if (href !== '') {
-                    item.title = href;
-                }
+                button.type = 'button';
+                button.dataset.runtimeUrl = href;
+                button.dataset.runtimeUrlLabel = label !== '' ? label : domainFromUrl(href);
+                button.dataset.runtimeUrlParent = common.text(object && object.id, '');
+                button.textContent = button.dataset.runtimeUrlLabel;
+                button.title = href;
+                item.appendChild(button);
                 list.appendChild(item);
             });
             return [list];
@@ -520,7 +528,7 @@
             return (Array.isArray(object.resources) ? object.resources : []).filter(function (resource) {
                 return common.text(resource.href, '') !== '';
             }).map(function (resource) {
-                return linkLine('Resource', resource.label, resource.href);
+                return linkLine('Resource', resource.label, resource.href, object.id);
             });
         }
 
@@ -531,18 +539,22 @@
             return (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
                 return action.availability && action.availability.state === 'enabled' && common.text(action.href, '') !== '';
             }).map(function (action) {
-                return linkLine('Action', action.label, action.href);
+                return linkLine('Action', action.label, action.href, object.id);
             });
         }
 
-        function linkLine(label, text, href) {
+        function linkLine(label, text, href, objectId) {
             var row = document.createElement('p');
             var strong = document.createElement('strong');
-            var link = externalHref(href) ? document.createElement('span') : document.createElement('a');
+            var link = externalHref(href) ? document.createElement('button') : document.createElement('a');
             row.className = 'meta-line';
             strong.textContent = label;
             link.textContent = common.text(text, href);
             if (externalHref(href)) {
+                link.type = 'button';
+                link.dataset.runtimeUrl = href;
+                link.dataset.runtimeUrlLabel = common.text(text, href);
+                link.dataset.runtimeUrlObject = common.text(objectId, '');
                 link.title = href;
             } else {
                 link.href = href;

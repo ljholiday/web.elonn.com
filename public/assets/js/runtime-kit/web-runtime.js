@@ -64,6 +64,7 @@
         var resizeHandle = event.target.closest('[data-carry-panel-resize]');
         var panelTitle = event.target.closest('[data-carry-panel-title]');
         var hostedSurface = event.target.closest('[data-hosted-surface]');
+        var runtimeUrl = event.target.closest('[data-runtime-url]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('[data-object-id]');
 
@@ -84,6 +85,12 @@
         }
 
         if (hostedSurface && state) {
+            return;
+        }
+
+        if (runtimeUrl && state) {
+            event.preventDefault();
+            openRuntimeUrl(runtimeUrl);
             return;
         }
 
@@ -380,6 +387,91 @@
         persistCarryPanels();
     }
 
+    function openRuntimeUrl(control) {
+        var url = String(control.dataset.runtimeUrl || '').trim();
+        var objectId = String(control.dataset.runtimeUrlObject || '').trim();
+        if (objectId !== '' && state.indexes.objects[objectId]) {
+            selectObject(objectId);
+            carryObject(objectId);
+            renderState();
+            return;
+        }
+        objectId = ensureRuntimeUrlObject({
+            url: url,
+            label: String(control.dataset.runtimeUrlLabel || ''),
+            parentObjectId: String(control.dataset.runtimeUrlParent || '')
+        });
+        if (objectId === '') {
+            return;
+        }
+        selectObject(objectId);
+        carryObject(objectId);
+        persistCarryPanels();
+        renderState();
+    }
+
+    function ensureRuntimeUrlObject(details) {
+        var url = String(details.url || '').trim();
+        var id = 'runtime.website.link:' + stableHash(url);
+        var resourceId = 'resource:' + id + ':url';
+        var placementId = 'placement:' + id + ':workspace';
+        var label = String(details.label || '').trim();
+        var domain = domainFromUrl(url);
+        var panels = [];
+        if (url === '' || !state) {
+            return '';
+        }
+        if (!state.indexes.objects[id]) {
+            panels = state.carryPanels || [];
+            state.dataset.objects.unshift({
+                id: id,
+                type: 'website.link',
+                title: label !== '' ? label : (domain !== '' ? domain : url),
+                summary: domain,
+                content: {
+                    name: label !== '' ? label : (domain !== '' ? domain : url),
+                    description: domain,
+                    source_url: url,
+                    source_domain: domain,
+                    canonical_url: url,
+                    parent_object_id: String(details.parentObjectId || '')
+                },
+                visibility: {},
+                permissions: {},
+                availability: {state: 'enabled'},
+                resourceIds: [resourceId],
+                metadata: {
+                    service: 'web.runtime',
+                    anchor: 'workspace'
+                }
+            });
+            state.dataset.resources.unshift({
+                id: resourceId,
+                kind: 'website.link',
+                media_type: 'application/vnd.elonn.website-link+json',
+                href: '',
+                label: label !== '' ? label : url,
+                content: {
+                    kind: 'website.link',
+                    url: url,
+                    domain: domain,
+                    parent_object_id: String(details.parentObjectId || '')
+                },
+                availability: {state: 'enabled'}
+            });
+            state.dataset.placements.unshift({
+                id: placementId,
+                type: 'workspace',
+                object_id: id,
+                collection_id: '',
+                resource_id: ''
+            });
+            state = runtime.StateIndexer.build(state.dataset, state);
+            state.carryPanels = panels;
+        }
+        return id;
+    }
+
     function toggleCarryPanel(panelId) {
         var panel = carryPanel(panelId);
         if (!panel) {
@@ -548,6 +640,25 @@
             maxWidth: Math.max(220, rootBounds.width - x - 8),
             maxHeight: Math.max(120, rootBounds.height - y - 58)
         };
+    }
+
+    function stableHash(value) {
+        var text = String(value || '');
+        var hash = 2166136261;
+        var index = 0;
+        for (index = 0; index < text.length; index++) {
+            hash ^= text.charCodeAt(index);
+            hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+        }
+        return (hash >>> 0).toString(16);
+    }
+
+    function domainFromUrl(value) {
+        try {
+            return value ? (new URL(value, window.location.origin)).hostname : '';
+        } catch (error) {
+            return '';
+        }
     }
 
     function clamp(value, min, max) {
