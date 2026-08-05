@@ -192,6 +192,8 @@ $checks = [
     'Runtime opens external result URLs as runtime objects' => str_contains($webRenderer, 'externalHref')
         && str_contains($webRenderer, "document.createElement('button') : document.createElement('a')")
         && str_contains($webRenderer, 'dataset.runtimeUrl')
+        && str_contains($webRenderer, 'dataset.runtimeUrlParent')
+        && !str_contains($webRenderer, 'dataset.runtimeUrlObject')
         && str_contains($webRuntime, 'openRuntimeUrl')
         && str_contains($webRuntime, 'ensureRuntimeUrlObject')
         && str_contains($webRuntime, "type: 'website.link'")

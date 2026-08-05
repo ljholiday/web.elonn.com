@@ -389,14 +389,7 @@
 
     function openRuntimeUrl(control) {
         var url = String(control.dataset.runtimeUrl || '').trim();
-        var objectId = String(control.dataset.runtimeUrlObject || '').trim();
-        if (objectId !== '' && state.indexes.objects[objectId]) {
-            selectObject(objectId);
-            carryObject(objectId);
-            renderState();
-            return;
-        }
-        objectId = ensureRuntimeUrlObject({
+        var objectId = ensureRuntimeUrlObject({
             url: url,
             label: String(control.dataset.runtimeUrlLabel || ''),
             parentObjectId: String(control.dataset.runtimeUrlParent || '')

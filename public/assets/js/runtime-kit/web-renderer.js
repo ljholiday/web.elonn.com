@@ -195,7 +195,7 @@
                 link.className += ' world-object-link--runtime';
                 link.dataset.runtimeUrl = href;
                 link.dataset.runtimeUrlLabel = common.text(text, href);
-                link.dataset.runtimeUrlObject = common.text(objectId, '');
+                link.dataset.runtimeUrlParent = common.text(objectId, '');
                 link.title = href;
             } else {
                 link.href = href;
@@ -554,7 +554,7 @@
                 link.type = 'button';
                 link.dataset.runtimeUrl = href;
                 link.dataset.runtimeUrlLabel = common.text(text, href);
-                link.dataset.runtimeUrlObject = common.text(objectId, '');
+                link.dataset.runtimeUrlParent = common.text(objectId, '');
                 link.title = href;
             } else {
                 link.href = href;
