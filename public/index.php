@@ -150,10 +150,10 @@ function web_runtime_fallback_dataset(array $world, ?string $token): ?array
     $body = json_encode([
         'id' => 'call:runtime:web:fallback',
         'content' => [
-            'operation' => 'world.compose',
+            'operation' => 'world.restore',
             'input' => [
                 'type' => 'text',
-                'text' => 'Open my world.',
+                'text' => 'Restore my world.',
             ],
         ],
         'context' => [

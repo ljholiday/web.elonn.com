@@ -50,6 +50,9 @@ The runtime renders collections as the primary interaction unit, objects as
 selectable world primitives, resources as fetchable media or documents, and
 actions as contextual World-dispatched affordances.
 
+On page load, Web requests `world.restore` so World can return the member's
+current persisted World Dataset without replaying a search or creation command.
+
 ## Query input
 
 Web exposes a query composer in the top runtime area. Typing text and pressing
