@@ -112,7 +112,7 @@ if (parsed.collections[0].items[0] !== 'object:one') throw new Error('canonical 
 if (parsed.actions[0].target_id !== 'object:one') throw new Error('canonical action target was not parsed');
 
 const state = runtime.StateIndexer.build(parsed, null);
-if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Error('carry placement was not translated');
+if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Error('carry placement was not projected');
 const scene = runtime.SceneModel.fromState(state);
 if (scene.actions[0].availability.state !== 'unavailable') throw new Error('returned actions must be unavailable until Web supports execution');
 if (scene.actions[0].availability.reason !== 'Action execution is not available yet.') throw new Error('unavailable action reason was not set');
@@ -133,21 +133,32 @@ const websiteDataset = Object.assign({}, dataset, {
   id: 'dataset:world:website',
   objects: [{
     id: 'finding:website',
-    type: 'html_resource',
+    type: 'website.resource',
     title: 'Ballard Pizza',
     content: {
       name: 'Ballard Pizza',
       description: 'Neighborhood pizza.',
-      website_resource: 'resource:finding:website:website'
+      document_resource: 'resource:finding:website:document'
     },
-    resources: ['resource:finding:website:source', 'resource:finding:website:website']
+    resources: ['resource:finding:website:source', 'resource:finding:website:document']
+  }, {
+    id: 'finding:website:segment:menu',
+    type: 'menu',
+    title: 'Menu',
+    content: {
+      name: 'Menu',
+      description: 'Classic pies and seasonal specials.',
+      parent_resource_object_id: 'finding:website',
+      segment_order: 1
+    },
+    resources: []
   }],
   resources: [{
     id: 'resource:finding:website:source',
     type: 'resource',
     content: {kind: 'link', href: 'https://ballard.example.test', label: 'Ballard Pizza'}
   }, {
-    id: 'resource:finding:website:website',
+    id: 'resource:finding:website:document',
     type: 'application/vnd.elonn.website+json',
     content: {
       kind: 'website.document',
@@ -159,13 +170,21 @@ const websiteDataset = Object.assign({}, dataset, {
       links: [{label: 'Menu', href: 'https://ballard.example.test/menu'}]
     }
   }],
-  collections: [{id: 'collection:website', type: 'collection', content: {items: ['finding:website']}}],
+  relationships: [{
+    id: 'relationship:website:menu',
+    type: 'contains',
+    source: 'finding:website',
+    target: 'finding:website:segment:menu',
+    content: {order: 1}
+  }],
+  collections: [{id: 'collection:website', type: 'resource.segmented', content: {items: ['finding:website', 'finding:website:segment:menu']}}],
   placements: [{id: 'placement:website:workspace', type: 'workspace', content: {collection: 'collection:website'}}]
 });
 const websiteState = runtime.StateIndexer.build(runtime.DatasetParser.parse(websiteDataset), null);
 const websiteScene = runtime.SceneModel.fromState(websiteState);
 if (websiteScene.focus.resources[1].kind !== 'website.document') throw new Error('website JSON Resource was not projected');
 if (websiteScene.focus.resources[1].content.sections[0].text !== 'Wood-fired pizza.') throw new Error('website JSON sections were not preserved');
+if (websiteScene.layers[1].zones[0].collections[0].objects[1].type !== 'menu') throw new Error('segmented resource child object was not projected');
 
 state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, width: 280, height: 160, z: 23, collapsed: true}];
 const carryScene = runtime.SceneModel.fromState(state);
@@ -188,7 +207,7 @@ const workspaceDataset = Object.assign({}, dataset, {
 });
 const workspaceState = runtime.StateIndexer.build(runtime.DatasetParser.parse(workspaceDataset), null);
 if (workspaceState.layers[1].id !== 'workspace') throw new Error('workspace layer was not indexed');
-if (workspaceState.layers[1].zones[0].collectionIds[0] !== 'collection:workspace') throw new Error('workspace placement was not translated');
+if (workspaceState.layers[1].zones[0].collectionIds[0] !== 'collection:workspace') throw new Error('workspace placement was not projected');
 if (workspaceState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('workspace collection leaked into carry');
 const workspaceScene = runtime.SceneModel.fromState(workspaceState);
 if (workspaceScene.focus.layer !== 'workspace') throw new Error('selected workspace object was labeled as carry');
@@ -296,4 +315,4 @@ if ($status !== 0) {
     exit(1);
 }
 
-echo "PASS: Canonical runtime kit parses Datasets and translations\n";
+echo "PASS: Canonical runtime kit parses and projects Datasets\n";

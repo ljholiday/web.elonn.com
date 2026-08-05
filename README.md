@@ -3,7 +3,7 @@
 `web.elonn.local` is the browser runtime for canonical World Datasets.
 
 The runtime submits canonical Calls to `POST /world/call`, receives canonical
-World Datasets, translates them into browser-owned render state, and renders
+World Datasets, projects them into browser-owned render state, and renders
 only the data published by World:
 
 - objects
@@ -40,7 +40,7 @@ is not part of the normal runtime request path.
 
 ## Runtime projection
 
-Web translates semantic Placement as a flat-screen runtime:
+Web projects semantic Placement as a flat-screen runtime:
 
 - Field Layer: persistent world anchored to reality.
 - Workspace Layer: transient manifestation of the member's current intent.

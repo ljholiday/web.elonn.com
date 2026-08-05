@@ -238,7 +238,7 @@ $checks = [
         && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'stale local carry panel snapshot')
         && !str_contains($webRuntime, '|| panel.object || null')
         && !str_contains(read_file($root . '/public/assets/js/runtime-kit/scene-model.js'), '|| panel.object || null'),
-    'Runtime translates canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
+    'Runtime projects canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
         && str_contains($scripts, "['carry', 'workspace', 'field']")
         && str_contains($scripts, 'objectIds')
         && !str_contains($template, 'data-layer-zone="carry:main_content"')
