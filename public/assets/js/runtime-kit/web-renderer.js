@@ -24,12 +24,112 @@
             nodes.status.dataset.state = common.text(state, 'neutral');
         }
 
-        function render(scene) {
+        function render(scene, options) {
+            options = options && typeof options === 'object' ? options : {};
             var zoneMap = zonesByKey(scene.layers || []);
-            renderZone(nodes.workspace, zoneMap['workspace:workspace'], 'overlay');
+            renderWorkspace(nodes.workspace, zoneMap['workspace:workspace'], options.workspace || {});
             renderField(nodes.field, zoneMap['field:field']);
             common.replaceChildren(nodes.carryPanels, carryPanelNodes(scene.carryPanels || []));
             common.replaceChildren(nodes.statusRows, (scene.status || []).map(statusNode));
+        }
+
+        function renderWorkspace(node, zone, options) {
+            var body = document.createElement('div');
+            var panel = null;
+            var content = [];
+            if (!node) {
+                return;
+            }
+            if (!zone || options.closed === true) {
+                common.replaceChildren(node, []);
+                return;
+            }
+
+            content = collections(zone.collections || [], 'overlay').concat(objectList(zone.objects || [], 'overlay'));
+            if (content.length === 0 && options.emptyVisible !== true) {
+                common.replaceChildren(node, []);
+                return;
+            }
+
+            body.className = 'carry-object-panel__content workspace-results-panel__content';
+            body.dataset.workspaceResultsContent = 'true';
+            content.forEach(function (item) {
+                body.appendChild(item);
+            });
+
+            panel = document.createElement('section');
+            panel.className = 'workspace-results-panel';
+            panel.dataset.workspaceResultsPanel = 'true';
+            panel.dataset.collapsed = options.collapsed === true ? 'true' : 'false';
+            panel.appendChild(panelHeader({
+                title: 'Results',
+                barClass: 'workspace-results-panel__bar',
+                headerDataset: 'workspaceResultsTitle',
+                headerDatasetValue: 'true',
+                titleDataset: 'workspaceResultsTitle',
+                titleDatasetValue: 'true',
+                closeDataset: 'workspaceResultsClose',
+                closeDatasetValue: 'true',
+                closeLabel: 'Close results',
+                actions: [
+                    panelButton({
+                        label: 'Clear',
+                        className: 'workspace-results-panel__clear',
+                        dataset: 'workspaceResultsClear',
+                        datasetValue: 'true'
+                    })
+                ]
+            }));
+            panel.appendChild(body);
+            common.replaceChildren(node, [panel]);
+        }
+
+        function panelHeader(config) {
+            config = config && typeof config === 'object' ? config : {};
+            var header = document.createElement('header');
+            var title = document.createElement('h2');
+            var actions = document.createElement('div');
+            var close = panelButton({
+                label: 'x',
+                dataset: config.closeDataset,
+                datasetValue: config.closeDatasetValue,
+                ariaLabel: config.closeLabel
+            });
+
+            header.className = ['carry-object-panel__bar', common.text(config.barClass, '')].filter(Boolean).join(' ');
+            setDataset(header, config.headerDataset, config.headerDatasetValue);
+            title.className = 'carry-object-panel__title';
+            setDataset(title, config.titleDataset, config.titleDatasetValue);
+            title.textContent = common.text(config.title, 'Object');
+            actions.className = 'carry-object-panel__actions';
+
+            (Array.isArray(config.actions) ? config.actions : []).forEach(function (action) {
+                actions.appendChild(action);
+            });
+            actions.appendChild(close);
+            header.appendChild(title);
+            header.appendChild(actions);
+            return header;
+        }
+
+        function panelButton(config) {
+            config = config && typeof config === 'object' ? config : {};
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = ['carry-object-panel__close', common.text(config.className, '')].filter(Boolean).join(' ');
+            setDataset(button, config.dataset, config.datasetValue);
+            if (common.text(config.ariaLabel, '') !== '') {
+                button.setAttribute('aria-label', config.ariaLabel);
+            }
+            button.textContent = common.text(config.label, 'x');
+            return button;
+        }
+
+        function setDataset(node, key, value) {
+            key = common.text(key, '');
+            if (key !== '') {
+                node.dataset[key] = common.text(value, '');
+            }
         }
 
         function zonesByKey(layers) {
@@ -262,9 +362,6 @@
         function carryPanelNodes(panels) {
             return panels.map(function (panel) {
                 var article = document.createElement('article');
-                var header = document.createElement('header');
-                var title = document.createElement('h2');
-                var close = document.createElement('button');
                 var content = document.createElement('div');
                 var resize = document.createElement('span');
                 var type = document.createElement('span');
@@ -282,16 +379,6 @@
                 }
                 article.style.zIndex = String(panel.z || 1);
 
-                title.className = 'carry-object-panel__title';
-                title.dataset.carryPanelTitle = panel.id;
-                title.textContent = panel.object.title;
-
-                close.className = 'carry-object-panel__close';
-                close.type = 'button';
-                close.dataset.carryPanelClose = panel.id;
-                close.setAttribute('aria-label', 'Close ' + panel.object.title);
-                close.textContent = 'x';
-
                 content.className = 'carry-object-panel__content';
                 type.className = 'object-type';
                 type.textContent = panel.object.type + ' / ' + panel.object.layer;
@@ -307,11 +394,16 @@
                 resize.dataset.carryPanelResize = panel.id;
                 resize.setAttribute('aria-hidden', 'true');
 
-                header.className = 'carry-object-panel__bar';
-                header.dataset.carryPanelTitle = panel.id;
-                header.appendChild(title);
-                header.appendChild(close);
-                article.appendChild(header);
+                article.appendChild(panelHeader({
+                    title: panel.object.title,
+                    headerDataset: 'carryPanelTitle',
+                    headerDatasetValue: panel.id,
+                    titleDataset: 'carryPanelTitle',
+                    titleDatasetValue: panel.id,
+                    closeDataset: 'carryPanelClose',
+                    closeDatasetValue: panel.id,
+                    closeLabel: 'Close ' + panel.object.title
+                }));
                 article.appendChild(content);
                 article.appendChild(resize);
                 return article;

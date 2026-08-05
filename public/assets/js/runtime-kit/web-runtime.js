@@ -17,6 +17,9 @@
     var drag = null;
     var resize = null;
     var lastCarryTitleTap = null;
+    var workspaceResultsCollapsed = false;
+    var workspaceResultsClosed = false;
+    var workspaceResultsCleared = false;
 
     if (!root || !runtime) {
         return;
@@ -65,6 +68,9 @@
         var panelTitle = event.target.closest('[data-carry-panel-title]');
         var hostedSurface = event.target.closest('[data-hosted-surface]');
         var runtimeUrl = event.target.closest('[data-runtime-url]');
+        var workspaceTitle = event.target.closest('[data-workspace-results-title]');
+        var workspaceClear = event.target.closest('[data-workspace-results-clear]');
+        var workspaceClose = event.target.closest('[data-workspace-results-close]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('button[data-object-id]');
 
@@ -77,6 +83,26 @@
         if (runtimeUrl && state) {
             event.preventDefault();
             openRuntimeUrl(runtimeUrl);
+            return;
+        }
+
+        if (workspaceClear) {
+            event.preventDefault();
+            clearResults();
+            return;
+        }
+
+        if (workspaceClose) {
+            event.preventDefault();
+            workspaceResultsClosed = true;
+            renderState();
+            return;
+        }
+
+        if (workspaceTitle && state) {
+            event.preventDefault();
+            workspaceResultsCollapsed = !workspaceResultsCollapsed;
+            renderState();
             return;
         }
 
@@ -218,11 +244,15 @@
     function submitQuery(text) {
         var request = {
             inputText: text,
-            runtimeSessionId: state ? state.runtimeSessionId : '',
+            runtimeSessionId: state && !workspaceResultsCleared ? state.runtimeSessionId : '',
             selectedObjectId: state ? state.selectedObjectId : '',
-            selectedCollectionId: state ? state.selectedCollectionId : ''
+            selectedCollectionId: state && !workspaceResultsCleared ? state.selectedCollectionId : '',
+            replaceResults: workspaceResultsCleared
         };
 
+        workspaceResultsClosed = false;
+        workspaceResultsCollapsed = false;
+        workspaceResultsCleared = false;
         renderer.status('Requesting World Dataset.', 'loading');
         browserOrigin().then(function (origin) {
             request.origin = origin;
@@ -273,7 +303,8 @@
         return !!state
             && !!runtimeState
             && String(runtimeState.inputText || '').trim() !== ''
-            && !runtimeState.surfaceCommand;
+            && !runtimeState.surfaceCommand
+            && runtimeState.replaceResults !== true;
     }
 
     function replaceDataset(payload, mergeWithPrevious) {
@@ -289,8 +320,103 @@
     }
 
     function renderState() {
-        renderer.render(runtime.SceneModel.fromState(state));
+        renderer.render(runtime.SceneModel.fromState(state), {
+            workspace: {
+                collapsed: workspaceResultsCollapsed,
+                closed: workspaceResultsClosed,
+                emptyVisible: workspaceResultsCleared
+            }
+        });
         runtime.AdapterRegistry.mountAll(root, adapterContext());
+    }
+
+    function clearResults() {
+        clearWorkspaceResults();
+        workspaceResultsClosed = false;
+        workspaceResultsCollapsed = false;
+        workspaceResultsCleared = true;
+        if (queryInput) {
+            queryInput.value = '';
+            queryInput.focus();
+        }
+        renderState();
+        renderer.status('Results cleared.', 'neutral');
+    }
+
+    function clearWorkspaceResults() {
+        var workspaceLayer = null;
+        var workspaceZone = null;
+        var collectionIds = {};
+        var objectIds = {};
+        var protectedObjectIds = {};
+        var dataset = null;
+        var panels = [];
+
+        if (!state || !state.dataset) {
+            return;
+        }
+
+        workspaceLayer = (state.layers || []).filter(function (layer) {
+            return String(layer.id || '') === 'workspace';
+        })[0] || null;
+        workspaceZone = workspaceLayer && workspaceLayer.zones ? workspaceLayer.zones[0] : null;
+        if (!workspaceZone) {
+            return;
+        }
+
+        (workspaceZone.collectionIds || []).forEach(function (collectionId) {
+            collectionIds[String(collectionId || '')] = true;
+        });
+        (workspaceZone.objectIds || []).forEach(function (objectId) {
+            objectIds[String(objectId || '')] = true;
+        });
+        Object.keys(collectionIds).forEach(function (collectionId) {
+            var collection = state.indexes.collections[collectionId] || null;
+            runtime.Common.itemIds(collection ? collection.items : []).forEach(function (objectId) {
+                objectIds[String(objectId || '')] = true;
+            });
+        });
+
+        panels = state.carryPanels || [];
+        panels.forEach(function (panel) {
+            protectedObjectIds[String(panel.objectId || '')] = true;
+        });
+        runtime.Common.sectionItems({items: state.dataset.placements}).forEach(function (placement) {
+            if (String(placement.type || '') !== 'workspace') {
+                protectedObjectIds[String(placement.object_id || '')] = true;
+            }
+        });
+        runtime.Common.sectionItems({items: state.dataset.collections}).forEach(function (collection) {
+            if (!collectionIds[String(collection.id || '')]) {
+                runtime.Common.itemIds(collection.items).forEach(function (objectId) {
+                    protectedObjectIds[String(objectId || '')] = true;
+                });
+            }
+        });
+        Object.keys(protectedObjectIds).forEach(function (objectId) {
+            delete objectIds[objectId];
+        });
+
+        dataset = Object.assign({}, state.dataset, {
+            collections: runtime.Common.sectionItems({items: state.dataset.collections}).filter(function (collection) {
+                return !collectionIds[String(collection.id || '')];
+            }),
+            placements: runtime.Common.sectionItems({items: state.dataset.placements}).filter(function (placement) {
+                return String(placement.type || '') !== 'workspace';
+            }),
+            objects: runtime.Common.sectionItems({items: state.dataset.objects}).filter(function (object) {
+                return !objectIds[String(object.id || '')];
+            }),
+            actions: runtime.Common.sectionItems({items: state.dataset.actions}).filter(function (action) {
+                return !objectIds[String(action.target_id || '')];
+            }),
+            relationships: runtime.Common.sectionItems({items: state.dataset.relationships}).filter(function (relationship) {
+                return !objectIds[String(relationship.from_id || '')] && !objectIds[String(relationship.to_id || '')];
+            })
+        });
+
+        state = runtime.StateIndexer.build(dataset, null);
+        state.carryPanels = panels;
     }
 
     function adapterContext() {
