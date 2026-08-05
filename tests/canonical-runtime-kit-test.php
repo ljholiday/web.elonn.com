@@ -128,6 +128,45 @@ if (paintScene.focus.resources[1].content.data_url.indexOf('data:image/png;base6
 paintState.carryPanels = [{id: 'carry-panel:paint.document:test', objectId: 'paint.document:test', x: 10, y: 10, width: 360, height: 240, z: 24, collapsed: false}];
 const paintCarryScene = runtime.SceneModel.fromState(paintState);
 if (paintCarryScene.carryPanels[0].object.surface.kind !== 'editor') throw new Error('hosted Object surface was not available in carry panel');
+
+const websiteDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:website',
+  objects: [{
+    id: 'finding:website',
+    type: 'html_resource',
+    title: 'Ballard Pizza',
+    content: {
+      name: 'Ballard Pizza',
+      description: 'Neighborhood pizza.',
+      website_resource: 'resource:finding:website:website'
+    },
+    resources: ['resource:finding:website:source', 'resource:finding:website:website']
+  }],
+  resources: [{
+    id: 'resource:finding:website:source',
+    type: 'resource',
+    content: {kind: 'link', href: 'https://ballard.example.test', label: 'Ballard Pizza'}
+  }, {
+    id: 'resource:finding:website:website',
+    type: 'application/vnd.elonn.website+json',
+    content: {
+      kind: 'website.document',
+      url: 'https://ballard.example.test',
+      domain: 'ballard.example.test',
+      title: 'Ballard Pizza',
+      description: 'Neighborhood pizza.',
+      sections: [{id: 'section:summary', type: 'summary', title: 'Ballard Pizza', text: 'Wood-fired pizza.'}],
+      links: [{label: 'Menu', href: 'https://ballard.example.test/menu'}]
+    }
+  }],
+  collections: [{id: 'collection:website', type: 'collection', content: {items: ['finding:website']}}],
+  placements: [{id: 'placement:website:workspace', type: 'workspace', content: {collection: 'collection:website'}}]
+});
+const websiteState = runtime.StateIndexer.build(runtime.DatasetParser.parse(websiteDataset), null);
+const websiteScene = runtime.SceneModel.fromState(websiteState);
+if (websiteScene.focus.resources[1].kind !== 'website.document') throw new Error('website JSON Resource was not projected');
+if (websiteScene.focus.resources[1].content.sections[0].text !== 'Wood-fired pizza.') throw new Error('website JSON sections were not preserved');
+
 state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, width: 280, height: 160, z: 23, collapsed: true}];
 const carryScene = runtime.SceneModel.fromState(state);
 if (carryScene.carryPanels[0].object.id !== 'object:one') throw new Error('carry panel object was not projected');

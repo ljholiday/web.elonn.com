@@ -701,6 +701,73 @@ figure {
     background-size: 12px 12px;
 }
 
+.website-document {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 10px;
+}
+
+.website-document h4,
+.website-document h5,
+.website-document p {
+    margin: 0;
+}
+
+.website-document h4 {
+    color: #eefaf8;
+    font-size: 0.98rem;
+}
+
+.website-document__domain {
+    color: #9bb7b0;
+    font-size: 0.74rem;
+}
+
+.website-document__sections {
+    display: grid;
+    gap: 8px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.website-document__section {
+    display: grid;
+    gap: 4px;
+    border: 1px solid rgba(184, 255, 243, 0.16);
+    border-radius: 7px;
+    background: rgba(8, 18, 20, 0.46);
+    padding: 9px;
+}
+
+.website-document__section h5 {
+    color: #b8fff3;
+    font-size: 0.78rem;
+}
+
+.website-document__section p {
+    color: #d0ddd5;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.website-document__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.website-document__links li {
+    border: 1px solid rgba(184, 255, 243, 0.18);
+    border-radius: 999px;
+    color: #cfe7e0;
+    font-size: 0.72rem;
+    padding: 3px 7px;
+}
+
 .object-badge {
     border: 1px solid rgba(255, 184, 184, 0.4);
     color: #ffc8c8;

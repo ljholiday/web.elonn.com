@@ -189,6 +189,12 @@ $checks = [
         && str_contains($scripts, 'world-object-link')
         && str_contains($runtimeCss, '.world-object-link')
         && str_contains($scripts, "wrapper.appendChild(button)"),
+    'Runtime renders website JSON resources inside Web' => str_contains($webRenderer, 'websiteDocument')
+        && str_contains($webRenderer, 'websiteNode')
+        && str_contains($webRenderer, 'website-document__sections')
+        && str_contains($webRenderer, 'website-document__links')
+        && str_contains($runtimeCss, '.website-document')
+        && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'website JSON Resource was not projected'),
     'Carry panels are runtime-local floating objects controlled by title text' => str_contains($template, 'data-runtime-carry-panels')
         && str_contains($scripts, 'carryStorageKey')
         && str_contains($scripts, 'localStorage')

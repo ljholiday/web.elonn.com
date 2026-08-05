@@ -168,6 +168,9 @@
 
         function cardLinks(object) {
             var links = [];
+            if (websiteDocument(object)) {
+                return links;
+            }
             firstHref(object.resources, 'Source', links);
             firstHref(object.actions, 'Action', links);
             return links;
@@ -350,18 +353,108 @@
 
         function genericPreview(object) {
             var fragment = document.createDocumentFragment();
+            var website = websiteDocument(object);
+            if (website) {
+                fragment.appendChild(websiteNode(website));
+            }
             detailRows(object).forEach(function (row) {
                 fragment.appendChild(metaLine(row.label, row.value));
             });
-            resourceLinks(object).forEach(function (link) {
-                fragment.appendChild(link);
-            });
-            actionLinks(object).forEach(function (link) {
-                fragment.appendChild(link);
-            });
+            if (!website) {
+                resourceLinks(object).forEach(function (link) {
+                    fragment.appendChild(link);
+                });
+                actionLinks(object).forEach(function (link) {
+                    fragment.appendChild(link);
+                });
+            }
             fragment.appendChild(metaLine('Visibility', object.visibility || 'default'));
             fragment.appendChild(metaLine('Permissions', permissionsText(object.permissions)));
             return fragment;
+        }
+
+        function websiteDocument(object) {
+            var match = null;
+            (Array.isArray(object.resources) ? object.resources : []).some(function (resource) {
+                var content = resource && typeof resource.content === 'object' ? resource.content : {};
+                if (resource.kind === 'website.document' || content.kind === 'website.document') {
+                    match = content;
+                    return true;
+                }
+                return false;
+            });
+            return match;
+        }
+
+        function websiteNode(website) {
+            var article = document.createElement('article');
+            var header = document.createElement('header');
+            var title = document.createElement('h4');
+            var summary = document.createElement('p');
+            var domain = document.createElement('p');
+            var sections = document.createElement('div');
+            article.className = 'website-document';
+            title.textContent = common.text(website.title, 'Website');
+            summary.textContent = common.text(website.description, '');
+            domain.className = 'website-document__domain';
+            domain.textContent = common.text(website.domain || domainFromUrl(website.url), '');
+            header.appendChild(title);
+            if (summary.textContent !== '') {
+                header.appendChild(summary);
+            }
+            if (domain.textContent !== '') {
+                header.appendChild(domain);
+            }
+            sections.className = 'website-document__sections';
+            (Array.isArray(website.sections) ? website.sections : []).forEach(function (section) {
+                sections.appendChild(websiteSection(section));
+            });
+            if (sections.childNodes.length === 0 && summary.textContent !== '') {
+                sections.appendChild(websiteSection({
+                    title: title.textContent,
+                    text: summary.textContent
+                }));
+            }
+            article.appendChild(header);
+            article.appendChild(sections);
+            websiteLinks(website).forEach(function (link) {
+                article.appendChild(link);
+            });
+            return article;
+        }
+
+        function websiteSection(section) {
+            var node = document.createElement('section');
+            var title = document.createElement('h5');
+            var text = document.createElement('p');
+            node.className = 'website-document__section';
+            title.textContent = common.text(section && section.title, 'Section');
+            text.textContent = common.text(section && section.text, '');
+            node.appendChild(title);
+            if (text.textContent !== '') {
+                node.appendChild(text);
+            }
+            return node;
+        }
+
+        function websiteLinks(website) {
+            var links = Array.isArray(website.links) ? website.links : [];
+            if (links.length === 0) {
+                return [];
+            }
+            var list = document.createElement('ul');
+            list.className = 'website-document__links';
+            links.slice(0, 8).forEach(function (link) {
+                var item = document.createElement('li');
+                var label = common.text(link && link.label, '');
+                var href = common.text(link && link.href, '');
+                item.textContent = label !== '' ? label : domainFromUrl(href);
+                if (href !== '') {
+                    item.title = href;
+                }
+                list.appendChild(item);
+            });
+            return [list];
         }
 
         function detailRows(object) {
@@ -419,6 +512,9 @@
         }
 
         function resourceLinks(object) {
+            if (websiteDocument(object)) {
+                return [];
+            }
             return (Array.isArray(object.resources) ? object.resources : []).filter(function (resource) {
                 return common.text(resource.href, '') !== '';
             }).map(function (resource) {
@@ -427,6 +523,9 @@
         }
 
         function actionLinks(object) {
+            if (websiteDocument(object)) {
+                return [];
+            }
             return (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
                 return action.availability && action.availability.state === 'enabled' && common.text(action.href, '') !== '';
             }).map(function (action) {
