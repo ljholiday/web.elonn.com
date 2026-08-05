@@ -74,6 +74,12 @@
             return;
         }
 
+        if (runtimeUrl && state) {
+            event.preventDefault();
+            openRuntimeUrl(runtimeUrl);
+            return;
+        }
+
         if (resizeHandle && state) {
             event.preventDefault();
             return;
@@ -85,12 +91,6 @@
         }
 
         if (hostedSurface && state) {
-            return;
-        }
-
-        if (runtimeUrl && state) {
-            event.preventDefault();
-            openRuntimeUrl(runtimeUrl);
             return;
         }
 

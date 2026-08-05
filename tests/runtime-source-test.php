@@ -196,7 +196,9 @@ $checks = [
         && str_contains($webRuntime, 'ensureRuntimeUrlObject')
         && str_contains($webRuntime, "type: 'website.link'")
         && str_contains($runtimeCss, '.world-object-link--runtime')
-        && !str_contains($webRenderer, "target = '_blank'"),
+        && !str_contains($webRenderer, "target = '_blank'")
+        && strpos($webRuntime, 'if (runtimeUrl && state)') < strpos($webRuntime, 'if (panelTitle && state)')
+        && strpos($webRuntime, 'if (runtimeUrl && state)') < strpos($webRuntime, 'if (hostedSurface && state)'),
     'Runtime renders website JSON resources inside Web' => str_contains($webRenderer, 'websiteDocument')
         && str_contains($webRenderer, 'websiteNode')
         && str_contains($webRenderer, 'website-document__sections')
