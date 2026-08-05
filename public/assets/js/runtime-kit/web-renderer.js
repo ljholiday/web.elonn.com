@@ -168,9 +168,6 @@
 
         function cardLinks(object) {
             var links = [];
-            if (websiteDocument(object)) {
-                return links;
-            }
             firstHref(object.resources, 'Source', links, object.id);
             firstHref(object.actions, 'Action', links, object.id);
             return links;
@@ -366,10 +363,10 @@
             detailRows(object).forEach(function (row) {
                 fragment.appendChild(metaLine(row.label, row.value));
             });
+            resourceLinks(object).forEach(function (link) {
+                fragment.appendChild(link);
+            });
             if (!website) {
-                resourceLinks(object).forEach(function (link) {
-                    fragment.appendChild(link);
-                });
                 actionLinks(object).forEach(function (link) {
                     fragment.appendChild(link);
                 });
@@ -522,9 +519,6 @@
         }
 
         function resourceLinks(object) {
-            if (websiteDocument(object)) {
-                return [];
-            }
             return (Array.isArray(object.resources) ? object.resources : []).filter(function (resource) {
                 return common.text(resource.href, '') !== '';
             }).map(function (resource) {

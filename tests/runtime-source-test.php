@@ -188,7 +188,8 @@ $checks = [
     'Runtime shows source links on result entries' => str_contains($scripts, 'cardLinks')
         && str_contains($scripts, 'world-object-link')
         && str_contains($runtimeCss, '.world-object-link')
-        && str_contains($scripts, "wrapper.appendChild(button)"),
+        && str_contains($scripts, "wrapper.appendChild(button)")
+        && strpos($webRenderer, "firstHref(object.resources, 'Source'") < strpos($webRenderer, 'if (websiteDocument(object))'),
     'Runtime opens external result URLs as runtime objects' => str_contains($webRenderer, 'externalHref')
         && str_contains($webRenderer, "document.createElement('button') : document.createElement('a')")
         && str_contains($webRenderer, 'dataset.runtimeUrl')
@@ -207,6 +208,7 @@ $checks = [
         && str_contains($webRenderer, 'websiteNode')
         && str_contains($webRenderer, 'website-document__sections')
         && str_contains($webRenderer, 'website-document__links')
+        && str_contains($webRenderer, "linkLine('Resource'")
         && str_contains($runtimeCss, '.website-document')
         && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'website JSON Resource was not projected'),
     'Carry panels are runtime-local floating objects controlled by title text' => str_contains($template, 'data-runtime-carry-panels')
