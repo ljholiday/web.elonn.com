@@ -716,6 +716,42 @@ figure {
     background-size: 12px 12px;
 }
 
+.object-decomposition {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 10px;
+}
+
+.object-decomposition h4 {
+    margin: 0;
+    color: #eefaf8;
+    font-size: 0.86rem;
+}
+
+.object-decomposition__list {
+    display: grid;
+    gap: 6px;
+}
+
+.object-decomposition__object {
+    width: 100%;
+    display: grid;
+    gap: 3px;
+    border: 1px solid rgba(184, 255, 243, 0.16);
+    border-radius: 7px;
+    background: rgba(8, 18, 20, 0.46);
+    color: #eefaf8;
+    padding: 8px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.object-decomposition__object:hover,
+.object-decomposition__object:focus {
+    border-color: rgba(184, 255, 243, 0.52);
+    outline: none;
+}
+
 .website-document {
     display: grid;
     gap: 10px;

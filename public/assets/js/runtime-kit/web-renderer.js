@@ -360,6 +360,9 @@
             if (website) {
                 fragment.appendChild(websiteNode(website, object));
             }
+            containedObjectNodes(object).forEach(function (node) {
+                fragment.appendChild(node);
+            });
             detailRows(object).forEach(function (row) {
                 fragment.appendChild(metaLine(row.label, row.value));
             });
@@ -387,6 +390,49 @@
                 return false;
             });
             return match;
+        }
+
+        function containedObjectNodes(object) {
+            var objects = Array.isArray(object.containedObjects) ? object.containedObjects : [];
+            var section = null;
+            var title = null;
+            var list = null;
+            if (objects.length === 0) {
+                return [];
+            }
+            section = document.createElement('section');
+            title = document.createElement('h4');
+            list = document.createElement('div');
+            section.className = 'object-decomposition';
+            title.textContent = 'Objects';
+            list.className = 'object-decomposition__list';
+            objects.forEach(function (child) {
+                list.appendChild(containedObjectButton(child));
+            });
+            section.appendChild(title);
+            section.appendChild(list);
+            return [section];
+        }
+
+        function containedObjectButton(object) {
+            var button = document.createElement('button');
+            var type = document.createElement('span');
+            var title = document.createElement('strong');
+            var summary = document.createElement('span');
+            button.type = 'button';
+            button.className = 'object-decomposition__object';
+            button.dataset.objectId = object.id;
+            type.className = 'object-type';
+            type.textContent = object.type;
+            title.textContent = object.title;
+            summary.className = 'object-summary';
+            summary.textContent = object.summary;
+            button.appendChild(type);
+            button.appendChild(title);
+            if (object.summary !== '') {
+                button.appendChild(summary);
+            }
+            return button;
         }
 
         function websiteNode(website, object) {

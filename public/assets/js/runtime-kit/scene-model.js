@@ -35,7 +35,7 @@
             var selectedObject = state.indexes.objects[state.selectedObjectId] || null;
             return {
                 layers: layers(state),
-                focus: selectedObject ? objectView(state, selectedObject, true) : {kind: 'empty', title: 'No object selected.', summary: ''},
+                focus: selectedObject ? objectView(state, selectedObject, true, true) : {kind: 'empty', title: 'No object selected.', summary: ''},
                 carryPanels: carryPanels(state),
                 actions: selectedObject ? actionsForObject(state, selectedObject.id) : [],
                 resources: selectedObject ? resourcesForObject(state, selectedObject) : [],
@@ -67,7 +67,7 @@
                         }),
                         objects: (zone.objectIds || []).map(function (objectId) {
                             var object = state.indexes.objects[String(objectId || '')] || null;
-                            return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId) : null;
+                            return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId, true) : null;
                         }).filter(Boolean)
                     };
                 })
@@ -85,12 +85,12 @@
             availability: availability(collection.availability),
             objects: common.itemIds(collection.items).map(function (objectId) {
                 var object = state.indexes.objects[String(objectId || '')] || null;
-                return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId) : null;
+                return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId, true) : null;
             }).filter(Boolean)
         };
     }
 
-    function objectView(state, object, selected) {
+    function objectView(state, object, selected, includeContained) {
         var metadata = object.metadata && typeof object.metadata === 'object' ? object.metadata : {};
         var content = object.content && typeof object.content === 'object' ? object.content : {};
         var visibility = object.visibility && typeof object.visibility === 'object' ? object.visibility : {};
@@ -113,7 +113,8 @@
                 reason: common.text(permissions.reason, '')
             },
             resources: resourcesForObject(state, object),
-            actions: actionsForObject(state, object.id)
+            actions: actionsForObject(state, object.id),
+            containedObjects: includeContained === true ? containedObjects(state, object.id) : []
         };
     }
 
@@ -167,6 +168,18 @@
         });
     }
 
+    function containedObjects(state, objectId) {
+        return common.sectionItems(state.dataset.relationships).filter(function (relationship) {
+            return String(relationship.type || '') === 'contains'
+                && String(relationship.from_id || '') === String(objectId || '');
+        }).map(function (relationship) {
+            var object = state.indexes.objects[String(relationship.to_id || '')] || null;
+            return object ? objectView(state, object, false, false) : null;
+        }).filter(function (object) {
+            return object && object.id !== '';
+        });
+    }
+
     function relatedObjects(state, objectId) {
         return common.sectionItems(state.dataset.relationships).filter(function (relationship) {
             return String(relationship.from_id || '') === objectId || String(relationship.to_id || '') === objectId;
@@ -175,7 +188,7 @@
             var object = state.indexes.objects[otherId] || {};
             return {
                 type: common.text(relationship.type, 'related'),
-                object: objectView(state, object, String(object.id || '') === state.selectedObjectId)
+                object: objectView(state, object, String(object.id || '') === state.selectedObjectId, false)
             };
         }).filter(function (entry) {
             return entry.object.id !== '';
@@ -190,7 +203,7 @@
             }
             return {
                 id: String(panel.id || ''),
-                object: objectView(state, object, String(object.id || '') === state.selectedObjectId),
+                object: objectView(state, object, String(object.id || '') === state.selectedObjectId, true),
                 x: Number(panel.x || 0),
                 y: Number(panel.y || 0),
                 width: Number(panel.width || 320),

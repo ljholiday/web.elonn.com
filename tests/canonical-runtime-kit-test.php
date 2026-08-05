@@ -177,15 +177,16 @@ const websiteDataset = Object.assign({}, dataset, {
     target: 'finding:website:segment:menu',
     content: {order: 1}
   }],
-  collections: [{id: 'collection:website', type: 'resource.segmented', content: {items: ['finding:website', 'finding:website:segment:menu']}}],
+  collections: [{id: 'collection:website', type: 'resource.segmented', content: {items: ['finding:website']}}],
   placements: [{id: 'placement:website:workspace', type: 'workspace', content: {collection: 'collection:website'}}]
 });
 const websiteState = runtime.StateIndexer.build(runtime.DatasetParser.parse(websiteDataset), null);
 const websiteScene = runtime.SceneModel.fromState(websiteState);
 if (websiteScene.focus.resources[1].kind !== 'website.document') throw new Error('website JSON Resource was not projected');
 if (websiteScene.focus.resources[1].content.sections[0].text !== 'Wood-fired pizza.') throw new Error('website JSON sections were not preserved');
-if (websiteScene.layers[1].zones[0].collections[0].objects[1].type !== 'menu') throw new Error('segmented resource child object was not projected');
-if (websiteScene.layers[1].zones[0].collections[0].objects[1].resources[1].kind !== 'website.document') throw new Error('segmented resource child object did not keep website JSON Resource');
+if (websiteScene.layers[1].zones[0].collections[0].objects.length !== 1) throw new Error('segmented resource children were rendered as first-level result cards');
+if (websiteScene.focus.containedObjects[0].type !== 'menu') throw new Error('segmented resource child object was not projected through containment');
+if (websiteScene.focus.containedObjects[0].resources[1].kind !== 'website.document') throw new Error('segmented resource child object did not keep website JSON Resource');
 
 state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, width: 280, height: 160, z: 23, collapsed: true}];
 const carryScene = runtime.SceneModel.fromState(state);

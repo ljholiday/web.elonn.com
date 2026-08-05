@@ -173,6 +173,11 @@ $checks = [
     'Collections and resources are first-class scene inputs' => str_contains($scripts, 'state.indexes.collections[collectionId]')
         && str_contains($scripts, 'resourcesForObject')
         && str_contains($scripts, 'resourceIds'),
+    'Runtime expands selected resources through contained objects' => str_contains($scripts, 'containedObjects')
+        && str_contains($webRenderer, 'containedObjectNodes')
+        && str_contains($webRenderer, 'object-decomposition')
+        && str_contains($runtimeCss, '.object-decomposition')
+        && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'segmented resource children were rendered as first-level result cards'),
     'Runtime renders empty collection notices where results appear' => str_contains($scripts, 'emptyCollectionNotice')
         && str_contains($scripts, "collection.summary || 'No results.'"),
     'Returned remote actions remain unavailable without dispatch controls' => str_contains($scripts, 'Action execution is not available yet.')
