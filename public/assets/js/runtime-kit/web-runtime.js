@@ -198,7 +198,7 @@
 
     function loadDataset(runtimeState) {
         client.loadDataset(runtimeState).then(function (payload) {
-            replaceDataset(payload);
+            replaceDataset(payload, shouldMergeDataset(runtimeState));
             runtime.AdapterRegistry.handleResponse(payload, runtimeState, adapterContext());
             renderer.status(datasetStatus(payload), datasetStatusState(payload));
         }).catch(function (error) {
@@ -262,8 +262,18 @@
         });
     }
 
-    function replaceDataset(payload) {
+    function shouldMergeDataset(runtimeState) {
+        return !!state
+            && !!runtimeState
+            && String(runtimeState.inputText || '').trim() !== ''
+            && !runtimeState.surfaceCommand;
+    }
+
+    function replaceDataset(payload, mergeWithPrevious) {
         var parsed = runtime.DatasetParser.parse(payload);
+        if (mergeWithPrevious) {
+            parsed = runtime.StateIndexer.mergeDatasets(state ? state.dataset : null, parsed);
+        }
         var next = runtime.StateIndexer.build(parsed, state);
         state = runtime.ContinuityReconciler.reconcile(state, next);
         state.carryPanels = reconcileCarryPanels(loadCarryPanels());

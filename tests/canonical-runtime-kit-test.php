@@ -154,6 +154,47 @@ if (workspaceState.layers[0].zones[0].collectionIds.length !== 0) throw new Erro
 const workspaceScene = runtime.SceneModel.fromState(workspaceState);
 if (workspaceScene.focus.layer !== 'workspace') throw new Error('selected workspace object was labeled as carry');
 
+const previousSearchDataset = runtime.DatasetParser.parse(Object.assign({}, dataset, {
+  id: 'dataset:world:previous-search',
+  objects: [{id: 'object:old', type: 'finding', content: {name: 'Old result'}}],
+  collections: [{
+    id: 'collection:old',
+    type: 'collection',
+    content: {items: ['object:old']}
+  }, {
+    id: 'collection:old-empty',
+    type: 'mind.notice.results',
+    content: {description: 'No results matched "old".', items: []}
+  }],
+  placements: [{
+    id: 'placement:old:workspace',
+    type: 'workspace',
+    content: {collection: 'collection:old'}
+  }, {
+    id: 'placement:old-empty:workspace',
+    type: 'workspace',
+    content: {collection: 'collection:old-empty'}
+  }]
+}));
+const nextSearchDataset = runtime.DatasetParser.parse(Object.assign({}, dataset, {
+  id: 'dataset:world:next-search',
+  objects: [{id: 'object:new', type: 'finding', content: {name: 'New result'}}],
+  collections: [{
+    id: 'collection:new',
+    type: 'collection',
+    content: {items: ['object:new']}
+  }],
+  placements: [{
+    id: 'placement:new:workspace',
+    type: 'workspace',
+    content: {collection: 'collection:new'}
+  }]
+}));
+const mergedSearchDataset = runtime.StateIndexer.mergeDatasets(previousSearchDataset, nextSearchDataset);
+if (mergedSearchDataset.objects.map((object) => object.id).join(',') !== 'object:new,object:old') throw new Error('new search did not preserve previous result objects');
+if (mergedSearchDataset.collections.map((collection) => collection.id).join(',') !== 'collection:new,collection:old') throw new Error('new search did not preserve only actual previous result collections');
+if (mergedSearchDataset.placements.map((placement) => placement.id).join(',') !== 'placement:new:workspace,placement:old:workspace') throw new Error('new search did not preserve only placements with visible targets');
+
 let rejected = false;
 try {
   runtime.DatasetParser.parse({dataset: {name: 'elonn.world.dataset', version: 1}});

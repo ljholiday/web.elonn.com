@@ -7,6 +7,21 @@
     var common = window.ElonnWorldRuntime.Common;
 
     window.ElonnWorldRuntime.StateIndexer = {
+        mergeDatasets: function (previous, incoming) {
+            if (!previous || !incoming) {
+                return incoming;
+            }
+
+            return Object.assign({}, incoming, {
+                objects: mergeById(previous.objects, incoming.objects),
+                actions: mergeById(previous.actions, incoming.actions),
+                relationships: mergeById(previous.relationships, incoming.relationships),
+                collections: mergeCollections(previous.collections, incoming.collections),
+                resources: mergeById(previous.resources, incoming.resources),
+                placements: mergePlacements(previous.placements, incoming.placements, previous.collections, incoming.collections)
+            });
+        },
+
         build: function (dataset, previous) {
             var indexes = {
                 objects: common.indexBy(dataset.objects, 'id'),
@@ -41,6 +56,47 @@
             };
         }
     };
+
+    function mergeById(previousItems, incomingItems) {
+        var seen = {};
+        return common.sectionItems({items: incomingItems}).concat(common.sectionItems({items: previousItems})).filter(function (item) {
+            var id = String(item.id || '');
+            if (id === '' || seen[id]) {
+                return false;
+            }
+            seen[id] = true;
+            return true;
+        });
+    }
+
+    function mergeCollections(previousItems, incomingItems) {
+        return common.sectionItems({items: incomingItems}).concat(common.sectionItems({items: previousItems}).filter(function (collection) {
+            return common.itemIds(collection.items).length > 0;
+        })).filter(uniqueById());
+    }
+
+    function mergePlacements(previousItems, incomingItems, previousCollections, incomingCollections) {
+        var collections = mergeCollections(previousCollections, incomingCollections);
+        var collectionIds = common.indexBy(collections, 'id');
+        return mergeById(previousItems, incomingItems).filter(function (placement) {
+            if (placement.collection_id !== '') {
+                return !!collectionIds[placement.collection_id];
+            }
+            return placement.object_id !== '' || placement.resource_id !== '';
+        });
+    }
+
+    function uniqueById() {
+        var seen = {};
+        return function (item) {
+            var id = String(item.id || '');
+            if (id === '' || seen[id]) {
+                return false;
+            }
+            seen[id] = true;
+            return true;
+        };
+    }
 
     function layers(dataset, indexes) {
         return ['carry', 'workspace', 'field'].map(function (placementType) {
