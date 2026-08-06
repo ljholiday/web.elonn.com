@@ -258,6 +258,7 @@ $checks = [
         && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'website JSON Resource was not projected'),
     'Carry panels are runtime-local floating objects controlled by title text' => str_contains($template, 'data-runtime-carry-panels')
         && str_contains($scripts, 'carryStorageKey')
+        && str_contains($scripts, 'runtimeStorageKey')
         && str_contains($scripts, 'localStorage')
         && str_contains($scripts, 'carryObject(')
         && str_contains($scripts, "root.addEventListener('pointerdown'")
@@ -280,6 +281,15 @@ $checks = [
         && str_contains($scripts, 'carry-object-panel__content')
         && str_contains($scripts, 'data-carry-panel-close')
         && str_contains($scripts, 'closeCarryPanel'),
+    'Runtime restores browser-local query results and panel state after reload' => str_contains($webRuntime, 'restoreLocalRuntimeState')
+        && str_contains($webRuntime, 'persistLocalRuntimeState')
+        && str_contains($webRuntime, 'restoreFallbackPayload')
+        && str_contains($webRuntime, 'isEmptyRestorePayload')
+        && str_contains($webRuntime, 'clearLocalRuntimeDataset')
+        && str_contains($webRuntime, "String(runtimeState.operation || '') === 'world.restore'")
+        && str_contains($webRuntime, 'composition.state === \'empty\'')
+        && str_contains($webRuntime, "queryInput.addEventListener('input'")
+        && str_contains($webRuntime, 'dataset: datasetPayload || saved.dataset || null'),
     'Runtime does not revive stale local carry panel Object snapshots' => str_contains($webRuntime, 'state.indexes.objects[String(panel.objectId || \'\')] || null')
         && str_contains($webRuntime, 'reconcileCarryPanels(loadCarryPanels())')
         && str_contains($webRuntime, 'object: carrySnapshot(object)')

@@ -14,6 +14,7 @@
     var voiceButton = null;
     var recognition = null;
     var carryStorageKey = 'elonn.web.carry.panels.v1';
+    var runtimeStorageKey = 'elonn.web.runtime.state.v1';
     var drag = null;
     var resize = null;
     var lastCarryTitleTap = null;
@@ -34,6 +35,7 @@
 
     renderer.status('Requesting World Dataset.', 'loading');
     renderer.render(runtime.SceneModel.loading());
+    restoreLocalRuntimeState();
     loadDataset({operation: 'world.restore'});
 
     if (voiceButton) {
@@ -49,6 +51,11 @@
                 return;
             }
             submitQuery(text);
+        });
+    }
+    if (queryInput) {
+        queryInput.addEventListener('input', function () {
+            persistLocalRuntimeState();
         });
     }
 
@@ -95,6 +102,7 @@
         if (workspaceClose) {
             event.preventDefault();
             workspaceResultsClosed = true;
+            persistLocalRuntimeState();
             renderState();
             return;
         }
@@ -102,6 +110,7 @@
         if (workspaceTitle && state) {
             event.preventDefault();
             workspaceResultsCollapsed = !workspaceResultsCollapsed;
+            persistLocalRuntimeState();
             renderState();
             return;
         }
@@ -231,7 +240,7 @@
 
     function loadDataset(runtimeState) {
         client.loadDataset(runtimeState).then(function (payload) {
-            replaceDataset(payload, shouldMergeDataset(runtimeState));
+            replaceDataset(payload, shouldMergeDataset(runtimeState), runtimeState);
             runtime.AdapterRegistry.handleResponse(payload, runtimeState, adapterContext());
             renderer.status(datasetStatus(payload), datasetStatusState(payload));
         }).catch(function (error) {
@@ -307,7 +316,8 @@
             && runtimeState.replaceResults !== true;
     }
 
-    function replaceDataset(payload, mergeWithPrevious) {
+    function replaceDataset(payload, mergeWithPrevious, runtimeState) {
+        payload = restoreFallbackPayload(payload, runtimeState);
         var parsed = runtime.DatasetParser.parse(payload);
         if (mergeWithPrevious) {
             parsed = runtime.StateIndexer.mergeDatasets(state ? state.dataset : null, parsed);
@@ -316,6 +326,7 @@
         state = runtime.ContinuityReconciler.reconcile(state, next);
         state.carryPanels = reconcileCarryPanels(loadCarryPanels());
         persistCarryPanels();
+        persistLocalRuntimeState(payload);
         renderState();
     }
 
@@ -339,6 +350,8 @@
             queryInput.value = '';
             queryInput.focus();
         }
+        clearLocalRuntimeDataset();
+        persistLocalRuntimeState();
         renderState();
         renderer.status('Results cleared.', 'neutral');
     }
@@ -787,6 +800,95 @@
         } catch (error) {
             renderer.status('Carry panels could not be saved locally.', 'error');
         }
+    }
+
+    function restoreLocalRuntimeState() {
+        var saved = loadLocalRuntimeState();
+        var parsed = null;
+        if (queryInput && typeof saved.query === 'string') {
+            queryInput.value = saved.query;
+        }
+        workspaceResultsCollapsed = saved.workspace && saved.workspace.collapsed === true;
+        workspaceResultsClosed = saved.workspace && saved.workspace.closed === true;
+        workspaceResultsCleared = saved.workspace && saved.workspace.cleared === true;
+        if (!saved.dataset) {
+            return;
+        }
+        try {
+            parsed = runtime.DatasetParser.parse(saved.dataset);
+            state = runtime.StateIndexer.build(parsed, null);
+            state.carryPanels = reconcileCarryPanels(loadCarryPanels());
+            renderState();
+        } catch (error) {
+            clearLocalRuntimeDataset();
+        }
+    }
+
+    function restoreFallbackPayload(payload, runtimeState) {
+        var saved = null;
+        if (!isRestoreRequest(runtimeState) || !isEmptyRestorePayload(payload)) {
+            return payload;
+        }
+        saved = loadLocalRuntimeState();
+        return saved.dataset || payload;
+    }
+
+    function persistLocalRuntimeState(datasetPayload) {
+        var saved = loadLocalRuntimeState();
+        var next = {
+            query: queryInput ? String(queryInput.value || '') : '',
+            workspace: {
+                collapsed: workspaceResultsCollapsed,
+                closed: workspaceResultsClosed,
+                cleared: workspaceResultsCleared
+            },
+            dataset: datasetPayload || saved.dataset || null
+        };
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(runtimeStorageKey, JSON.stringify(next));
+            }
+        } catch (error) {
+            renderer.status('Runtime state could not be saved locally.', 'error');
+        }
+    }
+
+    function loadLocalRuntimeState() {
+        var stored = '';
+        var decoded = null;
+        try {
+            stored = window.localStorage ? window.localStorage.getItem(runtimeStorageKey) : '';
+            decoded = stored ? JSON.parse(stored) : {};
+            return decoded && typeof decoded === 'object' && !Array.isArray(decoded) ? decoded : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function clearLocalRuntimeDataset() {
+        var saved = loadLocalRuntimeState();
+        saved.dataset = null;
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(runtimeStorageKey, JSON.stringify(saved));
+            }
+        } catch (error) {
+            renderer.status('Runtime state could not be saved locally.', 'error');
+        }
+    }
+
+    function isRestoreRequest(runtimeState) {
+        return runtimeState && String(runtimeState.operation || '') === 'world.restore';
+    }
+
+    function isEmptyRestorePayload(payload) {
+        var source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+        var context = source.context && typeof source.context === 'object' ? source.context : {};
+        var composition = context.composition && typeof context.composition === 'object' ? context.composition : {};
+        return Array.isArray(source.objects) && source.objects.length === 0
+            && Array.isArray(source.collections) && source.collections.length === 0
+            && Array.isArray(source.placements) && source.placements.length === 0
+            && composition.state === 'empty';
     }
 
     function endDrag(event) {
