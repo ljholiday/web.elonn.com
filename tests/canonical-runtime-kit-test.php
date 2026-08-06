@@ -284,7 +284,7 @@ if (worldCall.context.runtime.id !== 'web') throw new Error('runtime identity wa
 const paintWorldCall = worldClient.worldCall({
   inputText: 'draw stroke',
   selectedObjectId: 'paint.document:test',
-  surfaceCommand: {
+  operationInvocation: {
     service: 'paint',
     operation: 'paint.draw',
     object_id: 'paint.document:test',
@@ -297,9 +297,9 @@ const paintWorldCall = worldClient.worldCall({
     }
   }
 });
-if (paintWorldCall.content.surface_command.operation !== 'paint.draw') throw new Error('surface command operation was not preserved');
-if (paintWorldCall.content.surface_command.payload.stroke.geometry.points.length !== 2) throw new Error('surface command stroke was not preserved');
-if (paintWorldCall.context.focus.object_id !== 'paint.document:test') throw new Error('surface command focus Object was not preserved');
+if (paintWorldCall.content.operation_invocation.operation !== 'paint.draw') throw new Error('operation invocation operation was not preserved');
+if (paintWorldCall.content.operation_invocation.payload.stroke.geometry.points.length !== 2) throw new Error('operation invocation stroke was not preserved');
+if (paintWorldCall.context.focus.object_id !== 'paint.document:test') throw new Error('operation invocation focus Object was not preserved');
 
 const errorDataset = Object.assign({}, dataset, {id: 'dataset:world:error', errors: [{code: 'contract_violation', class: 'contract', message: 'Bad call.'}]});
 const parsedError = runtime.DatasetParser.parse(errorDataset);

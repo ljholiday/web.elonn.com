@@ -51,8 +51,8 @@
             },
 
             handleResponse: function (payload, runtimeState, context) {
-                var command = runtimeState && runtimeState.surfaceCommand && typeof runtimeState.surfaceCommand === 'object'
-                    ? runtimeState.surfaceCommand
+                var command = runtimeState && runtimeState.operationInvocation && typeof runtimeState.operationInvocation === 'object'
+                    ? runtimeState.operationInvocation
                     : null;
                 var adapter = command ? adapters[key(command.service, command.kind || '')] || adapters[key(command.service, command.surface_kind || '')] : null;
                 if (adapter && typeof adapter.handleResponse === 'function') {

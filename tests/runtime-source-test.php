@@ -112,6 +112,9 @@ $checks = [
         && str_contains($adapterRegistry, 'mountAll')
         && str_contains($adapterRegistry, 'handleResponse')
         && str_contains($webRuntime, 'dispatchSurfaceCommand')
+        && str_contains($webRuntime, 'operationInvocation')
+        && str_contains($adapterRegistry, 'runtimeState.operationInvocation')
+        && str_contains(read_file($root . '/public/assets/js/runtime-kit/world-client.js'), 'operation_invocation')
         && str_contains($webRuntime, 'removeObjectSurface')
         && str_contains($webRenderer, 'dataset.hostedSurface'),
     'Runtime leaves hosted surface interaction events to adapters' => str_contains($webRuntime, "event.target.closest('[data-hosted-surface]')")

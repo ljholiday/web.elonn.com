@@ -303,7 +303,7 @@
         return !!state
             && !!runtimeState
             && String(runtimeState.inputText || '').trim() !== ''
-            && !runtimeState.surfaceCommand
+            && !runtimeState.operationInvocation
             && runtimeState.replaceResults !== true;
     }
 
@@ -436,8 +436,8 @@
             runtimeSessionId: state ? state.runtimeSessionId : '',
             selectedObjectId: objectId,
             selectedCollectionId: state ? state.selectedCollectionId : '',
-            inputText: String(command && command.input_text || 'surface command'),
-            surfaceCommand: command
+            inputText: String(command && command.input_text || 'operation invocation'),
+            operationInvocation: command
         });
     }
 

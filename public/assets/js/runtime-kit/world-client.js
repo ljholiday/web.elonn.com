@@ -75,8 +75,8 @@
             if (isFinite(Number(state.radiusMeters)) && Number(state.radiusMeters) > 0) {
                 call.content.radius_meters = Math.round(Number(state.radiusMeters));
             }
-            if (state.surfaceCommand && typeof state.surfaceCommand === 'object' && !Array.isArray(state.surfaceCommand)) {
-                call.content.surface_command = state.surfaceCommand;
+            if (state.operationInvocation && typeof state.operationInvocation === 'object' && !Array.isArray(state.operationInvocation)) {
+                call.content.operation_invocation = state.operationInvocation;
             }
             if (String(state.selectedObjectId || '') !== '') {
                 call.context.focus.object_id = String(state.selectedObjectId);
