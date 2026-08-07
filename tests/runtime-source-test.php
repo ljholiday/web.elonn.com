@@ -194,6 +194,11 @@ $checks = [
         && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'segmented resource child parts were not projected'),
     'Runtime renders empty collection notices where results appear' => str_contains($scripts, 'emptyCollectionNotice')
         && str_contains($scripts, "collection.summary || 'No results.'"),
+    'Runtime keeps notification areas at the bottom of the viewport' => str_contains($runtimeCss, '.field-projection__status')
+        && str_contains($runtimeCss, '.runtime-session')
+        && str_contains($runtimeCss, 'bottom: 18px;')
+        && !str_contains($runtimeCss, "field-projection__status {\n    left: 22px;\n    top:")
+        && !str_contains($runtimeCss, "runtime-session {\n    right: 20px;\n    top:"),
     'Workspace results use the search form as the shared panel title bar' => str_contains($template, 'workspace-layer workspace-results-panel')
         && str_contains($template, 'query-composer carry-object-panel__bar workspace-results-panel__bar')
         && str_contains($template, 'query-composer__field carry-object-panel__title')

@@ -278,13 +278,13 @@ input {
 
 .field-projection__status {
     left: 22px;
-    top: 66px;
+    bottom: 18px;
     margin: 0;
 }
 
 .runtime-session {
     right: 20px;
-    top: 64px;
+    bottom: 18px;
     display: grid;
     gap: 3px;
     text-align: right;
