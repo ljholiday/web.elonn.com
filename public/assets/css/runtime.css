@@ -274,12 +274,14 @@ input {
     z-index: 8;
     color: #d0ddd5;
     font-size: 0.82rem;
+    max-width: min(42vw, 360px);
 }
 
 .field-projection__status {
     left: 22px;
     bottom: 18px;
     margin: 0;
+    overflow-wrap: anywhere;
 }
 
 .runtime-session {
@@ -959,5 +961,22 @@ figure {
         top: 8px;
         width: auto;
         transform: none;
+    }
+
+    .field-projection__status,
+    .runtime-session {
+        left: 12px;
+        right: 12px;
+        max-width: none;
+    }
+
+    .field-projection__status {
+        bottom: 54px;
+    }
+
+    .runtime-session {
+        bottom: 12px;
+        justify-items: start;
+        text-align: left;
     }
 }

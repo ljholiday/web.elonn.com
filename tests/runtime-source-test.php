@@ -197,6 +197,11 @@ $checks = [
     'Runtime keeps notification areas at the bottom of the viewport' => str_contains($runtimeCss, '.field-projection__status')
         && str_contains($runtimeCss, '.runtime-session')
         && str_contains($runtimeCss, 'bottom: 18px;')
+        && str_contains($runtimeCss, 'max-width: min(42vw, 360px);')
+        && str_contains($runtimeCss, 'overflow-wrap: anywhere;')
+        && str_contains($runtimeCss, '@media (max-width: 920px)')
+        && str_contains($runtimeCss, 'bottom: 54px;')
+        && str_contains($runtimeCss, 'justify-items: start;')
         && !str_contains($runtimeCss, "field-projection__status {\n    left: 22px;\n    top:")
         && !str_contains($runtimeCss, "runtime-session {\n    right: 20px;\n    top:"),
     'Workspace results use the search form as the shared panel title bar' => str_contains($template, 'workspace-layer workspace-results-panel')
