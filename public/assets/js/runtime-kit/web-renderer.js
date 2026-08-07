@@ -180,7 +180,7 @@
             title.textContent = collection.title;
             summary.textContent = collection.summary;
             header.appendChild(title);
-            if (collection.summary !== '' && mode !== 'compact') {
+            if (collection.summary !== '' && mode !== 'compact' && collection.objects.length > 0) {
                 header.appendChild(summary);
             }
             list.className = 'world-object-list';

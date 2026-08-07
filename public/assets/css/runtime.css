@@ -286,6 +286,8 @@ input {
     color: #d0ddd5;
     font-size: 0.82rem;
     min-width: 0;
+    pointer-events: auto;
+    user-select: text;
 }
 
 .field-projection__status {

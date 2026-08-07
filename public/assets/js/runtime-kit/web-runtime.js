@@ -302,7 +302,7 @@
     function shouldMergeDataset(runtimeState) {
         return !!state
             && !!runtimeState
-            && String(runtimeState.inputText || '').trim() !== ''
+            && String(runtimeState.inputText || '').trim() === ''
             && !runtimeState.operationInvocation
             && runtimeState.replaceResults !== true;
     }

@@ -200,6 +200,8 @@ $checks = [
         && str_contains($runtimeCss, 'grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);')
         && str_contains($runtimeCss, 'grid-template-columns: minmax(0, 1fr);')
         && str_contains($runtimeCss, 'overflow-wrap: anywhere;')
+        && str_contains($runtimeCss, 'user-select: text;')
+        && str_contains($runtimeCss, 'pointer-events: auto;')
         && str_contains($runtimeCss, '@media (max-width: 920px)')
         && str_contains($runtimeCss, 'justify-items: start;')
         && !str_contains($runtimeCss, "field-projection__status {\n    left: 22px;\n    top:")
@@ -233,7 +235,9 @@ $checks = [
         && !str_contains($webRuntime, "recordTitleTap('workspace-results')")
         && !str_contains($webRuntime, "panelId === 'workspace-results'")
         && str_contains($webRuntime, 'replaceResults: workspaceResultsCleared')
+        && str_contains($webRuntime, "String(runtimeState.inputText || '').trim() === ''")
         && str_contains($webRuntime, 'runtimeState.replaceResults !== true')
+        && str_contains($webRenderer, "collection.objects.length > 0")
         && !str_contains($webRuntime, 'function clearWorkspaceResults')
         && !str_contains(substr($webRuntime, strpos($webRuntime, 'function clearResults()'), 500), "loadDataset({operation: 'world.restore'})")
         && str_contains($runtimeCss, '.workspace-results-panel[data-collapsed="true"] .workspace-results-panel__content'),
