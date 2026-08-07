@@ -31,7 +31,7 @@
                 voice: true,
                 collections: true,
                 resources: true,
-                action_dispatch: false
+                action_dispatch: true
             };
         }
 

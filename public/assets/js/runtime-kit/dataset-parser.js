@@ -96,6 +96,9 @@
                     label: common.text(content.label || content.name || action.label || action.name, 'Action'),
                     target_id: String(target || ''),
                     href: String(content.href || content.url || action.href || ''),
+                    operation_invocation: content.operation_invocation && typeof content.operation_invocation === 'object' && !Array.isArray(content.operation_invocation)
+                        ? content.operation_invocation
+                        : null,
                     availability: availability(action.availability || content.availability),
                     source: action
                 };

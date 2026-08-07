@@ -117,6 +117,35 @@ const scene = runtime.SceneModel.fromState(state);
 if (scene.actions[0].availability.state !== 'unavailable') throw new Error('returned actions must be unavailable until Web supports execution');
 if (scene.actions[0].availability.reason !== 'Action execution is not available yet.') throw new Error('unavailable action reason was not set');
 
+const operationDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:operation-action',
+  objects: [{
+    id: 'paint.workspace',
+    type: 'paint.workspace',
+    content: {name: 'Paint', description: 'Create a new Paint drawing document.'}
+  }],
+  actions: [{
+    id: 'action:paint.workspace:create',
+    type: 'operation',
+    target: 'paint.workspace',
+    content: {
+      label: 'Create drawing',
+      operation_invocation: {
+        service: 'paint',
+        operation: 'paint.create',
+        object_id: 'paint.workspace',
+        payload: {}
+      }
+    }
+  }],
+  collections: [{id: 'collection:paint.workspace', type: 'collection', content: {items: ['paint.workspace']}}],
+  placements: [{id: 'placement:paint.workspace:workspace', type: 'workspace', content: {collection: 'collection:paint.workspace'}}]
+});
+const operationState = runtime.StateIndexer.build(runtime.DatasetParser.parse(operationDataset), null);
+const operationScene = runtime.SceneModel.fromState(operationState);
+if (operationScene.actions[0].availability.state !== 'enabled') throw new Error('operation action was not enabled');
+if (operationScene.actions[0].operationInvocation.operation !== 'paint.create') throw new Error('operation invocation was not projected');
+
 const paintState = runtime.StateIndexer.build(runtime.DatasetParser.parse(paintDataset), null);
 const paintScene = runtime.SceneModel.fromState(paintState);
 if (paintScene.focus.surface.mode !== 'hosted') throw new Error('hosted Object surface was not projected');
@@ -281,6 +310,7 @@ if (worldCall.content.origin.latitude !== 47.6062 || worldCall.content.origin.lo
 }
 if (worldCall.content.radius_meters !== 1000) throw new Error('nearby radius was not included in the canonical World Call');
 if (worldCall.context.runtime.id !== 'web') throw new Error('runtime identity was not preserved in the World Call');
+if (worldCall.context.runtime.capabilities.action_dispatch !== true) throw new Error('operation action dispatch capability was not advertised');
 const paintWorldCall = worldClient.worldCall({
   inputText: 'draw stroke',
   selectedObjectId: 'paint.document:test',

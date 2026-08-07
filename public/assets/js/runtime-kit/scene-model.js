@@ -137,16 +137,19 @@
         }).map(function (action) {
             var sourceAvailability = availability(action.availability);
             var href = common.text(action.href || (action.source && action.source.href), '');
+            var operationInvocation = action.operation_invocation && typeof action.operation_invocation === 'object' ? action.operation_invocation : null;
+            var enabled = href !== '' || operationInvocation !== null;
             return {
                 id: String(action.id || ''),
                 label: common.text(action.label, 'Action'),
                 type: common.text(action.type, 'action'),
                 endpoint: String(action.endpoint || ''),
                 href: href,
+                operationInvocation: operationInvocation,
                 availability: {
-                    state: href !== '' ? 'enabled' : 'unavailable',
-                    reason: href !== '' ? '' : common.text(sourceAvailability.reason, 'Action execution is not available yet.'),
-                    requiredCapability: href !== '' ? '' : common.text(sourceAvailability.requiredCapability, 'action_dispatch')
+                    state: enabled ? 'enabled' : 'unavailable',
+                    reason: enabled ? '' : common.text(sourceAvailability.reason, 'Action execution is not available yet.'),
+                    requiredCapability: enabled ? '' : common.text(sourceAvailability.requiredCapability, 'action_dispatch')
                 },
                 source: action
             };

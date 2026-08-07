@@ -74,6 +74,7 @@
         var panelTitle = event.target.closest('[data-carry-panel-title]');
         var hostedSurface = event.target.closest('[data-hosted-surface]');
         var runtimeUrl = event.target.closest('[data-runtime-url]');
+        var operationAction = event.target.closest('[data-operation-invocation]');
         var workspaceToggle = event.target.closest('[data-workspace-results-toggle]');
         var workspaceClear = event.target.closest('[data-workspace-results-clear]');
         var collectionButton = event.target.closest('[data-collection-id]');
@@ -88,6 +89,12 @@
         if (runtimeUrl && state) {
             event.preventDefault();
             openRuntimeUrl(runtimeUrl);
+            return;
+        }
+
+        if (operationAction && state) {
+            event.preventDefault();
+            dispatchOperationAction(operationAction);
             return;
         }
 
@@ -258,17 +265,9 @@
             request.origin = origin;
             request.radiusMeters = 1000;
             loadDataset(request);
-        }).catch(function (error) {
-            if (needsBrowserOrigin(text)) {
-                renderer.status(error && error.message ? error.message : 'Location is required for nearby requests.', 'error');
-                return;
-            }
+        }).catch(function () {
             loadDataset(request);
         });
-    }
-
-    function needsBrowserOrigin(text) {
-        return /\b(near me|nearby|around me|close to me|in my area)\b/i.test(String(text || ''));
     }
 
     function browserOrigin() {
@@ -369,6 +368,21 @@
             inputText: String(command && command.input_text || 'operation invocation'),
             operationInvocation: command
         });
+    }
+
+    function dispatchOperationAction(control) {
+        var command = null;
+        try {
+            command = JSON.parse(String(control.dataset.operationInvocation || '{}'));
+        } catch (error) {
+            renderer.status('Action could not be read.', 'error');
+            return;
+        }
+        if (!command || typeof command !== 'object' || Array.isArray(command)) {
+            renderer.status('Action could not be read.', 'error');
+            return;
+        }
+        dispatchOperationInvocation(command);
     }
 
     function removeObjectSurface(objectId) {

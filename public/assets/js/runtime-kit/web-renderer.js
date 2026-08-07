@@ -721,10 +721,30 @@
                 return [];
             }
             return (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
-                return action.availability && action.availability.state === 'enabled' && common.text(action.href, '') !== '';
+                return action.availability
+                    && action.availability.state === 'enabled'
+                    && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'));
             }).map(function (action) {
+                if (action.operationInvocation && typeof action.operationInvocation === 'object') {
+                    return operationLine('Action', action.label, action.operationInvocation);
+                }
+
                 return linkLine('Action', action.label, action.href, object.id);
             });
+        }
+
+        function operationLine(label, text, operationInvocation) {
+            var row = document.createElement('p');
+            var strong = document.createElement('strong');
+            var button = document.createElement('button');
+            row.className = 'meta-line';
+            strong.textContent = label;
+            button.type = 'button';
+            button.dataset.operationInvocation = JSON.stringify(operationInvocation);
+            button.textContent = common.text(text, 'Action');
+            row.appendChild(strong);
+            row.appendChild(button);
+            return row;
         }
 
         function linkLine(label, text, href, objectId) {
