@@ -268,27 +268,35 @@ input {
     white-space: nowrap;
 }
 
-.field-projection__status,
-.runtime-session {
+.runtime-notifications {
     position: absolute;
     z-index: 8;
+    left: 18px;
+    right: 18px;
+    bottom: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 16px;
+    pointer-events: none;
+}
+
+.field-projection__status,
+.runtime-session {
     color: #d0ddd5;
     font-size: 0.82rem;
-    max-width: min(42vw, 360px);
+    min-width: 0;
 }
 
 .field-projection__status {
-    left: 22px;
-    bottom: 18px;
     margin: 0;
     overflow-wrap: anywhere;
 }
 
 .runtime-session {
-    right: 20px;
-    bottom: 18px;
     display: grid;
     gap: 3px;
+    justify-items: end;
     text-align: right;
 }
 
@@ -963,19 +971,15 @@ figure {
         transform: none;
     }
 
-    .field-projection__status,
-    .runtime-session {
+    .runtime-notifications {
         left: 12px;
         right: 12px;
-        max-width: none;
-    }
-
-    .field-projection__status {
-        bottom: 54px;
+        bottom: 12px;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
     }
 
     .runtime-session {
-        bottom: 12px;
         justify-items: start;
         text-align: left;
     }

@@ -194,13 +194,13 @@ $checks = [
         && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'segmented resource child parts were not projected'),
     'Runtime renders empty collection notices where results appear' => str_contains($scripts, 'emptyCollectionNotice')
         && str_contains($scripts, "collection.summary || 'No results.'"),
-    'Runtime keeps notification areas at the bottom of the viewport' => str_contains($runtimeCss, '.field-projection__status')
+    'Runtime keeps notification areas at the bottom of the viewport' => str_contains($template, 'runtime-notifications')
+        && str_contains($runtimeCss, '.runtime-notifications')
         && str_contains($runtimeCss, '.runtime-session')
-        && str_contains($runtimeCss, 'bottom: 18px;')
-        && str_contains($runtimeCss, 'max-width: min(42vw, 360px);')
+        && str_contains($runtimeCss, 'grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);')
+        && str_contains($runtimeCss, 'grid-template-columns: minmax(0, 1fr);')
         && str_contains($runtimeCss, 'overflow-wrap: anywhere;')
         && str_contains($runtimeCss, '@media (max-width: 920px)')
-        && str_contains($runtimeCss, 'bottom: 54px;')
         && str_contains($runtimeCss, 'justify-items: start;')
         && !str_contains($runtimeCss, "field-projection__status {\n    left: 22px;\n    top:")
         && !str_contains($runtimeCss, "runtime-session {\n    right: 20px;\n    top:"),

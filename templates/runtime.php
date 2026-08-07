@@ -63,7 +63,6 @@ $pageUrl = rtrim($app['url'], '/') . '/';
                 <div class="field-projection__horizon" aria-hidden="true"></div>
                 <div class="field-projection__north" aria-hidden="true"><span>N</span></div>
                 <div class="field-projection__objects" data-layer-zone="field:field"></div>
-                <p class="field-projection__status" data-runtime-status>Preparing runtime request.</p>
             </div>
 
             <div class="carry-panel-stage" data-runtime-carry-panels></div>
@@ -104,7 +103,10 @@ $pageUrl = rtrim($app['url'], '/') . '/';
                 <div class="carry-object-panel__content workspace-results-panel__content" data-workspace-results-content="true" data-layer-zone="workspace:workspace"></div>
             </section>
 
-            <div class="runtime-session" data-runtime-session></div>
+            <div class="runtime-notifications" aria-live="polite">
+                <p class="field-projection__status" data-runtime-status>Preparing runtime request.</p>
+                <div class="runtime-session" data-runtime-session></div>
+            </div>
         </section>
 
         <noscript>
