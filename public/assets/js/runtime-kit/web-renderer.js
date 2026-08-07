@@ -34,54 +34,32 @@
         }
 
         function renderWorkspace(node, zone, options) {
-            var body = document.createElement('div');
             var panel = null;
+            var toggle = null;
             var content = [];
             if (!node) {
                 return;
             }
-            if (!zone || options.closed === true) {
+            panel = node.closest('[data-workspace-results-panel]');
+            if (panel) {
+                panel.dataset.collapsed = options.collapsed === true ? 'true' : 'false';
+                toggle = panel.querySelector('[data-workspace-results-toggle]');
+                if (toggle) {
+                    toggle.textContent = options.collapsed === true ? 'Show' : 'Hide';
+                }
+            }
+            if (!zone || options.closed === true || options.collapsed === true || options.emptyVisible === true) {
                 common.replaceChildren(node, []);
                 return;
             }
 
             content = collections(zone.collections || [], 'overlay').concat(objectList(zone.objects || [], 'overlay'));
-            if (content.length === 0 && options.emptyVisible !== true) {
+            if (content.length === 0) {
                 common.replaceChildren(node, []);
                 return;
             }
 
-            body.className = 'carry-object-panel__content workspace-results-panel__content';
-            body.dataset.workspaceResultsContent = 'true';
-            content.forEach(function (item) {
-                body.appendChild(item);
-            });
-
-            panel = document.createElement('section');
-            panel.className = 'workspace-results-panel';
-            panel.dataset.workspaceResultsPanel = 'true';
-            panel.dataset.collapsed = options.collapsed === true ? 'true' : 'false';
-            panel.appendChild(panelHeader({
-                title: 'Results',
-                barClass: 'workspace-results-panel__bar',
-                headerDataset: 'workspaceResultsTitle',
-                headerDatasetValue: 'true',
-                titleDataset: 'workspaceResultsTitle',
-                titleDatasetValue: 'true',
-                closeDataset: 'workspaceResultsClose',
-                closeDatasetValue: 'true',
-                closeLabel: 'Close results',
-                actions: [
-                    panelButton({
-                        label: 'Clear',
-                        className: 'workspace-results-panel__clear',
-                        dataset: 'workspaceResultsClear',
-                        datasetValue: 'true'
-                    })
-                ]
-            }));
-            panel.appendChild(body);
-            common.replaceChildren(node, [panel]);
+            common.replaceChildren(node, content);
         }
 
         function panelHeader(config) {

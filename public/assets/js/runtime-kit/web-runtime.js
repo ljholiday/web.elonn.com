@@ -14,12 +14,11 @@
     var voiceButton = null;
     var recognition = null;
     var carryStorageKey = 'elonn.web.carry.panels.v1';
-    var runtimeStorageKey = 'elonn.web.runtime.state.v1';
+    var uiStorageKey = 'elonn.web.runtime.ui.v1';
     var drag = null;
     var resize = null;
     var lastCarryTitleTap = null;
     var workspaceResultsCollapsed = false;
-    var workspaceResultsClosed = false;
     var workspaceResultsCleared = false;
 
     if (!root || !runtime) {
@@ -35,7 +34,7 @@
 
     renderer.status('Requesting World Dataset.', 'loading');
     renderer.render(runtime.SceneModel.loading());
-    restoreLocalRuntimeState();
+    restoreLocalUiState();
     loadDataset({operation: 'world.restore'});
 
     if (voiceButton) {
@@ -55,7 +54,7 @@
     }
     if (queryInput) {
         queryInput.addEventListener('input', function () {
-            persistLocalRuntimeState();
+            persistLocalUiState();
         });
     }
 
@@ -75,9 +74,8 @@
         var panelTitle = event.target.closest('[data-carry-panel-title]');
         var hostedSurface = event.target.closest('[data-hosted-surface]');
         var runtimeUrl = event.target.closest('[data-runtime-url]');
-        var workspaceTitle = event.target.closest('[data-workspace-results-title]');
+        var workspaceToggle = event.target.closest('[data-workspace-results-toggle]');
         var workspaceClear = event.target.closest('[data-workspace-results-clear]');
-        var workspaceClose = event.target.closest('[data-workspace-results-close]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('button[data-object-id]');
 
@@ -93,25 +91,15 @@
             return;
         }
 
+        if (workspaceToggle && state) {
+            event.preventDefault();
+            toggleWorkspaceResults();
+            return;
+        }
+
         if (workspaceClear) {
             event.preventDefault();
             clearResults();
-            return;
-        }
-
-        if (workspaceClose) {
-            event.preventDefault();
-            workspaceResultsClosed = true;
-            persistLocalRuntimeState();
-            renderState();
-            return;
-        }
-
-        if (workspaceTitle && state) {
-            event.preventDefault();
-            workspaceResultsCollapsed = !workspaceResultsCollapsed;
-            persistLocalRuntimeState();
-            renderState();
             return;
         }
 
@@ -245,6 +233,10 @@
             renderer.status(datasetStatus(payload), datasetStatusState(payload));
         }).catch(function (error) {
             var message = error && error.message ? error.message : 'World Dataset unavailable.';
+            if (runtimeState && String(runtimeState.operation || '') === 'world.clear') {
+                workspaceResultsCleared = false;
+                persistLocalUiState();
+            }
             renderer.status(message, 'error');
             renderer.render(runtime.SceneModel.error(message));
         });
@@ -259,7 +251,6 @@
             replaceResults: workspaceResultsCleared
         };
 
-        workspaceResultsClosed = false;
         workspaceResultsCollapsed = false;
         workspaceResultsCleared = false;
         renderer.status('Requesting World Dataset.', 'loading');
@@ -317,7 +308,6 @@
     }
 
     function replaceDataset(payload, mergeWithPrevious, runtimeState) {
-        payload = restoreFallbackPayload(payload, runtimeState);
         var parsed = runtime.DatasetParser.parse(payload);
         if (mergeWithPrevious) {
             parsed = runtime.StateIndexer.mergeDatasets(state ? state.dataset : null, parsed);
@@ -326,7 +316,7 @@
         state = runtime.ContinuityReconciler.reconcile(state, next);
         state.carryPanels = reconcileCarryPanels(loadCarryPanels());
         persistCarryPanels();
-        persistLocalRuntimeState(payload);
+        persistLocalUiState();
         renderState();
     }
 
@@ -334,7 +324,7 @@
         renderer.render(runtime.SceneModel.fromState(state), {
             workspace: {
                 collapsed: workspaceResultsCollapsed,
-                closed: workspaceResultsClosed,
+                closed: false,
                 emptyVisible: workspaceResultsCleared
             }
         });
@@ -342,100 +332,27 @@
     }
 
     function clearResults() {
-        clearWorkspaceResults();
-        workspaceResultsClosed = false;
         workspaceResultsCollapsed = false;
         workspaceResultsCleared = true;
         if (queryInput) {
             queryInput.value = '';
             queryInput.focus();
         }
-        clearLocalRuntimeDataset();
-        persistLocalRuntimeState();
+        persistLocalUiState();
         renderState();
         renderer.status('Results cleared.', 'neutral');
     }
 
-    function clearWorkspaceResults() {
-        var workspaceLayer = null;
-        var workspaceZone = null;
-        var collectionIds = {};
-        var objectIds = {};
-        var protectedObjectIds = {};
-        var dataset = null;
-        var panels = [];
-
-        if (!state || !state.dataset) {
-            return;
-        }
-
-        workspaceLayer = (state.layers || []).filter(function (layer) {
-            return String(layer.id || '') === 'workspace';
-        })[0] || null;
-        workspaceZone = workspaceLayer && workspaceLayer.zones ? workspaceLayer.zones[0] : null;
-        if (!workspaceZone) {
-            return;
-        }
-
-        (workspaceZone.collectionIds || []).forEach(function (collectionId) {
-            collectionIds[String(collectionId || '')] = true;
-        });
-        (workspaceZone.objectIds || []).forEach(function (objectId) {
-            objectIds[String(objectId || '')] = true;
-        });
-        Object.keys(collectionIds).forEach(function (collectionId) {
-            var collection = state.indexes.collections[collectionId] || null;
-            runtime.Common.itemIds(collection ? collection.items : []).forEach(function (objectId) {
-                objectIds[String(objectId || '')] = true;
-            });
-        });
-
-        panels = state.carryPanels || [];
-        panels.forEach(function (panel) {
-            protectedObjectIds[String(panel.objectId || '')] = true;
-        });
-        runtime.Common.sectionItems({items: state.dataset.placements}).forEach(function (placement) {
-            if (String(placement.type || '') !== 'workspace') {
-                protectedObjectIds[String(placement.object_id || '')] = true;
-            }
-        });
-        runtime.Common.sectionItems({items: state.dataset.collections}).forEach(function (collection) {
-            if (!collectionIds[String(collection.id || '')]) {
-                runtime.Common.itemIds(collection.items).forEach(function (objectId) {
-                    protectedObjectIds[String(objectId || '')] = true;
-                });
-            }
-        });
-        Object.keys(protectedObjectIds).forEach(function (objectId) {
-            delete objectIds[objectId];
-        });
-
-        dataset = Object.assign({}, state.dataset, {
-            collections: runtime.Common.sectionItems({items: state.dataset.collections}).filter(function (collection) {
-                return !collectionIds[String(collection.id || '')];
-            }),
-            placements: runtime.Common.sectionItems({items: state.dataset.placements}).filter(function (placement) {
-                return String(placement.type || '') !== 'workspace';
-            }),
-            objects: runtime.Common.sectionItems({items: state.dataset.objects}).filter(function (object) {
-                return !objectIds[String(object.id || '')];
-            }),
-            actions: runtime.Common.sectionItems({items: state.dataset.actions}).filter(function (action) {
-                return !objectIds[String(action.target_id || '')];
-            }),
-            relationships: runtime.Common.sectionItems({items: state.dataset.relationships}).filter(function (relationship) {
-                return !objectIds[String(relationship.from_id || '')] && !objectIds[String(relationship.to_id || '')];
-            })
-        });
-
-        state = runtime.StateIndexer.build(dataset, null);
-        state.carryPanels = panels;
+    function toggleWorkspaceResults() {
+        workspaceResultsCollapsed = !workspaceResultsCollapsed;
+        persistLocalUiState();
+        renderState();
     }
 
     function adapterContext() {
         return {
             status: renderer.status,
-            dispatchSurfaceCommand: dispatchSurfaceCommand,
+            dispatchOperationInvocation: dispatchOperationInvocation,
             removeObjectSurface: removeObjectSurface,
             selectObject: function (objectId) {
                 selectObject(objectId);
@@ -443,7 +360,7 @@
         };
     }
 
-    function dispatchSurfaceCommand(command) {
+    function dispatchOperationInvocation(command) {
         var objectId = String(command && command.object_id || '');
         loadDataset({
             runtimeSessionId: state ? state.runtimeSessionId : '',
@@ -802,93 +719,42 @@
         }
     }
 
-    function restoreLocalRuntimeState() {
-        var saved = loadLocalRuntimeState();
-        var parsed = null;
+    function restoreLocalUiState() {
+        var saved = loadLocalUiState();
         if (queryInput && typeof saved.query === 'string') {
             queryInput.value = saved.query;
         }
         workspaceResultsCollapsed = saved.workspace && saved.workspace.collapsed === true;
-        workspaceResultsClosed = saved.workspace && saved.workspace.closed === true;
         workspaceResultsCleared = saved.workspace && saved.workspace.cleared === true;
-        if (!saved.dataset) {
-            return;
-        }
-        try {
-            parsed = runtime.DatasetParser.parse(saved.dataset);
-            state = runtime.StateIndexer.build(parsed, null);
-            state.carryPanels = reconcileCarryPanels(loadCarryPanels());
-            renderState();
-        } catch (error) {
-            clearLocalRuntimeDataset();
-        }
     }
 
-    function restoreFallbackPayload(payload, runtimeState) {
-        var saved = null;
-        if (!isRestoreRequest(runtimeState) || !isEmptyRestorePayload(payload)) {
-            return payload;
-        }
-        saved = loadLocalRuntimeState();
-        return saved.dataset || payload;
-    }
-
-    function persistLocalRuntimeState(datasetPayload) {
-        var saved = loadLocalRuntimeState();
+    function persistLocalUiState() {
         var next = {
             query: queryInput ? String(queryInput.value || '') : '',
             workspace: {
                 collapsed: workspaceResultsCollapsed,
-                closed: workspaceResultsClosed,
                 cleared: workspaceResultsCleared
-            },
-            dataset: datasetPayload || saved.dataset || null
+            }
         };
         try {
             if (window.localStorage) {
-                window.localStorage.setItem(runtimeStorageKey, JSON.stringify(next));
+                window.localStorage.setItem(uiStorageKey, JSON.stringify(next));
             }
         } catch (error) {
-            renderer.status('Runtime state could not be saved locally.', 'error');
+            renderer.status('Runtime UI state could not be saved locally.', 'error');
         }
     }
 
-    function loadLocalRuntimeState() {
+    function loadLocalUiState() {
         var stored = '';
         var decoded = null;
         try {
-            stored = window.localStorage ? window.localStorage.getItem(runtimeStorageKey) : '';
+            stored = window.localStorage ? window.localStorage.getItem(uiStorageKey) : '';
             decoded = stored ? JSON.parse(stored) : {};
             return decoded && typeof decoded === 'object' && !Array.isArray(decoded) ? decoded : {};
         } catch (error) {
             return {};
         }
-    }
-
-    function clearLocalRuntimeDataset() {
-        var saved = loadLocalRuntimeState();
-        saved.dataset = null;
-        try {
-            if (window.localStorage) {
-                window.localStorage.setItem(runtimeStorageKey, JSON.stringify(saved));
-            }
-        } catch (error) {
-            renderer.status('Runtime state could not be saved locally.', 'error');
-        }
-    }
-
-    function isRestoreRequest(runtimeState) {
-        return runtimeState && String(runtimeState.operation || '') === 'world.restore';
-    }
-
-    function isEmptyRestorePayload(payload) {
-        var source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
-        var context = source.context && typeof source.context === 'object' ? source.context : {};
-        var composition = context.composition && typeof context.composition === 'object' ? context.composition : {};
-        return Array.isArray(source.objects) && source.objects.length === 0
-            && Array.isArray(source.collections) && source.collections.length === 0
-            && Array.isArray(source.placements) && source.placements.length === 0
-            && composition.state === 'empty';
     }
 
     function endDrag(event) {
@@ -901,26 +767,30 @@
             return;
         }
         if (drag.moved !== true) {
-            recordCarryTitleTap(drag.id);
+            recordTitleTap(drag.id);
         }
         persistCarryPanels();
         drag = null;
     }
 
-    function recordCarryTitleTap(panelId) {
+    function recordTitleTap(panelId) {
         var now = Date.now();
         if (lastCarryTitleTap
             && lastCarryTitleTap.id === panelId
             && now - lastCarryTitleTap.time <= 420
         ) {
             lastCarryTitleTap = null;
-            toggleCarryPanel(panelId);
+            togglePanel(panelId);
             return;
         }
         lastCarryTitleTap = {
             id: panelId,
             time: now
         };
+    }
+
+    function togglePanel(panelId) {
+        toggleCarryPanel(panelId);
     }
 
     function carryBounds(panel) {

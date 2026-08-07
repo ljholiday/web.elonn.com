@@ -305,24 +305,16 @@ input {
 }
 
 .query-composer {
-    position: absolute;
-    z-index: 12;
-    top: 8px;
-    left: 50%;
-    width: min(620px, calc(100vw - 24px));
-    transform: translateX(-50%);
+    min-width: 0;
 }
 
 .query-composer__field {
     display: grid;
     grid-template-columns: 1fr 42px;
     align-items: center;
-    min-height: 48px;
-    border: 1px solid rgba(184, 255, 243, 0.4);
-    border-radius: 8px;
-    background: rgba(6, 12, 13, 0.9);
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(10px);
+    min-width: 0;
+    padding: 0;
+    cursor: default;
 }
 
 .query-composer__input {
@@ -366,22 +358,19 @@ input {
     cursor: default;
 }
 
-.query-composer__field:focus-within {
+.query-composer:focus-within {
     border-color: rgba(184, 255, 243, 0.78);
 }
 
 .workspace-layer {
-    right: 18px;
-    top: 156px;
-    width: min(360px, calc(100vw - 36px));
-    max-height: 44vh;
-    overflow: auto;
-    padding: 10px;
+    left: 50%;
+    top: 8px;
+    width: min(620px, calc(100vw - 24px));
+    max-height: min(58vh, calc(100dvh - 16px));
+    overflow: hidden;
+    padding: 0;
     border-radius: 8px;
-}
-
-.workspace-layer:empty {
-    display: none;
+    transform: translateX(-50%);
 }
 
 .workspace-results-panel {
@@ -393,9 +382,10 @@ input {
 }
 
 .workspace-results-panel .carry-object-panel__title {
-    cursor: pointer;
+    cursor: default;
 }
 
+.workspace-results-panel__toggle,
 .workspace-results-panel__clear {
     padding: 0 10px;
     font-size: 0.74rem;
@@ -405,7 +395,8 @@ input {
 
 .workspace-results-panel__content {
     min-height: 0;
-    padding: 10px 0 0;
+    overflow: auto;
+    padding: 10px;
 }
 
 .workspace-results-panel[data-collapsed="true"] .workspace-results-panel__bar {
@@ -965,8 +956,8 @@ figure {
     .workspace-layer {
         left: 12px;
         right: 12px;
+        top: 8px;
         width: auto;
-        top: auto;
-        bottom: 154px;
+        transform: none;
     }
 }

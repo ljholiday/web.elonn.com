@@ -39,6 +39,7 @@
         var settings = settingsFor(object);
 
         shell.className = 'paint-editor';
+        shell.dataset.paintObjectId = String(object.id || '');
         toolbar.className = 'paint-editor__bar';
         toolbar.dataset.paintRenameForm = 'true';
         tools.className = 'paint-editor__tools';
@@ -72,6 +73,7 @@
         title.setAttribute('aria-label', 'Paint document title');
         saveState.className = 'paint-editor__save-state';
         saveState.dataset.paintSaveState = 'true';
+        saveState.dataset.paintObjectId = String(object.id || '');
         saveState.textContent = 'Saved';
 
         canvas.className = 'paint-surface';
@@ -227,7 +229,7 @@
         localOperations[objectId] = (localOperations[objectId] || []).concat([stroke]);
         setSaveState(saveState, 'Saving');
         context.status('Saving Paint stroke.', 'loading');
-        context.dispatchSurfaceCommand({
+        context.dispatchOperationInvocation({
             service: 'paint',
             kind: 'editor',
             operation: 'paint.draw',
@@ -257,7 +259,7 @@
 
         setSaveState(saveState, 'Saving');
         context.status('Saving Paint title.', 'loading');
-        context.dispatchSurfaceCommand({
+        context.dispatchOperationInvocation({
             service: 'paint',
             kind: 'editor',
             operation: 'paint.rename',
@@ -326,19 +328,31 @@
         if (!stale || objectId === '') {
             if (errors.length === 0 && objectId !== '' && String(command.operation || '') === 'paint.draw') {
                 delete localOperations[objectId];
+                setSaveStateForObject(objectId, 'Saved');
                 context.status('Paint stroke saved.', 'ready');
             }
             if (errors.length === 0 && objectId !== '' && String(command.operation || '') === 'paint.rename') {
+                setSaveStateForObject(objectId, 'Saved');
                 context.status('Paint title saved.', 'ready');
             }
             if (errors.length > 0 && objectId !== '') {
+                setSaveStateForObject(objectId, 'Error');
                 context.status(String(errors[0].message || 'Paint save failed.'), 'error');
             }
             return;
         }
 
         delete localOperations[objectId];
+        setSaveStateForObject(objectId, 'Error');
         context.removeObjectSurface(objectId);
+    }
+
+    function setSaveStateForObject(objectId, text) {
+        document.querySelectorAll('[data-paint-save-state]').forEach(function (node) {
+            if (String(node.dataset.paintObjectId || '') === objectId) {
+                setSaveState(node, text);
+            }
+        });
     }
 
     function setSaveState(node, text) {
