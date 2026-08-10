@@ -340,6 +340,14 @@
         persistLocalUiState();
         renderState();
         renderer.status('Results cleared.', 'neutral');
+        loadDataset({
+            operation: 'world.clear',
+            runtimeSessionId: state ? state.runtimeSessionId : '',
+            selectedObjectId: state ? state.selectedObjectId : '',
+            selectedCollectionId: state ? state.selectedCollectionId : '',
+            preservedObjectIds: openObjectIds(),
+            replaceResults: true
+        });
     }
 
     function toggleWorkspaceResults() {
@@ -455,6 +463,18 @@
         });
         state.carryPanels = panels;
         persistCarryPanels();
+    }
+
+    function openObjectIds() {
+        var ids = {};
+        (state && Array.isArray(state.carryPanels) ? state.carryPanels : []).forEach(function (panel) {
+            var objectId = String(panel.objectId || '');
+            if (objectId !== '') {
+                ids[objectId] = true;
+            }
+        });
+
+        return Object.keys(ids);
     }
 
     function openRuntimeUrl(control) {

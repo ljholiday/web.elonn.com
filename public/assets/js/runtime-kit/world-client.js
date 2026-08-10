@@ -60,7 +60,8 @@
                     runtime_state: {
                         dataset_id: String(state.runtimeSessionId || ''),
                         selected_object_id: String(state.selectedObjectId || ''),
-                        selected_collection_id: String(state.selectedCollectionId || '')
+                        selected_collection_id: String(state.selectedCollectionId || ''),
+                        replace_results: state.replaceResults === true
                     },
                     focus: {}
                 }
@@ -86,6 +87,11 @@
             }
             if (String(state.runtimeSessionId || '') !== '') {
                 call.context.runtime_state.dataset_id = String(state.runtimeSessionId);
+            }
+            if (Array.isArray(state.preservedObjectIds)) {
+                call.context.runtime_state.preserved_object_ids = state.preservedObjectIds.map(function (objectId) {
+                    return String(objectId || '');
+                }).filter(Boolean);
             }
 
             return call;
