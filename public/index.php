@@ -47,6 +47,36 @@ if ($path === '/ready') {
     return;
 }
 
+if ($path === '/metrics') {
+    $startedAt = microtime(true);
+    if (!web_runtime_service_authenticated($config, 'admin.elonn')) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'errors' => [[
+                'code' => 'web.service_auth_failed',
+                'class' => 'auth',
+                'message' => 'Authenticated admin service request is required.',
+            ]],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return;
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'contract_version' => '1.0',
+        'service' => 'web.elonn',
+        'status' => 'ok',
+        'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
+        'response_time_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+        'custom_metrics' => [
+            'api_base_url_configured' => $config['api']['base_url'] !== '',
+            'world_base_url_configured' => $config['world']['base_url'] !== '',
+        ],
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    return;
+}
+
 if ($path === '/login' && $method === 'GET') {
     if (web_runtime_auth_token() !== null) {
         web_runtime_redirect('/');
@@ -215,6 +245,22 @@ function web_runtime_auth_token(): ?string
 
     $token = trim($token);
     return $token === '' ? null : $token;
+}
+
+function web_runtime_service_authenticated(array $config, string $expectedService): bool
+{
+    $service = trim((string) ($_SERVER['HTTP_X_ELONN_SERVICE'] ?? ''));
+    $token = trim((string) ($_SERVER['HTTP_X_ELONN_SERVICE_TOKEN'] ?? ''));
+    $authorization = trim((string) ($_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '')));
+    if ($token === '' && str_starts_with($authorization, 'Bearer ')) {
+        $token = trim(substr($authorization, 7));
+    }
+
+    $expected = (string) (($config['service_auth'][$expectedService] ?? '') ?: '');
+    return $service === $expectedService
+        && $token !== ''
+        && $expected !== ''
+        && hash_equals($expected, $token);
 }
 
 /**
