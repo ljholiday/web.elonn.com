@@ -63,6 +63,7 @@ $checks = [
         && str_contains($scripts, "id: 'call:runtime:web:'")
         && str_contains($scripts, "operation: String(state.operation || 'world.compose')")
         && str_contains($webRuntime, "loadDataset({operation: 'world.restore'})")
+        && str_contains($scripts, "type: 'text'")
         && str_contains($scripts, "text: String(state.inputText || 'Open my world.')")
         && str_contains($scripts, 'content:')
         && str_contains($scripts, 'context:')
