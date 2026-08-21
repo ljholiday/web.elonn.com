@@ -825,7 +825,7 @@
 
             form.className = 'operation-form';
             form.dataset.operationInvocationForm = 'true';
-            form.dataset.operationInvocation = JSON.stringify(baseInvocation);
+            form.dataset.operationBase = JSON.stringify(baseInvocation);
 
             fields.className = 'operation-form__fields';
             Object.keys(args).forEach(function (key) {

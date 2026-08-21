@@ -153,7 +153,7 @@
         var label = submitButton ? submitButton.textContent : 'Save';
         var payload = {};
         try {
-            base = JSON.parse(String(form.dataset.operationInvocation || '{}'));
+            base = JSON.parse(String(form.dataset.operationBase || '{}'));
         } catch (error) {
             return;
         }
