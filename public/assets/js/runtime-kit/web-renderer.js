@@ -431,6 +431,9 @@
             detailRows(object).forEach(function (row) {
                 fragment.appendChild(metaLine(row.label, row.value));
             });
+            remainingContentRows(object).forEach(function (row) {
+                fragment.appendChild(metaLine(row.label, row.value));
+            });
             resourceLinks(object).forEach(function (link) {
                 fragment.appendChild(link);
             });
@@ -439,7 +442,9 @@
                     fragment.appendChild(link);
                 });
             }
-            fragment.appendChild(metaLine('Visibility', object.visibility || 'default'));
+            if (object.visibility !== '') {
+                fragment.appendChild(metaLine('Visibility', object.visibility));
+            }
             fragment.appendChild(metaLine('Permissions', permissionsText(object.permissions)));
             return fragment;
         }
@@ -670,6 +675,49 @@
             if (text !== '') {
                 rows.push({label: label, value: text});
             }
+        }
+
+        var KNOWN_CONTENT_KEYS = [
+            'name', 'description',
+            'source_domain', 'source_url', 'canonical_url', 'url',
+            'rank', 'category', 'component_type',
+            'starts_at', 'due_at', 'last_message_at', 'published_at',
+            'location', 'address', 'distance_meters',
+            'message_count', 'participant_count', 'search', 'parts',
+            'parent_resource_object_id', 'parent_object_id',
+            'width', 'height', 'source_resource', 'preview_resource'
+        ];
+
+        function remainingContentRows(object) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var rows = [];
+            Object.keys(content).forEach(function (key) {
+                var value = content[key];
+                var text = '';
+                if (KNOWN_CONTENT_KEYS.indexOf(key) !== -1) {
+                    return;
+                }
+                if (typeof value === 'string') {
+                    text = value.trim();
+                } else if (typeof value === 'number' && isFinite(value)) {
+                    text = String(value);
+                } else if (typeof value === 'boolean') {
+                    text = value ? 'Yes' : 'No';
+                } else {
+                    return;
+                }
+                if (text === '' || text === object.title || text === object.summary) {
+                    return;
+                }
+                rows.push({label: humanizeKey(key), value: text});
+            });
+            return rows;
+        }
+
+        function humanizeKey(key) {
+            return String(key || '').split('_').filter(Boolean).map(function (word) {
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            }).join(' ');
         }
 
         function locationText(content) {
