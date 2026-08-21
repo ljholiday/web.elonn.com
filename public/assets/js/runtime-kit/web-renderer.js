@@ -420,6 +420,7 @@
             var fragment = document.createDocumentFragment();
             var segment = segmentNode(object);
             var website = segment ? null : websiteDocument(object);
+            var editableKeys = editableFieldKeys(object);
             if (segment) {
                 fragment.appendChild(segment);
             } else if (website) {
@@ -431,7 +432,7 @@
             detailRows(object).forEach(function (row) {
                 fragment.appendChild(metaLine(row.label, row.value));
             });
-            remainingContentRows(object).forEach(function (row) {
+            remainingContentRows(object, editableKeys).forEach(function (row) {
                 fragment.appendChild(metaLine(row.label, row.value));
             });
             resourceLinks(object).forEach(function (link) {
@@ -688,13 +689,28 @@
             'width', 'height', 'source_resource', 'preview_resource'
         ];
 
-        function remainingContentRows(object) {
+        function editableFieldKeys(object) {
+            var keys = {};
+            (Array.isArray(object.actions) ? object.actions : []).forEach(function (action) {
+                var operationInvocation = action.operationInvocation;
+                var args = operationInvocation && typeof operationInvocation === 'object' ? operationInvocation.arguments : null;
+                if (args && typeof args === 'object' && !Array.isArray(args)) {
+                    Object.keys(args).forEach(function (key) {
+                        keys[key] = true;
+                    });
+                }
+            });
+            return keys;
+        }
+
+        function remainingContentRows(object, skipKeys) {
             var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var skip = skipKeys && typeof skipKeys === 'object' ? skipKeys : {};
             var rows = [];
             Object.keys(content).forEach(function (key) {
                 var value = content[key];
                 var text = '';
-                if (KNOWN_CONTENT_KEYS.indexOf(key) !== -1) {
+                if (KNOWN_CONTENT_KEYS.indexOf(key) !== -1 || skip[key]) {
                     return;
                 }
                 if (typeof value === 'string') {
@@ -766,11 +782,19 @@
                     && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'));
             }).map(function (action) {
                 if (action.operationInvocation && typeof action.operationInvocation === 'object') {
+                    if (hasModelArguments(action.operationInvocation)) {
+                        return operationForm(action, object);
+                    }
                     return operationLine('Action', action.label, action.operationInvocation);
                 }
 
                 return linkLine('Action', action.label, action.href, object.id);
             });
+        }
+
+        function hasModelArguments(operationInvocation) {
+            var args = operationInvocation.arguments;
+            return !!args && typeof args === 'object' && !Array.isArray(args) && Object.keys(args).length > 0;
         }
 
         function operationLine(label, text, operationInvocation) {
@@ -785,6 +809,95 @@
             row.appendChild(strong);
             row.appendChild(button);
             return row;
+        }
+
+        var UNSUPPORTED_ARGUMENT_TYPES = ['array', 'geo_point'];
+
+        function operationForm(action, object) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var args = action.operationInvocation.arguments;
+            var baseInvocation = Object.assign({}, action.operationInvocation);
+            var form = document.createElement('form');
+            var fields = document.createElement('div');
+            var submit = document.createElement('button');
+            var status = document.createElement('p');
+            delete baseInvocation.arguments;
+
+            form.className = 'operation-form';
+            form.dataset.operationInvocationForm = 'true';
+            form.dataset.operationInvocation = JSON.stringify(baseInvocation);
+
+            fields.className = 'operation-form__fields';
+            Object.keys(args).forEach(function (key) {
+                var spec = args[key];
+                if (!spec || UNSUPPORTED_ARGUMENT_TYPES.indexOf(spec.type) !== -1) {
+                    return;
+                }
+                fields.appendChild(operationFormField(key, spec, content[key]));
+            });
+
+            submit.type = 'submit';
+            submit.className = 'operation-form__submit';
+            submit.textContent = common.text(action.label, 'Save');
+
+            status.className = 'operation-form__status';
+            status.dataset.operationFormStatus = 'true';
+
+            form.appendChild(fields);
+            form.appendChild(submit);
+            form.appendChild(status);
+            return form;
+        }
+
+        function operationFormField(key, spec, currentValue) {
+            var wrapper = document.createElement('label');
+            var labelText = document.createElement('span');
+            wrapper.className = 'operation-form__field';
+            labelText.className = 'operation-form__label';
+            labelText.textContent = humanizeKey(key);
+            wrapper.appendChild(labelText);
+            wrapper.appendChild(operationFormInput(key, spec, currentValue));
+            return wrapper;
+        }
+
+        function operationFormInput(key, spec, currentValue) {
+            var type = common.text(spec.type, 'string');
+            var enumValues = Array.isArray(spec.enum) ? spec.enum : null;
+            var hasDefault = Object.prototype.hasOwnProperty.call(spec, 'default');
+            var value = (currentValue !== undefined && currentValue !== null) ? currentValue : (hasDefault ? spec.default : '');
+            var input;
+
+            if (enumValues && type === 'string') {
+                input = document.createElement('select');
+                enumValues.forEach(function (option) {
+                    var optionNode = document.createElement('option');
+                    optionNode.value = option;
+                    optionNode.textContent = humanizeKey(option);
+                    optionNode.selected = String(value) === option;
+                    input.appendChild(optionNode);
+                });
+            } else if (type === 'boolean') {
+                input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = value === true;
+            } else if (type === 'integer' || type === 'number') {
+                input = document.createElement('input');
+                input.type = 'number';
+                if (type === 'integer') {
+                    input.step = '1';
+                }
+                input.value = (value === '' || value === null || value === undefined) ? '' : String(value);
+            } else {
+                input = document.createElement('input');
+                input.type = 'text';
+                input.value = common.text(value, '');
+            }
+
+            input.name = key;
+            if (spec.required === true) {
+                input.required = true;
+            }
+            return input;
         }
 
         function linkLine(label, text, href, objectId) {

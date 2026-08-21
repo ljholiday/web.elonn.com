@@ -137,6 +137,60 @@
         }
     });
 
+    root.addEventListener('submit', function (event) {
+        var form = event.target.closest('[data-operation-invocation-form]');
+        if (!form || !state) {
+            return;
+        }
+        event.preventDefault();
+        submitOperationForm(form);
+    });
+
+    function submitOperationForm(form) {
+        var base = null;
+        var submitButton = form.querySelector('.operation-form__submit');
+        var statusNode = form.querySelector('[data-operation-form-status]');
+        var label = submitButton ? submitButton.textContent : 'Save';
+        var payload = {};
+        try {
+            base = JSON.parse(String(form.dataset.operationInvocation || '{}'));
+        } catch (error) {
+            return;
+        }
+        if (!base || typeof base !== 'object' || Array.isArray(base)) {
+            return;
+        }
+
+        new FormData(form).forEach(function (value, key) {
+            payload[key] = value;
+        });
+        form.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+            payload[checkbox.name] = checkbox.checked;
+        });
+        base.payload = payload;
+
+        if (submitButton) {
+            submitButton.disabled = true;
+        }
+        if (statusNode) {
+            statusNode.textContent = 'Saving…';
+            statusNode.dataset.state = 'loading';
+        }
+
+        dispatchOperationInvocation(base).then(function () {
+            renderer.status(label + ' saved.', 'ready');
+        }).catch(function (error) {
+            var message = error && error.message ? error.message : label + ' failed.';
+            if (statusNode) {
+                statusNode.textContent = message;
+                statusNode.dataset.state = 'error';
+            }
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
+        });
+    }
+
     root.addEventListener('pointerdown', function (event) {
         var handle = event.target.closest('[data-carry-panel-resize]');
         var panel = handle ? handle.closest('[data-carry-panel-id]') : null;
@@ -234,10 +288,11 @@
     window.addEventListener('pointercancel', endDrag);
 
     function loadDataset(runtimeState) {
-        client.loadDataset(runtimeState).then(function (payload) {
+        return client.loadDataset(runtimeState).then(function (payload) {
             replaceDataset(payload, shouldMergeDataset(runtimeState), runtimeState);
             runtime.AdapterRegistry.handleResponse(payload, runtimeState, adapterContext());
             renderer.status(datasetStatus(payload), datasetStatusState(payload));
+            return payload;
         }).catch(function (error) {
             var message = error && error.message ? error.message : 'World Dataset unavailable.';
             if (runtimeState && String(runtimeState.operation || '') === 'world.clear') {
@@ -245,7 +300,10 @@
                 persistLocalUiState();
             }
             renderer.status(message, 'error');
-            renderer.render(runtime.SceneModel.error(message));
+            if (!runtimeState || !runtimeState.operationInvocation) {
+                renderer.render(runtime.SceneModel.error(message));
+            }
+            throw error;
         });
     }
 
@@ -369,7 +427,8 @@
 
     function dispatchOperationInvocation(command) {
         var objectId = String(command && command.object_id || '');
-        loadDataset({
+        renderer.status('Requesting World Dataset.', 'loading');
+        return loadDataset({
             runtimeSessionId: state ? state.runtimeSessionId : '',
             selectedObjectId: objectId,
             selectedCollectionId: state ? state.selectedCollectionId : '',

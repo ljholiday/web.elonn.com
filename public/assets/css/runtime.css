@@ -957,6 +957,81 @@ figure {
     margin-bottom: 0;
 }
 
+.operation-form {
+    display: grid;
+    gap: 8px;
+    margin: 6px 0;
+    padding: 10px;
+    border: 1px solid rgba(184, 255, 243, 0.2);
+    border-radius: 7px;
+    background: rgba(25, 39, 42, 0.6);
+}
+
+.operation-form__fields {
+    display: grid;
+    gap: 8px;
+}
+
+.operation-form__field {
+    display: grid;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: #d0ddd5;
+}
+
+.operation-form__field input,
+.operation-form__field select {
+    width: 100%;
+    border: 1px solid rgba(184, 255, 243, 0.32);
+    border-radius: 6px;
+    background: rgba(6, 12, 13, 0.9);
+    color: #eefaf8;
+    padding: 8px 10px;
+    font: inherit;
+    outline: none;
+}
+
+.operation-form__field input:focus,
+.operation-form__field select:focus {
+    border-color: rgba(184, 255, 243, 0.78);
+}
+
+.operation-form__submit {
+    justify-self: start;
+    border: 1px solid rgba(184, 255, 243, 0.54);
+    border-radius: 6px;
+    background: #b8fff3;
+    color: #061011;
+    padding: 7px 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.operation-form__submit:hover,
+.operation-form__submit:focus {
+    background: #eefaf8;
+    outline: none;
+}
+
+.operation-form__submit:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.operation-form__status {
+    margin: 0;
+    font-size: 0.76rem;
+    color: #d0ddd5;
+}
+
+.operation-form__status[data-state="error"] {
+    color: #ffc8c8;
+}
+
+.operation-form__status[data-state="success"] {
+    color: #b8fff3;
+}
+
 .noscript-runtime {
     position: relative;
     z-index: 30;
