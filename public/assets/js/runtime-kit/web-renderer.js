@@ -27,13 +27,13 @@
         function render(scene, options) {
             options = options && typeof options === 'object' ? options : {};
             var zoneMap = zonesByKey(scene.layers || []);
-            renderWorkspace(nodes.workspace, zoneMap['workspace:workspace'], options.workspace || {});
+            renderWorkspace(nodes.workspace, zoneMap['workspace:workspace'], zoneMap['carry:carry'], options.workspace || {});
             renderField(nodes.field, zoneMap['field:field']);
             common.replaceChildren(nodes.carryPanels, carryPanelNodes(scene.carryPanels || []));
             common.replaceChildren(nodes.statusRows, (scene.status || []).map(statusNode));
         }
 
-        function renderWorkspace(node, zone, options) {
+        function renderWorkspace(node, zone, selfZone, options) {
             var panel = null;
             var toggle = null;
             var content = [];
@@ -48,12 +48,15 @@
                     toggle.textContent = options.collapsed === true ? 'Show' : 'Hide';
                 }
             }
-            if (!zone || options.closed === true || options.collapsed === true || options.emptyVisible === true) {
+            if (options.closed === true || options.collapsed === true || options.emptyVisible === true) {
                 common.replaceChildren(node, []);
                 return;
             }
 
-            content = collections(zone.collections || [], 'overlay').concat(objectList(zone.objects || [], 'overlay'));
+            content = objectList((selfZone && selfZone.objects) || [], 'overlay');
+            if (zone) {
+                content = content.concat(collections(zone.collections || [], 'overlay')).concat(objectList(zone.objects || [], 'overlay'));
+            }
             if (content.length === 0) {
                 common.replaceChildren(node, []);
                 return;
@@ -118,17 +121,6 @@
                 });
             });
             return output;
-        }
-
-        function renderZone(node, zone, mode) {
-            if (!node) {
-                return;
-            }
-            if (!zone) {
-                common.replaceChildren(node, []);
-                return;
-            }
-            common.replaceChildren(node, collections(zone.collections || [], mode).concat(objectList(zone.objects || [], mode)));
         }
 
         function renderField(node, zone) {
