@@ -27,7 +27,7 @@ return [
         'base_url' => rtrim(web_string_config('ELONN_WORLD_BASE_URL', $local ? 'https://world.elonn.local' : 'https://world.elonn.com'), '/'),
     ],
     'service_auth' => [
-        'admin.elonn' => web_string_config('ELONN_ADMIN_SERVICE_TOKEN'),
+        'admin.elonn' => web_string_config('ELONN_ADMIN_WEB_TOKEN'),
     ],
 ];
 
