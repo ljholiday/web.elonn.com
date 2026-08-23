@@ -387,15 +387,17 @@
             resources.some(function (resource) {
                 var content = resource && typeof resource.content === 'object' ? resource.content : {};
                 var dataUrl = String(content.data_url || '');
-                if (dataUrl.indexOf('data:image/') === 0) {
-                    image = document.createElement('img');
-                    image.className = 'object-preview';
-                    image.src = dataUrl;
-                    image.alt = '';
-                    image.loading = 'lazy';
-                    return true;
+                var externalUrl = (content.kind === 'image') ? String(content.href || content.url || '') : '';
+                var src = dataUrl.indexOf('data:image/') === 0 ? dataUrl : externalUrl;
+                if (src === '') {
+                    return false;
                 }
-                return false;
+                image = document.createElement('img');
+                image.className = 'object-preview';
+                image.src = src;
+                image.alt = common.text(content.label, '');
+                image.loading = 'lazy';
+                return true;
             });
 
             return image;
