@@ -144,7 +144,7 @@
                 return [];
             }
             return items.map(function (collection) {
-                return collectionNode(collection, mode);
+                return collection.type === 'sequence' ? sequenceNode(collection, mode) : collectionNode(collection, mode);
             });
         }
 
@@ -186,6 +186,115 @@
             section.appendChild(header);
             section.appendChild(list);
             return section;
+        }
+
+        /*
+         * Renders a canonical `sequence` Collection (an ordered, related flow of Objects -- a
+         * conversation's replies, a thread's messages) as a grouped, chronological flow instead
+         * of the generic result-grid `collectionNode()` uses for everything else. Each entry
+         * stays its own addressable Object (own id, own data-object-id, click/select/carry works
+         * exactly like objectButton()) -- sequence only changes how the group is laid out, not
+         * what each member is.
+         */
+        function sequenceNode(collection, mode) {
+            var section = document.createElement('section');
+            var header = document.createElement('header');
+            var title = document.createElement('h3');
+            var summary = document.createElement('p');
+            var flow = document.createElement('div');
+            section.className = 'world-collection world-collection--' + common.text(mode, 'panel') + ' world-sequence';
+            section.dataset.collectionId = collection.id;
+            section.dataset.selected = collection.selected ? 'true' : 'false';
+            title.textContent = collection.title;
+            summary.textContent = collection.summary;
+            header.appendChild(title);
+            if (collection.summary !== '' && mode !== 'compact') {
+                header.appendChild(summary);
+            }
+            flow.className = 'world-sequence-flow';
+            if (collection.objects.length === 0) {
+                flow.appendChild(emptyCollectionNotice(collection));
+            } else {
+                sequenceGroups(collection.objects).forEach(function (group) {
+                    flow.appendChild(sequenceGroupNode(group, mode));
+                });
+            }
+            section.appendChild(header);
+            section.appendChild(flow);
+            return section;
+        }
+
+        /*
+         * Groups already-ordered sequence members by consecutive same origin (sender/author) --
+         * a display grouping only, not a canonical property of the sequence itself.
+         */
+        function sequenceGroups(objects) {
+            var groups = [];
+            objects.forEach(function (object) {
+                var origin = sequenceOrigin(object);
+                var current = groups.length > 0 ? groups[groups.length - 1] : null;
+                if (current && current.origin === origin) {
+                    current.objects.push(object);
+                    return;
+                }
+                groups.push({origin: origin, objects: [object]});
+            });
+            return groups;
+        }
+
+        function sequenceOrigin(object) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            return common.text(content.sender_identity_user_id || content.author_identity_user_id, object.title);
+        }
+
+        function sequenceGroupNode(group, mode) {
+            var wrapper = document.createElement('div');
+            var label = document.createElement('strong');
+            wrapper.className = 'world-sequence-group';
+            label.className = 'world-sequence-group__origin';
+            label.textContent = group.objects[0].title;
+            wrapper.appendChild(label);
+            group.objects.forEach(function (object) {
+                wrapper.appendChild(sequenceEntryNode(object, mode));
+            });
+            return wrapper;
+        }
+
+        function sequenceEntryNode(object, mode) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var entry = document.createElement('button');
+            var body = document.createElement('span');
+            var time = document.createElement('span');
+            entry.type = 'button';
+            entry.className = 'world-sequence-entry';
+            entry.dataset.objectId = object.id;
+            entry.dataset.objectType = object.type;
+            entry.dataset.layer = object.layer;
+            entry.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
+            body.className = 'world-sequence-entry__body';
+            body.textContent = common.text(content.body, object.summary);
+            entry.appendChild(body);
+            if (mode !== 'compact') {
+                time.className = 'world-sequence-entry__time';
+                time.textContent = sequenceTimeLabel(content.created_at);
+                entry.appendChild(time);
+            }
+            if (object.availability.state !== 'enabled') {
+                entry.appendChild(badge(object.availability.state));
+            }
+            return entry;
+        }
+
+        function sequenceTimeLabel(createdAt) {
+            var value = common.text(createdAt, '');
+            if (value === '') {
+                return '';
+            }
+            var parsed = new Date(value.indexOf('T') === -1 ? value.replace(' ', 'T') : value);
+            if (isNaN(parsed.getTime())) {
+                return '';
+            }
+            return parsed.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
         }
 
         function emptyCollectionNotice(collection) {
