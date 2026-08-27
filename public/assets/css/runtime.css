@@ -382,11 +382,21 @@ input {
 }
 
 .workspace-results-panel__toggle,
-.workspace-results-panel__clear {
+.workspace-results-panel__clear,
+.workspace-results-panel__scope {
     padding: 0 10px;
     font-size: 0.74rem;
     font-weight: 700;
     text-transform: uppercase;
+}
+
+.workspace-results-panel__scope-group {
+    display: flex;
+    gap: 4px;
+}
+
+.workspace-results-panel__scope[data-active="true"] {
+    text-decoration: underline;
 }
 
 .workspace-results-panel__content {

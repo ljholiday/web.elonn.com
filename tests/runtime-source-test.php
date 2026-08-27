@@ -217,7 +217,7 @@ $checks = [
         && str_contains($webRenderer, 'function floatingPanel(config)')
         && str_contains($webRenderer, 'function updateFloatingPanelChrome(article, options)')
         && str_contains($webRenderer, 'function workspacePanelNode(options)')
-        && str_contains($webRenderer, 'function queryFormNode()')
+        && str_contains($webRenderer, 'function queryFormNode(content)')
         && str_contains($webRenderer, "id: 'workspace-results'")
         && str_contains($webRenderer, 'closable: false')
         && str_contains($webRenderer, "return floatingPanel({\n                    id: panel.id,")
@@ -387,6 +387,20 @@ $checks = [
         && str_contains($index, "array_key_exists('errors', \$payload)")
         && str_contains($template, 'web_runtime_fallback_collections')
         && str_contains($template, '<noscript>'),
+    'Query panel title, placeholder, clear label, and scope options come from World content, not literals' => str_contains($webRenderer, "common.text(find.title, 'Find')")
+        && str_contains($webRenderer, "common.text(find.placeholder, 'Ask or search')")
+        && str_contains($webRenderer, "common.text(find.clear_label, 'Clear')")
+        && str_contains($webRenderer, "data-runtime-find-scope-group")
+        && str_contains($webRenderer, "dataset: 'runtimeFindScope'")
+        && str_contains($webRenderer, 'function updateWorkspaceContent(content, currentScope)')
+        && str_contains($webRenderer, 'function scopeButtonNodes(find, currentScope)')
+        && str_contains($webRuntime, "findScope: findScope")
+        && str_contains($webRuntime, "data-runtime-find-scope")
+        && str_contains($scene = read_file($root . '/public/assets/js/runtime-kit/scene-model.js'), 'function worldContent(state)')
+        && str_contains($scene, 'context.content')
+        && !str_contains($webRenderer, "title: 'Workspace'")
+        && !str_contains($webRenderer, "input.placeholder = 'Ask or search'")
+        && !str_contains($webRenderer, "label: 'Clear',"),
     'Legacy runtime vocabulary is quarantined outside the new app' => !contains_any($template . $scripts . $readme, [
         'surface_runtime',
         'field_runtime',

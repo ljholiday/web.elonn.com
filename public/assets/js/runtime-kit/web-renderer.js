@@ -33,6 +33,7 @@
             var zoneMap = zonesByKey(scene.layers || []);
             ensureWorkspacePanel(workspaceOptions);
             updateFloatingPanelChrome(workspacePanelEl, workspaceOptions);
+            updateWorkspaceContent(scene.content || {}, workspaceOptions.findScope);
             if (workspaceToggleButton) {
                 workspaceToggleButton.textContent = workspaceOptions.collapsed === true ? 'Show' : 'Hide';
             }
@@ -57,6 +58,57 @@
             workspaceToggleButton = built.toggleButton;
             nodes.workspace = built.resultsNode;
             nodes.workspaceMount.appendChild(workspacePanelEl);
+        }
+
+        /*
+         * The workspace panel is built exactly once (see ensureWorkspacePanel), so title,
+         * placeholder, and scope options -- all sourced from the World Dataset's
+         * context.content, not hardcoded here -- would otherwise be frozen at whatever
+         * SceneModel.loading()'s empty content was during that first build. Re-applied on
+         * every render instead, the same way updateFloatingPanelChrome() re-applies
+         * geometry every render despite the panel structure itself only existing once.
+         */
+        function updateWorkspaceContent(content, currentScope) {
+            var find = content.find && typeof content.find === 'object' ? content.find : {};
+            var titleNode = null;
+            var input = null;
+            var clearButton = null;
+            var scopeGroup = null;
+            if (!workspacePanelEl) {
+                return;
+            }
+            titleNode = workspacePanelEl.querySelector('.carry-object-panel__title');
+            if (titleNode) {
+                titleNode.textContent = common.text(find.title, 'Find');
+            }
+            input = workspacePanelEl.querySelector('[data-runtime-query-input]');
+            if (input) {
+                input.placeholder = common.text(find.placeholder, 'Ask or search');
+            }
+            clearButton = workspacePanelEl.querySelector('[data-workspace-results-clear]');
+            if (clearButton) {
+                clearButton.textContent = common.text(find.clear_label, 'Clear');
+            }
+            scopeGroup = workspacePanelEl.querySelector('[data-runtime-find-scope-group]');
+            if (scopeGroup) {
+                common.replaceChildren(scopeGroup, scopeButtonNodes(find, currentScope));
+            }
+        }
+
+        function scopeButtonNodes(find, currentScope) {
+            var scope = find.scope && typeof find.scope === 'object' ? find.scope : {};
+            var options = Array.isArray(scope.enum) ? scope.enum : [];
+            var active = common.text(currentScope, scope.default);
+            return options.map(function (value) {
+                var button = panelButton({
+                    label: humanizeKey(value),
+                    dataset: 'runtimeFindScope',
+                    datasetValue: value,
+                    className: 'workspace-results-panel__scope'
+                });
+                button.dataset.active = String(value) === String(active) ? 'true' : 'false';
+                return button;
+            });
         }
 
         function renderWorkspace(node, zone, selfZone, options) {
@@ -199,6 +251,8 @@
          * "query-results" panel.
          */
         function workspacePanelNode(options) {
+            var content = options.content && typeof options.content === 'object' ? options.content : {};
+            var find = content.find && typeof content.find === 'object' ? content.find : {};
             var resultsNode = document.createElement('div');
             var toggleButton = panelButton({
                 label: options.collapsed === true ? 'Show' : 'Hide',
@@ -212,7 +266,7 @@
                 className: 'workspace-results-panel',
                 barClass: 'workspace-results-panel__bar',
                 contentClassName: 'workspace-results-panel__content',
-                title: 'Workspace',
+                title: common.text(find.title, 'Find'),
                 closable: false,
                 collapsed: options.collapsed === true,
                 x: options.x,
@@ -224,14 +278,15 @@
                 buildContent: function (content) {
                     resultsNode.className = 'workspace-results-panel__list';
                     resultsNode.dataset.workspaceResultsContent = 'true';
-                    content.appendChild(queryFormNode());
+                    content.appendChild(queryFormNode(options.content || {}));
                     content.appendChild(resultsNode);
                 }
             });
             return {article: article, resultsNode: resultsNode, toggleButton: toggleButton};
         }
 
-        function queryFormNode() {
+        function queryFormNode(content) {
+            var find = content.find && typeof content.find === 'object' ? content.find : {};
             var form = document.createElement('form');
             var label = document.createElement('label');
             var field = document.createElement('div');
@@ -239,8 +294,9 @@
             var voice = document.createElement('button');
             var voiceIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             var actions = document.createElement('div');
+            var scopeGroup = document.createElement('div');
             var clear = panelButton({
-                label: 'Clear',
+                label: common.text(find.clear_label, 'Clear'),
                 dataset: 'workspaceResultsClear',
                 datasetValue: 'true',
                 className: 'workspace-results-panel__clear',
@@ -263,7 +319,7 @@
             input.name = 'query';
             input.autocomplete = 'off';
             input.spellcheck = true;
-            input.placeholder = 'Ask or search';
+            input.placeholder = common.text(find.placeholder, 'Ask or search');
 
             voice.type = 'button';
             voice.className = 'query-composer__voice';
@@ -284,6 +340,13 @@
 
             actions.className = 'carry-object-panel__actions';
             actions.appendChild(clear);
+
+            scopeGroup.className = 'workspace-results-panel__scope-group';
+            scopeGroup.setAttribute('data-runtime-find-scope-group', '');
+            scopeButtonNodes(find, find.scope && find.scope.default).forEach(function (button) {
+                scopeGroup.appendChild(button);
+            });
+            actions.appendChild(scopeGroup);
 
             form.appendChild(label);
             form.appendChild(field);

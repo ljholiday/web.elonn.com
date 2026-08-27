@@ -15,7 +15,8 @@
                 actions: [],
                 resources: [],
                 related: [],
-                status: []
+                status: [],
+                content: {}
             };
         },
 
@@ -27,7 +28,8 @@
                 actions: [],
                 resources: [],
                 related: [],
-                status: []
+                status: [],
+                content: {}
             };
         },
 
@@ -41,7 +43,8 @@
                 resources: selectedObject ? resourcesForObject(state, selectedObject) : [],
                 related: selectedObject ? relatedObjects(state, selectedObject.id) : [],
                 actionResult: state.actionResult || null,
-                status: statusRows(state)
+                status: statusRows(state),
+                content: worldContent(state)
             };
         }
     };
@@ -267,6 +270,12 @@
             var collection = state.indexes.collections[collectionId] || {};
             return common.itemIds(collection.items).indexOf(objectId) !== -1;
         });
+    }
+
+    function worldContent(state) {
+        var dataset = state.dataset || {};
+        var context = dataset.context && typeof dataset.context === 'object' ? dataset.context : {};
+        return context.content && typeof context.content === 'object' ? context.content : {};
     }
 
     function availability(value) {

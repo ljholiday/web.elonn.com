@@ -20,6 +20,7 @@
     var resize = null;
     var lastCarryTitleTap = null;
     var workspaceResultsCleared = false;
+    var findScope = '';
 
     if (!root || !runtime) {
         return;
@@ -81,6 +82,7 @@
         var operationAction = event.target.closest('[data-operation-invocation]');
         var workspaceToggle = event.target.closest('[data-workspace-results-toggle]');
         var workspaceClear = event.target.closest('[data-workspace-results-clear]');
+        var findScopeButton = event.target.closest('[data-runtime-find-scope]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('button[data-object-id]');
 
@@ -111,6 +113,13 @@
         if (workspaceClear) {
             event.preventDefault();
             clearResults();
+            return;
+        }
+
+        if (findScopeButton) {
+            event.preventDefault();
+            findScope = String(findScopeButton.dataset.runtimeFindScope || '');
+            renderState();
             return;
         }
 
@@ -400,7 +409,8 @@
                 y: panel.y,
                 width: panel.width,
                 height: panel.height,
-                z: panel.z
+                z: panel.z,
+                findScope: findScope
             }
         });
         runtime.AdapterRegistry.mountAll(root, adapterContext());
