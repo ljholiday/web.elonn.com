@@ -306,7 +306,6 @@ input {
     margin: 0;
 }
 
-.workspace-layer,
 .carry-object-panel {
     position: absolute;
     z-index: 10;
@@ -374,27 +373,12 @@ input {
     border-color: rgba(184, 255, 243, 0.78);
 }
 
-.workspace-layer {
-    left: 50%;
-    top: 8px;
-    width: min(620px, calc(100vw - 24px));
-    max-height: min(58vh, calc(100dvh - 16px));
-    overflow: hidden;
-    padding: 0;
-    border-radius: 8px;
-    transform: translateX(-50%);
-}
-
 .workspace-results-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     min-height: 0;
     overflow: hidden;
     border-radius: 8px;
-}
-
-.workspace-results-panel .carry-object-panel__title {
-    cursor: default;
 }
 
 .workspace-results-panel__toggle,
@@ -1089,14 +1073,6 @@ figure {
 }
 
 @media (max-width: 920px) {
-    .workspace-layer {
-        left: 12px;
-        right: 12px;
-        top: 8px;
-        width: auto;
-        transform: none;
-    }
-
     .runtime-notifications {
         left: 12px;
         right: 12px;

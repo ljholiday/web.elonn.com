@@ -10,11 +10,14 @@
         var worldBaseUrl = String(root.dataset.worldBaseUrl || '').replace(/\/+$/, '');
         var nodes = {
             status: root.querySelector('[data-runtime-status]'),
-            workspace: root.querySelector('[data-layer-zone="workspace:workspace"]'),
+            workspace: null,
             field: root.querySelector('[data-layer-zone="field:field"]'),
             carryPanels: root.querySelector('[data-runtime-carry-panels]'),
+            workspaceMount: root.querySelector('[data-workspace-panel-mount]'),
             statusRows: root.querySelector('[data-runtime-session]')
         };
+        var workspacePanelEl = null;
+        var workspaceToggleButton = null;
 
         function status(message, state) {
             if (!nodes.status) {
@@ -26,27 +29,40 @@
 
         function render(scene, options) {
             options = options && typeof options === 'object' ? options : {};
+            var workspaceOptions = options.workspace || {};
             var zoneMap = zonesByKey(scene.layers || []);
-            renderWorkspace(nodes.workspace, zoneMap['workspace:workspace'], zoneMap['carry:carry'], options.workspace || {});
+            ensureWorkspacePanel(workspaceOptions);
+            updateFloatingPanelChrome(workspacePanelEl, workspaceOptions);
+            if (workspaceToggleButton) {
+                workspaceToggleButton.textContent = workspaceOptions.collapsed === true ? 'Show' : 'Hide';
+            }
+            renderWorkspace(nodes.workspace, zoneMap['workspace:workspace'], zoneMap['carry:carry'], workspaceOptions);
             renderField(nodes.field, zoneMap['field:field']);
             common.replaceChildren(nodes.carryPanels, carryPanelNodes(scene.carryPanels || []));
             common.replaceChildren(nodes.statusRows, (scene.status || []).map(statusNode));
         }
 
+        /*
+         * Built exactly once, the first time real panel state (position/size) is available --
+         * never rebuilt on subsequent renders, unlike carry panels, because it hosts the live
+         * query input; replaceChildren-ing it every render would drop focus and in-progress text.
+         */
+        function ensureWorkspacePanel(options) {
+            var built = null;
+            if (workspacePanelEl || !nodes.workspaceMount) {
+                return;
+            }
+            built = workspacePanelNode(options);
+            workspacePanelEl = built.article;
+            workspaceToggleButton = built.toggleButton;
+            nodes.workspace = built.resultsNode;
+            nodes.workspaceMount.appendChild(workspacePanelEl);
+        }
+
         function renderWorkspace(node, zone, selfZone, options) {
-            var panel = null;
-            var toggle = null;
             var content = [];
             if (!node) {
                 return;
-            }
-            panel = node.closest('[data-workspace-results-panel]');
-            if (panel) {
-                panel.dataset.collapsed = options.collapsed === true ? 'true' : 'false';
-                toggle = panel.querySelector('[data-workspace-results-toggle]');
-                if (toggle) {
-                    toggle.textContent = options.collapsed === true ? 'Show' : 'Hide';
-                }
             }
             if (options.closed === true || options.collapsed === true || options.emptyVisible === true) {
                 common.replaceChildren(node, []);
@@ -70,7 +86,7 @@
             var header = document.createElement('header');
             var title = document.createElement('h2');
             var actions = document.createElement('div');
-            var close = panelButton({
+            var close = config.closable === false ? null : panelButton({
                 label: 'x',
                 dataset: config.closeDataset,
                 datasetValue: config.closeDatasetValue,
@@ -87,10 +103,192 @@
             (Array.isArray(config.actions) ? config.actions : []).forEach(function (action) {
                 actions.appendChild(action);
             });
-            actions.appendChild(close);
+            if (close) {
+                actions.appendChild(close);
+            }
             header.appendChild(title);
             header.appendChild(actions);
             return header;
+        }
+
+        /*
+         * Shared by every floating layer in the runtime -- carried objects and the workspace
+         * results panel alike get identical fixed sizing (persisted per panelId, driven by
+         * options.x/y/width/height/collapsed/z), the same tap-header-to-collapse and drag (via
+         * the generic [data-carry-panel-title]/[data-carry-panel-resize] handlers in
+         * web-runtime.js), and the same resize handle. panelId is either a real World object id
+         * or a fixed pseudo-id like "workspace-results"; both are just keys the runtime's panel
+         * state store resolves generically. Mirrors xreal.elonn.app's CreateFloatingPanel, which
+         * uses the same single-function-for-every-panel shape for the identical reason.
+         */
+        function floatingPanel(config) {
+            config = config && typeof config === 'object' ? config : {};
+            var article = document.createElement('article');
+            var content = document.createElement('div');
+            var resize = document.createElement('span');
+
+            article.className = ['carry-object-panel', common.text(config.className, '')].filter(Boolean).join(' ');
+            article.dataset.carryPanelId = config.id;
+            if (config.objectId) {
+                article.dataset.objectId = config.objectId;
+            }
+
+            content.className = ['carry-object-panel__content', common.text(config.contentClassName, '')].filter(Boolean).join(' ');
+            if (typeof config.buildContent === 'function') {
+                config.buildContent(content);
+            }
+
+            resize.className = 'carry-object-panel__resize';
+            resize.dataset.carryPanelResize = config.id;
+            resize.setAttribute('aria-hidden', 'true');
+
+            article.appendChild(panelHeader({
+                title: config.title,
+                barClass: config.barClass,
+                headerDataset: 'carryPanelTitle',
+                headerDatasetValue: config.id,
+                titleDataset: 'carryPanelTitle',
+                titleDatasetValue: config.id,
+                actions: config.headerActions || [],
+                closable: config.closable !== false,
+                closeDataset: 'carryPanelClose',
+                closeDatasetValue: config.id,
+                closeLabel: config.closeLabel || ('Close ' + common.text(config.title, 'panel'))
+            }));
+            article.appendChild(content);
+            article.appendChild(resize);
+            updateFloatingPanelChrome(article, config);
+            return article;
+        }
+
+        /*
+         * Applies position/size/collapse/z-order -- the only parts of a floating panel that
+         * change after it exists. Called once at construction (via floatingPanel()) and again on
+         * every render for panels built once and reused (the workspace panel); carry panels are
+         * rebuilt fresh each render so their initial construction call is the only one they need.
+         */
+        function updateFloatingPanelChrome(article, options) {
+            options = options && typeof options === 'object' ? options : {};
+            if (!article) {
+                return;
+            }
+            article.dataset.collapsed = options.collapsed === true ? 'true' : 'false';
+            if (typeof options.x === 'number') {
+                article.style.left = options.x + 'px';
+            }
+            if (typeof options.y === 'number') {
+                article.style.top = options.y + 'px';
+            }
+            if (typeof options.width === 'number') {
+                article.style.width = options.width + 'px';
+            }
+            if (options.collapsed === true) {
+                article.style.height = '';
+            } else if (typeof options.height === 'number') {
+                article.style.height = options.height + 'px';
+            }
+            article.style.zIndex = String(options.z || 1);
+        }
+
+        /*
+         * The workspace results panel, built through the exact same floatingPanel() every carry
+         * panel uses -- not a second, hand-rolled container. Not closable (there is always
+         * exactly one; collapsing hides it, nothing removes it). The live query form lives in
+         * content, not the header, so header-drag never conflicts with typing or the Voice/Clear
+         * buttons -- the same separation xreal's CreateFloatingPanel already uses for its
+         * "query-results" panel.
+         */
+        function workspacePanelNode(options) {
+            var resultsNode = document.createElement('div');
+            var toggleButton = panelButton({
+                label: options.collapsed === true ? 'Show' : 'Hide',
+                dataset: 'workspaceResultsToggle',
+                datasetValue: 'true',
+                className: 'workspace-results-panel__toggle',
+                ariaLabel: 'Toggle workspace results'
+            });
+            var article = floatingPanel({
+                id: 'workspace-results',
+                className: 'workspace-results-panel',
+                barClass: 'workspace-results-panel__bar',
+                contentClassName: 'workspace-results-panel__content',
+                title: 'Workspace',
+                closable: false,
+                collapsed: options.collapsed === true,
+                x: options.x,
+                y: options.y,
+                width: options.width,
+                height: options.height,
+                z: options.z,
+                headerActions: [toggleButton],
+                buildContent: function (content) {
+                    resultsNode.className = 'workspace-results-panel__list';
+                    resultsNode.dataset.workspaceResultsContent = 'true';
+                    content.appendChild(queryFormNode());
+                    content.appendChild(resultsNode);
+                }
+            });
+            return {article: article, resultsNode: resultsNode, toggleButton: toggleButton};
+        }
+
+        function queryFormNode() {
+            var form = document.createElement('form');
+            var label = document.createElement('label');
+            var field = document.createElement('div');
+            var input = document.createElement('input');
+            var voice = document.createElement('button');
+            var voiceIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            var actions = document.createElement('div');
+            var clear = panelButton({
+                label: 'Clear',
+                dataset: 'workspaceResultsClear',
+                datasetValue: 'true',
+                className: 'workspace-results-panel__clear',
+                ariaLabel: 'Clear results'
+            });
+
+            form.className = 'query-composer';
+            form.setAttribute('data-runtime-query-form', '');
+            form.setAttribute('role', 'search');
+
+            label.className = 'visually-hidden';
+            label.setAttribute('for', 'runtime-query');
+            label.textContent = 'World query';
+
+            field.className = 'query-composer__field';
+            input.id = 'runtime-query';
+            input.className = 'query-composer__input';
+            input.setAttribute('data-runtime-query-input', '');
+            input.type = 'search';
+            input.name = 'query';
+            input.autocomplete = 'off';
+            input.spellcheck = true;
+            input.placeholder = 'Ask or search';
+
+            voice.type = 'button';
+            voice.className = 'query-composer__voice';
+            voice.setAttribute('data-runtime-voice', '');
+            voice.setAttribute('aria-label', 'Start voice input');
+            voiceIcon.setAttribute('viewBox', '0 0 24 24');
+            voiceIcon.setAttribute('aria-hidden', 'true');
+            voiceIcon.setAttribute('focusable', 'false');
+            voiceIcon.innerHTML =
+                '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"></path>' +
+                '<path d="M5 11a7 7 0 0 0 14 0"></path>' +
+                '<path d="M12 18v3"></path>' +
+                '<path d="M8 21h8"></path>';
+            voice.appendChild(voiceIcon);
+
+            field.appendChild(input);
+            field.appendChild(voice);
+
+            actions.className = 'carry-object-panel__actions';
+            actions.appendChild(clear);
+
+            form.appendChild(label);
+            form.appendChild(field);
+            form.appendChild(actions);
+            return form;
         }
 
         function panelButton(config) {
@@ -442,52 +640,31 @@
 
         function carryPanelNodes(panels) {
             return panels.map(function (panel) {
-                var article = document.createElement('article');
-                var content = document.createElement('div');
-                var resize = document.createElement('span');
-                var type = document.createElement('span');
-                var summary = document.createElement('p');
-
-                article.className = 'carry-object-panel';
-                article.dataset.carryPanelId = panel.id;
-                article.dataset.objectId = panel.object.id;
-                article.dataset.collapsed = panel.collapsed ? 'true' : 'false';
-                article.style.left = panel.x + 'px';
-                article.style.top = panel.y + 'px';
-                article.style.width = panel.width + 'px';
-                if (!panel.collapsed) {
-                    article.style.height = panel.height + 'px';
-                }
-                article.style.zIndex = String(panel.z || 1);
-
-                content.className = 'carry-object-panel__content';
-                type.className = 'object-type';
-                type.textContent = panel.object.type + ' / ' + panel.object.layer;
-                summary.textContent = panel.object.summary;
-
-                content.appendChild(type);
-                if (panel.object.summary !== '') {
-                    content.appendChild(summary);
-                }
-                content.appendChild(objectSurface(panel.object));
-
-                resize.className = 'carry-object-panel__resize';
-                resize.dataset.carryPanelResize = panel.id;
-                resize.setAttribute('aria-hidden', 'true');
-
-                article.appendChild(panelHeader({
+                return floatingPanel({
+                    id: panel.id,
+                    objectId: panel.object.id,
                     title: panel.object.title,
-                    headerDataset: 'carryPanelTitle',
-                    headerDatasetValue: panel.id,
-                    titleDataset: 'carryPanelTitle',
-                    titleDatasetValue: panel.id,
-                    closeDataset: 'carryPanelClose',
-                    closeDatasetValue: panel.id,
-                    closeLabel: 'Close ' + panel.object.title
-                }));
-                article.appendChild(content);
-                article.appendChild(resize);
-                return article;
+                    closable: true,
+                    collapsed: panel.collapsed,
+                    x: panel.x,
+                    y: panel.y,
+                    width: panel.width,
+                    height: panel.height,
+                    z: panel.z,
+                    closeLabel: 'Close ' + panel.object.title,
+                    buildContent: function (content) {
+                        var type = document.createElement('span');
+                        var summary = document.createElement('p');
+                        type.className = 'object-type';
+                        type.textContent = panel.object.type + ' / ' + panel.object.layer;
+                        summary.textContent = panel.object.summary;
+                        content.appendChild(type);
+                        if (panel.object.summary !== '') {
+                            content.appendChild(summary);
+                        }
+                        content.appendChild(objectSurface(panel.object));
+                    }
+                });
             });
         }
 

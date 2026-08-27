@@ -16,6 +16,7 @@ $readyPayload = json_decode(is_string($ready) ? $ready : '', true);
 $template = file_get_contents($root . '/templates/runtime.php') ?: '';
 $loginTemplate = file_get_contents($root . '/templates/login.php') ?: '';
 $index = file_get_contents($root . '/public/index.php') ?: '';
+$webRenderer = file_get_contents($root . '/public/assets/js/runtime-kit/web-renderer.js') ?: '';
 
 $checks = [
     'Ready endpoint identifies the fresh Web runtime' => is_array($readyPayload)
@@ -26,9 +27,13 @@ $checks = [
         && str_contains($template, "'scene-model.js'")
         && str_contains($template, "'web-runtime.js'")
         && str_contains($template, '/assets/js/runtime-kit/'),
-    'Runtime template exposes query composer controls' => str_contains($template, 'data-runtime-query-form')
-        && str_contains($template, 'data-runtime-query-input')
-        && str_contains($template, 'data-runtime-voice'),
+    // The query composer is built by web-renderer.js's queryFormNode(), as part of the same
+    // floatingPanel() the workspace results panel and every carry panel share -- not static
+    // template markup.
+    'Runtime template exposes query composer controls' => str_contains($template, 'data-workspace-panel-mount')
+        && str_contains($webRenderer, "form.setAttribute('data-runtime-query-form'")
+        && str_contains($webRenderer, "input.setAttribute('data-runtime-query-input'")
+        && str_contains($webRenderer, "voice.setAttribute('data-runtime-voice'"),
     'Runtime owns its login screen' => str_contains($index, "\$path === '/login'")
         && str_contains($index, 'web_runtime_api_login')
         && str_contains($index, 'web_runtime_set_auth_cookie')

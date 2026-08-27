@@ -14,11 +14,11 @@
     var voiceButton = null;
     var recognition = null;
     var carryStorageKey = 'elonn.web.carry.panels.v1';
+    var workspacePanelStorageKey = 'elonn.web.workspace.panel.v1';
     var uiStorageKey = 'elonn.web.runtime.ui.v1';
     var drag = null;
     var resize = null;
     var lastCarryTitleTap = null;
-    var workspaceResultsCollapsed = false;
     var workspaceResultsCleared = false;
 
     if (!root || !runtime) {
@@ -27,13 +27,17 @@
 
     client = runtime.WorldClient(root);
     renderer = runtime.WebRenderer(root);
-    queryForm = root.querySelector('[data-runtime-query-form]');
-    queryInput = root.querySelector('[data-runtime-query-input]');
-    voiceButton = root.querySelector('[data-runtime-voice]');
     recognition = speechRecognition();
 
     renderer.status('Requesting World Dataset.', 'loading');
     renderer.render(runtime.SceneModel.loading());
+
+    // The query form lives inside the workspace panel, which renderer.render() just built (once,
+    // reused for every subsequent render) -- these elements don't exist before that first call.
+    queryForm = root.querySelector('[data-runtime-query-form]');
+    queryInput = root.querySelector('[data-runtime-query-input]');
+    voiceButton = root.querySelector('[data-runtime-voice]');
+
     restoreLocalUiState();
     loadDataset({operation: 'world.restore'});
 
@@ -223,7 +227,11 @@
         var title = event.target.closest('[data-carry-panel-title]');
         var panel = title ? title.closest('[data-carry-panel-id]') : null;
         var panelState = null;
-        if (event.target.closest('[data-carry-panel-close]') || event.target.closest('[data-carry-panel-resize]') || !title || !panel || !state || event.button !== 0) {
+        // [data-carry-panel-title] marks the whole header (title text + header actions), so a
+        // header button click also matches .closest() here -- exclude the actions area entirely,
+        // not just the close button, so extra header actions (Hide/Clear on the workspace panel)
+        // never get hijacked into starting a drag instead of firing their own click.
+        if (event.target.closest('.carry-object-panel__actions') || event.target.closest('[data-carry-panel-resize]') || !title || !panel || !state || event.button !== 0) {
             return;
         }
         panelState = carryPanel(String(panel.dataset.carryPanelId || ''));
@@ -316,7 +324,10 @@
             replaceResults: workspaceResultsCleared
         };
 
-        workspaceResultsCollapsed = false;
+        var panel = carryPanel('workspace-results');
+        if (panel) {
+            panel.collapsed = false;
+        }
         workspaceResultsCleared = false;
         renderer.status('Requesting World Dataset.', 'loading');
         browserOrigin().then(function (origin) {
@@ -372,29 +383,40 @@
         var next = runtime.StateIndexer.build(parsed, state);
         state = runtime.ContinuityReconciler.reconcile(state, next);
         state.carryPanels = reconcileCarryPanels(loadCarryPanels());
+        state.workspacePanel = reconcileWorkspacePanel(loadWorkspacePanel());
         persistCarryPanels();
         persistLocalUiState();
         renderState();
     }
 
     function renderState() {
+        var panel = carryPanel('workspace-results') || {};
         renderer.render(runtime.SceneModel.fromState(state), {
             workspace: {
-                collapsed: workspaceResultsCollapsed,
+                collapsed: panel.collapsed === true,
                 closed: false,
-                emptyVisible: workspaceResultsCleared
+                emptyVisible: workspaceResultsCleared,
+                x: panel.x,
+                y: panel.y,
+                width: panel.width,
+                height: panel.height,
+                z: panel.z
             }
         });
         runtime.AdapterRegistry.mountAll(root, adapterContext());
     }
 
     function clearResults() {
-        workspaceResultsCollapsed = false;
+        var panel = carryPanel('workspace-results');
+        if (panel) {
+            panel.collapsed = false;
+        }
         workspaceResultsCleared = true;
         if (queryInput) {
             queryInput.value = '';
             queryInput.focus();
         }
+        persistCarryPanels();
         persistLocalUiState();
         renderState();
         renderer.status('Results cleared.', 'neutral');
@@ -409,9 +431,7 @@
     }
 
     function toggleWorkspaceResults() {
-        workspaceResultsCollapsed = !workspaceResultsCollapsed;
-        persistLocalUiState();
-        renderState();
+        toggleCarryPanel('workspace-results');
     }
 
     function adapterContext() {
@@ -725,8 +745,19 @@
         panel.z = nextCarryZ();
     }
 
+    /*
+     * Resolves any panel by id, real carried object or the workspace results panel alike -- the
+     * same generic lookup every drag/resize/collapse handler already uses regardless of which
+     * kind of panel it's operating on.
+     */
     function carryPanel(panelId) {
         var match = null;
+        if (!state) {
+            return null;
+        }
+        if (panelId === 'workspace-results') {
+            return state.workspacePanel || null;
+        }
         (state.carryPanels || []).some(function (panel) {
             if (String(panel.id || '') === panelId) {
                 match = panel;
@@ -742,6 +773,9 @@
         (state.carryPanels || []).forEach(function (panel) {
             max = Math.max(max, Number(panel.z || 0));
         });
+        if (state.workspacePanel) {
+            max = Math.max(max, Number(state.workspacePanel.z || 0));
+        }
         return max + 1;
     }
 
@@ -810,6 +844,52 @@
         } catch (error) {
             renderer.status('Carry panels could not be saved locally.', 'error');
         }
+        persistWorkspacePanel();
+    }
+
+    function persistWorkspacePanel() {
+        try {
+            if (window.localStorage && state && state.workspacePanel) {
+                window.localStorage.setItem(workspacePanelStorageKey, JSON.stringify(state.workspacePanel));
+            }
+        } catch (error) {
+            renderer.status('Workspace panel could not be saved locally.', 'error');
+        }
+    }
+
+    function loadWorkspacePanel() {
+        var stored = '';
+        try {
+            stored = window.localStorage ? window.localStorage.getItem(workspacePanelStorageKey) : '';
+            return stored ? JSON.parse(stored) : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    /*
+     * Same shape as reconcileCarryPanels() -- clamp persisted geometry to the current viewport,
+     * with defaults matching the panel's original fixed CSS position (centered, near the top) so
+     * a member who has never dragged or resized it sees the same layout as before this changed.
+     */
+    function reconcileWorkspacePanel(saved) {
+        var rootBounds = root.getBoundingClientRect();
+        var defaultWidth = Math.min(620, Math.max(320, rootBounds.width - 24));
+        var width = clamp(Number(saved.width || defaultWidth), 320, Math.max(320, rootBounds.width - 16));
+        var defaultHeight = Math.min(rootBounds.height * 0.58, rootBounds.height - 16);
+        var height = clamp(Number(saved.height || defaultHeight), 160, Math.max(160, rootBounds.height - 16));
+        var defaultX = (rootBounds.width - width) / 2;
+        var x = clamp(saved.x != null ? Number(saved.x) : defaultX, 8, Math.max(8, rootBounds.width - width - 8));
+        var y = clamp(Number(saved.y != null ? saved.y : 8), 8, Math.max(8, rootBounds.height - height - 8));
+        return {
+            id: 'workspace-results',
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            z: Number(saved.z || 10),
+            collapsed: saved.collapsed === true
+        };
     }
 
     function restoreLocalUiState() {
@@ -817,7 +897,6 @@
         if (queryInput && typeof saved.query === 'string') {
             queryInput.value = saved.query;
         }
-        workspaceResultsCollapsed = saved.workspace && saved.workspace.collapsed === true;
         workspaceResultsCleared = saved.workspace && saved.workspace.cleared === true;
     }
 
@@ -825,7 +904,6 @@
         var next = {
             query: queryInput ? String(queryInput.value || '') : '',
             workspace: {
-                collapsed: workspaceResultsCollapsed,
                 cleared: workspaceResultsCleared
             }
         };
