@@ -1022,6 +1022,15 @@ figure {
     color: #d0ddd5;
 }
 
+.operation-form__label {
+    font-weight: 600;
+}
+
+.operation-form__help {
+    font-size: 0.72rem;
+    color: rgba(208, 221, 213, 0.72);
+}
+
 .operation-form__field input,
 .operation-form__field select {
     width: 100%;

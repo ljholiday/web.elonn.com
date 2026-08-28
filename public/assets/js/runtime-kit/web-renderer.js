@@ -1203,10 +1203,19 @@
         function operationFormField(key, spec, currentValue) {
             var wrapper = document.createElement('label');
             var labelText = document.createElement('span');
+            var helpText = common.text(spec && spec.help, '');
             wrapper.className = 'operation-form__field';
             labelText.className = 'operation-form__label';
-            labelText.textContent = humanizeKey(key);
+            // spec.label is the display copy the owning Service authored in its Contract
+            // (resolved from a label_ref); humanizeKey is only the fallback for an unlabelled field.
+            labelText.textContent = common.text(spec && spec.label, humanizeKey(key));
             wrapper.appendChild(labelText);
+            if (helpText !== '') {
+                var help = document.createElement('span');
+                help.className = 'operation-form__help';
+                help.textContent = helpText;
+                wrapper.appendChild(help);
+            }
             wrapper.appendChild(operationFormInput(key, spec, currentValue));
             return wrapper;
         }
@@ -1219,11 +1228,12 @@
             var input;
 
             if (enumValues && type === 'string') {
+                var optionLabels = spec && spec.labels && typeof spec.labels === 'object' ? spec.labels : null;
                 input = document.createElement('select');
                 enumValues.forEach(function (option) {
                     var optionNode = document.createElement('option');
                     optionNode.value = option;
-                    optionNode.textContent = humanizeKey(option);
+                    optionNode.textContent = common.text(optionLabels && optionLabels[option], humanizeKey(option));
                     optionNode.selected = String(value) === option;
                     input.appendChild(optionNode);
                 });
