@@ -241,12 +241,15 @@ $checks = [
         && str_contains($webRuntime, 'clearResults')
         && str_contains($webRuntime, 'workspaceResultsCleared = true;')
         && str_contains($webRuntime, "renderer.status('Results cleared.', 'neutral')")
-        && str_contains(substr($webRuntime, strpos($webRuntime, 'function clearResults()'), 700), "operation: 'world.clear'")
+        // Clear is client-side only: it never round-trips to world.clear (which re-saves
+        // world state and drops field-placed objects). It clears the results list, nothing else.
+        && !str_contains(substr($webRuntime, strpos($webRuntime, 'function clearResults()'), 700), "operation: 'world.clear'")
+        && !str_contains($webRuntime, 'function openObjectIds()')
         && str_contains($webRuntime, 'workspaceToggle')
         && str_contains($webRuntime, 'replaceResults: workspaceResultsCleared')
-        && str_contains($webRuntime, 'preservedObjectIds: openObjectIds()')
-        && str_contains($webRuntime, 'function openObjectIds()')
-        && str_contains(read_file($root . '/public/assets/js/runtime-kit/world-client.js'), 'preserved_object_ids')
+        // Clear lives in the panel header (with Hide), not the query composer.
+        && str_contains($webRenderer, 'headerActions: [clearButton, toggleButton]')
+        && !str_contains($webRenderer, 'actions.appendChild(clear);')
         && str_contains(read_file($root . '/public/assets/js/runtime-kit/world-client.js'), 'replace_results: state.replaceResults === true')
         && str_contains($webRuntime, "String(runtimeState.inputText || '').trim() === ''")
         && str_contains($webRuntime, 'runtimeState.replaceResults !== true')

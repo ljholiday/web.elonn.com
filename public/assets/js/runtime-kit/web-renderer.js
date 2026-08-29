@@ -254,6 +254,13 @@
             var content = options.content && typeof options.content === 'object' ? options.content : {};
             var find = content.find && typeof content.find === 'object' ? content.find : {};
             var resultsNode = document.createElement('div');
+            var clearButton = panelButton({
+                label: common.text(find.clear_label, 'Clear'),
+                dataset: 'workspaceResultsClear',
+                datasetValue: 'true',
+                className: 'workspace-results-panel__clear',
+                ariaLabel: 'Clear results'
+            });
             var toggleButton = panelButton({
                 label: options.collapsed === true ? 'Show' : 'Hide',
                 dataset: 'workspaceResultsToggle',
@@ -274,7 +281,7 @@
                 width: options.width,
                 height: options.height,
                 z: options.z,
-                headerActions: [toggleButton],
+                headerActions: [clearButton, toggleButton],
                 buildContent: function (content) {
                     resultsNode.className = 'workspace-results-panel__list';
                     resultsNode.dataset.workspaceResultsContent = 'true';
@@ -295,13 +302,6 @@
             var voiceIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             var actions = document.createElement('div');
             var scopeGroup = document.createElement('div');
-            var clear = panelButton({
-                label: common.text(find.clear_label, 'Clear'),
-                dataset: 'workspaceResultsClear',
-                datasetValue: 'true',
-                className: 'workspace-results-panel__clear',
-                ariaLabel: 'Clear results'
-            });
 
             form.className = 'query-composer';
             form.setAttribute('data-runtime-query-form', '');
@@ -339,7 +339,6 @@
             field.appendChild(voice);
 
             actions.className = 'carry-object-panel__actions';
-            actions.appendChild(clear);
 
             scopeGroup.className = 'workspace-results-panel__scope-group';
             scopeGroup.setAttribute('data-runtime-find-scope-group', '');

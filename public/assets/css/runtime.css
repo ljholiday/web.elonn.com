@@ -413,10 +413,16 @@ input {
     display: none;
 }
 
+/*
+ * A full-bleed passthrough overlay for carry panels. Deliberately NOT a stacking
+ * context (no z-index): carry panels and the workspace results panel -- which mounts
+ * as a sibling, not a child -- must share one stacking context so their per-panel
+ * z-index values (from nextCarryZ) actually order them against each other. With a
+ * z-index here, any workspace-panel z above this value covered every carry panel.
+ */
 .carry-panel-stage {
     position: absolute;
     inset: 0;
-    z-index: 11;
     pointer-events: none;
 }
 

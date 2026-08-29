@@ -204,6 +204,23 @@
         });
     }
 
+    // Bring any panel the member interacts with to the front -- a plain click anywhere
+    // inside it, not only a title or resize drag. Capture phase so it runs before the
+    // drag/resize/click handlers; never prevents default, so those still fire.
+    root.addEventListener('pointerdown', function (event) {
+        var el = event.target.closest('[data-carry-panel-id]');
+        var panelState = el && state && event.button === 0
+            ? carryPanel(String(el.dataset.carryPanelId || ''))
+            : null;
+        if (!panelState || Number(panelState.z || 0) >= nextCarryZ() - 1) {
+            return;
+        }
+        bringCarryPanelForward(panelState.id);
+        el.style.zIndex = String(panelState.z || 1);
+        persistCarryPanels();
+        persistWorkspacePanel();
+    }, true);
+
     root.addEventListener('pointerdown', function (event) {
         var handle = event.target.closest('[data-carry-panel-resize]');
         var panel = handle ? handle.closest('[data-carry-panel-id]') : null;
@@ -416,6 +433,13 @@
         runtime.AdapterRegistry.mountAll(root, adapterContext());
     }
 
+    /*
+     * Clear empties the results list in the workspace panel only -- it is not a
+     * workspace-wide reset. It stays entirely client-side: it never calls world.clear,
+     * which also re-saves world state and would drop field-placed objects. The cleared
+     * flag is persisted locally, so the emptied list survives a reload; the next query
+     * clears the flag and shows fresh results.
+     */
     function clearResults() {
         var panel = carryPanel('workspace-results');
         if (panel) {
@@ -430,14 +454,6 @@
         persistLocalUiState();
         renderState();
         renderer.status('Results cleared.', 'neutral');
-        loadDataset({
-            operation: 'world.clear',
-            runtimeSessionId: state ? state.runtimeSessionId : '',
-            selectedObjectId: state ? state.selectedObjectId : '',
-            selectedCollectionId: state ? state.selectedCollectionId : '',
-            preservedObjectIds: openObjectIds(),
-            replaceResults: true
-        });
     }
 
     function toggleWorkspaceResults() {
@@ -457,6 +473,14 @@
 
     function dispatchOperationInvocation(command) {
         var objectId = String(command && command.object_id || '');
+        // An invocation's result renders into the workspace results panel -- make sure that
+        // panel is visible and on top so the member actually sees what they asked for.
+        var panel = carryPanel('workspace-results');
+        if (panel) {
+            panel.collapsed = false;
+            bringCarryPanelForward('workspace-results');
+        }
+        workspaceResultsCleared = false;
         renderer.status('Requesting World Dataset.', 'loading');
         return loadDataset({
             runtimeSessionId: state ? state.runtimeSessionId : '',
@@ -552,18 +576,6 @@
         });
         state.carryPanels = panels;
         persistCarryPanels();
-    }
-
-    function openObjectIds() {
-        var ids = {};
-        (state && Array.isArray(state.carryPanels) ? state.carryPanels : []).forEach(function (panel) {
-            var objectId = String(panel.objectId || '');
-            if (objectId !== '') {
-                ids[objectId] = true;
-            }
-        });
-
-        return Object.keys(ids);
     }
 
     function openRuntimeUrl(control) {
