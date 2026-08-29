@@ -405,7 +405,13 @@
                 return [];
             }
             return items.map(function (collection) {
-                return collection.type === 'sequence' ? sequenceNode(collection, mode) : collectionNode(collection, mode);
+                if (collection.type === 'sequence') {
+                    return sequenceNode(collection, mode);
+                }
+                if (collection.type === 'roster') {
+                    return rosterNode(collection, mode);
+                }
+                return collectionNode(collection, mode);
             });
         }
 
@@ -556,6 +562,66 @@
                 return '';
             }
             return parsed.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+        }
+
+        /*
+         * Renders a canonical `roster` Collection (a participant list -- a conversation's
+         * participants, a community's members, an event's guests) as a compact list of people
+         * instead of the generic result-grid `collectionNode()` uses. Each entry stays its own
+         * addressable Object (own id, own data-object-id, click/select/carry works exactly like
+         * objectButton()) -- roster only changes how the group is laid out. Role / RSVP / circle
+         * text rides in each member Object's own title and summary; no literal chrome here.
+         */
+        function rosterNode(collection, mode) {
+            var section = document.createElement('section');
+            var header = document.createElement('header');
+            var title = document.createElement('h3');
+            var summary = document.createElement('p');
+            var list = document.createElement('div');
+            section.className = 'world-collection world-roster';
+            section.dataset.collectionId = collection.id;
+            section.dataset.selected = collection.selected ? 'true' : 'false';
+            title.textContent = collection.title;
+            summary.textContent = collection.summary;
+            header.appendChild(title);
+            if (collection.summary !== '' && mode !== 'compact' && collection.objects.length > 0) {
+                header.appendChild(summary);
+            }
+            list.className = 'world-roster-list';
+            if (collection.objects.length === 0) {
+                list.appendChild(emptyCollectionNotice(collection));
+            } else {
+                collection.objects.forEach(function (object) {
+                    list.appendChild(rosterEntryNode(object, mode));
+                });
+            }
+            section.appendChild(header);
+            section.appendChild(list);
+            return section;
+        }
+
+        function rosterEntryNode(object, mode) {
+            var entry = document.createElement('button');
+            var name = document.createElement('span');
+            var meta = document.createElement('span');
+            entry.type = 'button';
+            entry.className = 'world-roster-entry';
+            entry.dataset.objectId = object.id;
+            entry.dataset.objectType = object.type;
+            entry.dataset.layer = object.layer;
+            entry.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
+            name.className = 'world-roster-entry__name';
+            name.textContent = object.title;
+            entry.appendChild(name);
+            if (object.summary !== '' && mode !== 'compact') {
+                meta.className = 'world-roster-entry__meta';
+                meta.textContent = object.summary;
+                entry.appendChild(meta);
+            }
+            if (object.availability.state !== 'enabled') {
+                entry.appendChild(badge(object.availability.state));
+            }
+            return entry;
         }
 
         function emptyCollectionNotice(collection) {
