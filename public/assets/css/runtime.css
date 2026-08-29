@@ -843,6 +843,38 @@ figure {
     font-size: 0.72rem;
 }
 
+/* Grouped Dashboard actions: one horizontal row per entry-point `group`
+   (Social's view / circle / create) instead of one long vertical stack. */
+.dashboard-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0;
+}
+
+.dashboard-action-row[data-action-group="create"] {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(184, 255, 243, 0.14);
+}
+
+.dashboard-action {
+    border: 1px solid rgba(184, 255, 243, 0.4);
+    border-radius: 999px;
+    background: rgba(25, 39, 42, 0.88);
+    color: #eefaf8;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.dashboard-action:hover,
+.dashboard-action:focus {
+    border-color: rgba(184, 255, 243, 0.82);
+    background: rgba(34, 52, 56, 0.96);
+    outline: none;
+}
+
 .object-decomposition {
     display: grid;
     gap: 8px;

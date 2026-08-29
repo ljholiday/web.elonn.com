@@ -146,6 +146,7 @@
                 id: String(action.id || ''),
                 label: common.text(action.label, 'Action'),
                 type: common.text(action.type, 'action'),
+                group: common.text(action.group, ''),
                 endpoint: String(action.endpoint || ''),
                 href: href,
                 operationInvocation: operationInvocation,

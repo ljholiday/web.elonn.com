@@ -1188,24 +1188,79 @@
             });
         }
 
+        // Fixed row order for grouped Dashboard actions (a Service's entry points can carry a
+        // `group` layout hint -- e.g. Social's view / circle / create). Anything else falls
+        // through to a trailing catch-all row.
+        var ACTION_GROUP_ORDER = ['view', 'circle', 'create'];
+
+        function actionNode(action, object) {
+            if (action.operationInvocation && typeof action.operationInvocation === 'object') {
+                if (hasModelArguments(action.operationInvocation)) {
+                    return operationForm(action, object);
+                }
+                return operationLine('Action', action.label, action.operationInvocation);
+            }
+            return linkLine('Action', action.label, action.href, object.id);
+        }
+
+        function actionButton(action) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'dashboard-action';
+            button.dataset.operationInvocation = JSON.stringify(action.operationInvocation);
+            // action.label is already resolved (scene-model applies the fallback); no literal here.
+            button.textContent = action.label;
+            return button;
+        }
+
         function actionLinks(object) {
             if (websiteDocument(object)) {
                 return [];
             }
-            return (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
+            var actions = (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
                 return action.availability
                     && action.availability.state === 'enabled'
                     && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'));
-            }).map(function (action) {
-                if (action.operationInvocation && typeof action.operationInvocation === 'object') {
-                    if (hasModelArguments(action.operationInvocation)) {
-                        return operationForm(action, object);
-                    }
-                    return operationLine('Action', action.label, action.operationInvocation);
-                }
-
-                return linkLine('Action', action.label, action.href, object.id);
             });
+
+            var grouped = actions.some(function (action) {
+                return common.text(action.group, '') !== '';
+            });
+            if (!grouped) {
+                return actions.map(function (action) {
+                    return actionNode(action, object);
+                });
+            }
+
+            // Lay grouped Dashboard actions out as one row per group. A row's actions become
+            // compact one-tap buttons when they need no input (the `view` / `circle` browses);
+            // an action that still needs a value keeps its full form (the `create` entrances).
+            var buckets = {};
+            actions.forEach(function (action) {
+                var key = common.text(action.group, '') || 'other';
+                (buckets[key] = buckets[key] || []).push(action);
+            });
+            var order = ACTION_GROUP_ORDER.concat(Object.keys(buckets).filter(function (key) {
+                return ACTION_GROUP_ORDER.indexOf(key) === -1;
+            }));
+            var nodes = [];
+            order.forEach(function (key) {
+                var bucket = buckets[key];
+                if (!bucket || bucket.length === 0) {
+                    return;
+                }
+                var row = document.createElement('div');
+                row.className = 'dashboard-action-row';
+                row.dataset.actionGroup = key;
+                bucket.forEach(function (action) {
+                    var canOneTap = action.operationInvocation
+                        && typeof action.operationInvocation === 'object'
+                        && !hasModelArguments(action.operationInvocation);
+                    row.appendChild(canOneTap ? actionButton(action) : actionNode(action, object));
+                });
+                nodes.push(row);
+            });
+            return nodes;
         }
 
         function hasModelArguments(operationInvocation) {

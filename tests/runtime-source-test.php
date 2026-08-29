@@ -272,6 +272,13 @@ $checks = [
         && str_contains($scripts, "operationLine('Action'")
         && str_contains($scripts, 'dispatchOperationAction')
         && !str_contains($scripts, 'dispatchWorldAction'),
+    'Grouped Dashboard actions lay out as one row per entry-point group, in fixed order' =>
+        str_contains($webRenderer, "ACTION_GROUP_ORDER = ['view', 'circle', 'create']")
+        && str_contains($webRenderer, "common.text(action.group, '') !== ''")
+        && str_contains($webRenderer, "row.className = 'dashboard-action-row'")
+        && str_contains($webRenderer, "row.dataset.actionGroup = key")
+        && str_contains($runtimeCss, '.dashboard-action-row')
+        && str_contains($runtimeCss, '.dashboard-action'),
     'Runtime shows source links on result entries' => str_contains($scripts, 'cardLinks')
         && str_contains($scripts, 'world-object-link')
         && str_contains($runtimeCss, '.world-object-link')
