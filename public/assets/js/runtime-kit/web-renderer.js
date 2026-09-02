@@ -889,19 +889,25 @@
             return button;
         }
 
+        /*
+         * A window body is its root Object's working controls followed by its Collections,
+         * nothing else. The Object's own detail fields (visibility, discovery, search
+         * scoring, counts, links) are indexing metadata, not something the member reads --
+         * a conversation window is its replies and its people, a dashboard window is its
+         * entrances. So this never runs the generic field-dump objectSurface() here.
+         */
         function windowBodyNodes(win) {
             var nodes = [];
             (win.objects || []).forEach(function (object) {
-                var type = document.createElement('span');
-                type.className = 'object-type';
-                type.textContent = object.type;
-                nodes.push(type);
                 if (object.summary !== '') {
                     var summary = document.createElement('p');
+                    summary.className = 'world-window__summary';
                     summary.textContent = object.summary;
                     nodes.push(summary);
                 }
-                nodes.push(objectSurface(object));
+                actionLinks(object).forEach(function (node) {
+                    nodes.push(node);
+                });
             });
             collections(win.collections || [], 'overlay').forEach(function (node) {
                 nodes.push(node);

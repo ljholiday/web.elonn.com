@@ -162,11 +162,15 @@
         if (objectButton && state) {
             var focusedId = String(objectButton.dataset.objectId || '');
             selectObject(focusedId);
-            // A card that carries a window-opening `open` action opens (or navigates) a window;
-            // any other card falls back to the client-local carry panel.
             if (openActionForObject(focusedId)) {
+                // A card with a window-opening `open` action opens (or navigates) a window.
                 openObjectWindow(focusedId, originWindowFor(objectButton), false);
+            } else if (originWindowFor(objectButton) !== '') {
+                // Inside a window, a card with no open action (a message, a participant) is
+                // terminal content -- select it, never spawn a separate panel for it.
+                renderState();
             } else {
+                // In the results pane, a card with no open action carries into its own panel.
                 carryObject(focusedId);
                 renderState();
             }
