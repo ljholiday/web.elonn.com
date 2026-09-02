@@ -686,6 +686,16 @@
             });
         }
 
+        // A dashboard object carries a self-open action so its workspace finding can open it
+        // as a window -- but that action is meaningless once the object is the window's own
+        // root, so it is never drawn as a button inside the window.
+        function opensThisObjectAsDashboard(action, object) {
+            var invocation = action && action.operationInvocation && typeof action.operationInvocation === 'object' ? action.operationInvocation : null;
+            return action && action.window === 'dashboard'
+                && invocation
+                && String(invocation.object_id || '') === String(object.id || '');
+        }
+
         // The visible "pull this into its own window" target on every card that opens a window.
         function pulloutMarker(objectId) {
             var button = document.createElement('button');
@@ -1322,7 +1332,8 @@
             var actions = (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
                 return action.availability
                     && action.availability.state === 'enabled'
-                    && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'));
+                    && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'))
+                    && !opensThisObjectAsDashboard(action, object);
             });
 
             var grouped = actions.some(function (action) {
