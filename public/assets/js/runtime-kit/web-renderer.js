@@ -686,14 +686,15 @@
             });
         }
 
-        // A dashboard object carries a self-open action so its workspace finding can open it
-        // as a window -- but that action is meaningless once the object is the window's own
-        // root, so it is never drawn as a button inside the window.
+        // An "open me" action (a dashboard finding's self-open, or a list card's open
+        // conversation) is meaningless once the object is the window's own root -- never draw
+        // it as a button inside the window it would open.
         function opensThisObjectAsDashboard(action, object) {
-            var invocation = action && action.operationInvocation && typeof action.operationInvocation === 'object' ? action.operationInvocation : null;
-            return action && action.window === 'dashboard'
-                && invocation
-                && String(invocation.object_id || '') === String(object.id || '');
+            if (!action || (action.window !== 'dashboard' && action.window !== 'object')) {
+                return false;
+            }
+            var invocation = action.operationInvocation && typeof action.operationInvocation === 'object' ? action.operationInvocation : null;
+            return !!invocation && String(invocation.object_id || '') === String(object.id || '');
         }
 
         // The visible "pull this into its own window" target on every card that opens a window.
