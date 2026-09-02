@@ -48,6 +48,7 @@
                     return String(collection.id || '');
                 }).filter(Boolean),
                 layers: layers(dataset, indexes),
+                windows: windows(dataset, indexes),
                 runtimeSessionId: String(dataset.id || ''),
                 selectedObjectId: selectedObjectId,
                 selectedCollectionId: selectedCollectionId,
@@ -127,7 +128,16 @@
         });
 
         if (placementType === 'workspace' && collectionIds.length === 0 && objectIds.length === 0) {
+            var windowPlaced = {};
+            dataset.placements.forEach(function (placement) {
+                if (placement.type === 'window' && placement.collection_id !== '') {
+                    windowPlaced[placement.collection_id] = true;
+                }
+            });
             dataset.collections.forEach(function (collection) {
+                if (windowPlaced[collection.id]) {
+                    return;
+                }
                 if (collection.type === placementType || ['carry', 'field'].indexOf(collection.type) === -1) {
                     collectionIds.push(collection.id);
                 }
@@ -141,6 +151,48 @@
             collectionIds: unique(collectionIds),
             objectIds: unique(objectIds)
         };
+    }
+
+    /*
+     * One entry per window Placement id: its placed Collections and Objects, plus the mode /
+     * title / navigation depth World tracks for it in context.windows. A window with no
+     * context.windows entry (a Runtime seeing one mid-transition) falls back to object mode.
+     */
+    function windows(dataset, indexes) {
+        var meta = dataset.windows && typeof dataset.windows === 'object' ? dataset.windows : {};
+        var order = [];
+        var byId = {};
+        dataset.placements.filter(function (placement) {
+            return placement.type === 'window' && placement.window_id !== '';
+        }).forEach(function (placement) {
+            var id = placement.window_id;
+            if (!byId[id]) {
+                byId[id] = {id: id, collectionIds: [], objectIds: [], mode: '', title: ''};
+                order.push(id);
+            }
+            if (placement.window_mode !== '' && byId[id].mode === '') {
+                byId[id].mode = placement.window_mode;
+            }
+            if (placement.collection_id !== '' && indexes.collections[placement.collection_id]) {
+                byId[id].collectionIds.push(placement.collection_id);
+            }
+            if (placement.object_id !== '' && indexes.objects[placement.object_id]) {
+                byId[id].objectIds.push(placement.object_id);
+            }
+        });
+
+        return order.map(function (id) {
+            var entry = byId[id];
+            var m = meta[id] && typeof meta[id] === 'object' ? meta[id] : {};
+            return {
+                id: id,
+                mode: (m.mode === 'dashboard' || m.mode === 'object') ? m.mode : (entry.mode === 'dashboard' ? 'dashboard' : 'object'),
+                title: common.text(m.title, entry.title),
+                depth: Math.max(0, parseInt(m.depth, 10) || 0),
+                collectionIds: unique(entry.collectionIds),
+                objectIds: unique(entry.objectIds)
+            };
+        });
     }
 
     function unique(items) {

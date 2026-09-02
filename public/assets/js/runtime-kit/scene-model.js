@@ -37,6 +37,7 @@
             var selectedObject = state.indexes.objects[state.selectedObjectId] || null;
             return {
                 layers: layers(state),
+                windows: windowViews(state),
                 focus: selectedObject ? objectView(state, selectedObject, true, true) : {kind: 'empty', title: 'No object selected.', summary: ''},
                 carryPanels: carryPanels(state),
                 actions: selectedObject ? actionsForObject(state, selectedObject.id) : [],
@@ -74,6 +75,31 @@
                         }).filter(Boolean)
                     };
                 })
+            };
+        });
+    }
+
+    /*
+     * One view per open window (see dev.elonn canonical/placement.md). A dashboard window is
+     * a launcher of entrance cards; an object window is a working view with its Collections
+     * inline and a depth-count back step. Both render through the same floating panel.
+     */
+    function windowViews(state) {
+        return (state.windows || []).map(function (win) {
+            return {
+                id: String(win.id || ''),
+                mode: win.mode === 'dashboard' ? 'dashboard' : 'object',
+                title: common.text(win.title, ''),
+                depth: Math.max(0, parseInt(win.depth, 10) || 0),
+                collections: (win.collectionIds || []).map(function (collectionId) {
+                    return collectionView(state, state.indexes.collections[collectionId] || {});
+                }).filter(function (collection) {
+                    return collection.id !== '';
+                }),
+                objects: (win.objectIds || []).map(function (objectId) {
+                    var object = state.indexes.objects[String(objectId || '')] || null;
+                    return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId, true) : null;
+                }).filter(Boolean)
             };
         });
     }
@@ -147,6 +173,7 @@
                 label: common.text(action.label, 'Action'),
                 type: common.text(action.type, 'action'),
                 group: common.text(action.group, ''),
+                window: action.window === 'dashboard' || action.window === 'object' ? action.window : '',
                 endpoint: String(action.endpoint || ''),
                 href: href,
                 operationInvocation: operationInvocation,

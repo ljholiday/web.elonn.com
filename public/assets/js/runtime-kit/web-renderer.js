@@ -18,6 +18,7 @@
         };
         var workspacePanelEl = null;
         var workspaceToggleButton = null;
+        var windowLabels = {};
 
         function status(message, state) {
             if (!nodes.status) {
@@ -31,6 +32,8 @@
             options = options && typeof options === 'object' ? options : {};
             var workspaceOptions = options.workspace || {};
             var zoneMap = zonesByKey(scene.layers || []);
+            var content = scene.content && typeof scene.content === 'object' ? scene.content : {};
+            windowLabels = content.window && typeof content.window === 'object' ? content.window : {};
             ensureWorkspacePanel(workspaceOptions);
             updateFloatingPanelChrome(workspacePanelEl, workspaceOptions);
             updateWorkspaceContent(scene.content || {}, workspaceOptions.findScope);
@@ -39,7 +42,10 @@
             }
             renderWorkspace(nodes.workspace, zoneMap['workspace:workspace'], zoneMap['carry:carry'], workspaceOptions);
             renderField(nodes.field, zoneMap['field:field']);
-            common.replaceChildren(nodes.carryPanels, carryPanelNodes(scene.carryPanels || []));
+            common.replaceChildren(
+                nodes.carryPanels,
+                windowPanelNodes(scene.windows || [], options.windows || []).concat(carryPanelNodes(scene.carryPanels || []))
+            );
             common.replaceChildren(nodes.statusRows, (scene.status || []).map(statusNode));
         }
 
@@ -664,11 +670,33 @@
             }
             wrapper.appendChild(button);
             if (mode !== 'compact') {
+                if (opensAWindow(object)) {
+                    wrapper.appendChild(pulloutMarker(object.id));
+                }
                 cardLinks(object).forEach(function (link) {
                     wrapper.appendChild(link);
                 });
             }
             return wrapper;
+        }
+
+        function opensAWindow(object) {
+            return (Array.isArray(object.actions) ? object.actions : []).some(function (action) {
+                return action.window === 'dashboard' || action.window === 'object';
+            });
+        }
+
+        // The visible "pull this into its own window" target on every card that opens a window.
+        function pulloutMarker(objectId) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'world-object__pullout';
+            button.dataset.objectPullout = objectId;
+            if (common.text(windowLabels.pull_out_label, '') !== '') {
+                button.setAttribute('aria-label', windowLabels.pull_out_label);
+            }
+            button.textContent = '⧉';
+            return button;
         }
 
         function cardLinks(object) {
@@ -798,6 +826,77 @@
 
         function statusNode(row) {
             return metaLine(row.label, row.value);
+        }
+
+        /*
+         * One floating panel per open window (see dev.elonn canonical/placement.md), built
+         * through the same floatingPanel() carry panels and the workspace panel use. A
+         * dashboard window is a launcher; an object window is a working view with a
+         * depth-count back step in its header. Geometry comes from the runtime's per-window
+         * panel store, keyed by window id.
+         */
+        function windowPanelNodes(windows, geometry) {
+            var geomById = {};
+            (Array.isArray(geometry) ? geometry : []).forEach(function (entry) {
+                geomById[String(entry && entry.id || '')] = entry || {};
+            });
+            return (Array.isArray(windows) ? windows : []).map(function (win) {
+                var geom = geomById[String(win.id || '')] || {};
+                var headerActions = win.mode === 'object' && win.depth > 0 ? [windowBackButton(win.id)] : [];
+                return floatingPanel({
+                    id: win.id,
+                    className: 'world-window world-window--' + win.mode,
+                    title: win.title,
+                    closable: true,
+                    collapsed: geom.collapsed === true,
+                    x: geom.x,
+                    y: geom.y,
+                    width: geom.width,
+                    height: geom.height,
+                    z: geom.z,
+                    headerActions: headerActions,
+                    closeLabel: common.text(windowLabels.close_label, ''),
+                    buildContent: function (content) {
+                        content.dataset.originWindow = win.id;
+                        content.dataset.windowMode = win.mode;
+                        windowBodyNodes(win).forEach(function (node) {
+                            content.appendChild(node);
+                        });
+                    }
+                });
+            });
+        }
+
+        function windowBackButton(windowId) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'carry-object-panel__close world-window__back';
+            button.dataset.worldBack = windowId;
+            if (common.text(windowLabels.back_label, '') !== '') {
+                button.setAttribute('aria-label', windowLabels.back_label);
+            }
+            button.textContent = '‹';
+            return button;
+        }
+
+        function windowBodyNodes(win) {
+            var nodes = [];
+            (win.objects || []).forEach(function (object) {
+                var type = document.createElement('span');
+                type.className = 'object-type';
+                type.textContent = object.type;
+                nodes.push(type);
+                if (object.summary !== '') {
+                    var summary = document.createElement('p');
+                    summary.textContent = object.summary;
+                    nodes.push(summary);
+                }
+                nodes.push(objectSurface(object));
+            });
+            collections(win.collections || [], 'overlay').forEach(function (node) {
+                nodes.push(node);
+            });
+            return nodes;
         }
 
         function objectSurface(object) {
@@ -1198,7 +1297,7 @@
                 if (hasModelArguments(action.operationInvocation)) {
                     return operationForm(action, object);
                 }
-                return operationLine('Action', action.label, action.operationInvocation);
+                return operationLine('Action', action.label, action.operationInvocation, action.window);
             }
             return linkLine('Action', action.label, action.href, object.id);
         }
@@ -1208,6 +1307,9 @@
             button.type = 'button';
             button.className = 'dashboard-action';
             button.dataset.operationInvocation = JSON.stringify(action.operationInvocation);
+            if (action.window === 'dashboard' || action.window === 'object') {
+                button.dataset.actionWindow = action.window;
+            }
             // action.label is already resolved (scene-model applies the fallback); no literal here.
             button.textContent = action.label;
             return button;
@@ -1268,7 +1370,7 @@
             return !!args && typeof args === 'object' && !Array.isArray(args) && Object.keys(args).length > 0;
         }
 
-        function operationLine(label, text, operationInvocation) {
+        function operationLine(label, text, operationInvocation, windowFlag) {
             var row = document.createElement('p');
             var strong = document.createElement('strong');
             var button = document.createElement('button');
@@ -1276,6 +1378,9 @@
             strong.textContent = label;
             button.type = 'button';
             button.dataset.operationInvocation = JSON.stringify(operationInvocation);
+            if (windowFlag === 'dashboard' || windowFlag === 'object') {
+                button.dataset.actionWindow = windowFlag;
+            }
             button.textContent = common.text(text, 'Action');
             row.appendChild(strong);
             row.appendChild(button);

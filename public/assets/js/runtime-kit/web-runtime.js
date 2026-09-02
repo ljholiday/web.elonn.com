@@ -15,6 +15,7 @@
     var recognition = null;
     var carryStorageKey = 'elonn.web.carry.panels.v1';
     var workspacePanelStorageKey = 'elonn.web.workspace.panel.v1';
+    var windowPanelStorageKey = 'elonn.web.window.panels.v1';
     var uiStorageKey = 'elonn.web.runtime.ui.v1';
     var drag = null;
     var resize = null;
@@ -85,10 +86,31 @@
         var findScopeButton = event.target.closest('[data-runtime-find-scope]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('button[data-object-id]');
+        var worldBack = event.target.closest('[data-world-back]');
+        var worldClose = event.target.closest('[data-world-close]');
+        var objectPullout = event.target.closest('[data-object-pullout]');
 
         if (closeButton && state) {
             event.preventDefault();
             closeCarryPanel(String(closeButton.dataset.carryPanelClose || ''));
+            return;
+        }
+
+        if (worldBack && state) {
+            event.preventDefault();
+            dispatchWorldNavigation('world.back', String(worldBack.dataset.worldBack || ''));
+            return;
+        }
+
+        if (worldClose && state) {
+            event.preventDefault();
+            dispatchWorldNavigation('world.close', String(worldClose.dataset.worldClose || ''));
+            return;
+        }
+
+        if (objectPullout && state) {
+            event.preventDefault();
+            openObjectWindow(String(objectPullout.dataset.objectPullout || ''), originWindowFor(objectPullout), true);
             return;
         }
 
@@ -138,9 +160,16 @@
         }
 
         if (objectButton && state) {
-            selectObject(String(objectButton.dataset.objectId || ''));
-            carryObject(String(objectButton.dataset.objectId || ''));
-            renderState();
+            var focusedId = String(objectButton.dataset.objectId || '');
+            selectObject(focusedId);
+            // A card that carries a window-opening `open` action opens (or navigates) a window;
+            // any other card falls back to the client-local carry panel.
+            if (openActionForObject(focusedId)) {
+                openObjectWindow(focusedId, originWindowFor(objectButton), false);
+            } else {
+                carryObject(focusedId);
+                renderState();
+            }
             return;
         }
 
@@ -410,6 +439,7 @@
         state = runtime.ContinuityReconciler.reconcile(state, next);
         state.carryPanels = reconcileCarryPanels(loadCarryPanels());
         state.workspacePanel = reconcileWorkspacePanel(loadWorkspacePanel());
+        state.windowPanels = reconcileWindowPanels(state.windows || [], loadWindowPanels());
         persistCarryPanels();
         persistLocalUiState();
         renderState();
@@ -428,7 +458,8 @@
                 height: panel.height,
                 z: panel.z,
                 findScope: findScope
-            }
+            },
+            windows: state.windowPanels || []
         });
         runtime.AdapterRegistry.mountAll(root, adapterContext());
     }
@@ -471,23 +502,29 @@
         };
     }
 
-    function dispatchOperationInvocation(command) {
+    function dispatchOperationInvocation(command, opts) {
+        opts = opts && typeof opts === 'object' ? opts : {};
         var objectId = String(command && command.object_id || '');
-        // An invocation's result renders into the workspace results panel -- make sure that
-        // panel is visible and on top so the member actually sees what they asked for.
-        var panel = carryPanel('workspace-results');
-        if (panel) {
-            panel.collapsed = false;
-            bringCarryPanelForward('workspace-results');
+        var originWindow = String(opts.originWindow || '');
+        if (originWindow === '') {
+            // A result with no target window renders into the workspace results panel -- make
+            // sure it is visible and on top so the member sees what they asked for.
+            var panel = carryPanel('workspace-results');
+            if (panel) {
+                panel.collapsed = false;
+                bringCarryPanelForward('workspace-results');
+            }
+            workspaceResultsCleared = false;
         }
-        workspaceResultsCleared = false;
         renderer.status('Requesting World Dataset.', 'loading');
         return loadDataset({
             runtimeSessionId: state ? state.runtimeSessionId : '',
             selectedObjectId: objectId,
             selectedCollectionId: state ? state.selectedCollectionId : '',
             inputText: String(command && command.input_text || 'operation invocation'),
-            operationInvocation: command
+            operationInvocation: command,
+            originWindow: originWindow,
+            openIn: String(opts.openIn || '')
         });
     }
 
@@ -503,7 +540,23 @@
             renderer.status('Action could not be read.', 'error');
             return;
         }
-        dispatchOperationInvocation(command);
+        var actionWindow = String(control.dataset.actionWindow || '');
+        var originWindow = originWindowFor(control);
+        var opts = {};
+        if (actionWindow === 'dashboard' || actionWindow === 'object') {
+            // A window-opening entrance: in place when it sits inside an object window,
+            // otherwise its own new window.
+            if (originWindow !== '' && windowModeOf(originWindow) === 'object') {
+                opts.originWindow = originWindow;
+            } else {
+                opts.openIn = 'new_window';
+            }
+        } else if (originWindow !== '') {
+            // A plain action fired from inside a window (Reply, RSVP, Save) keeps its result
+            // in that window.
+            opts.originWindow = originWindow;
+        }
+        dispatchOperationInvocation(command, opts);
     }
 
     function removeObjectSurface(objectId) {
@@ -752,6 +805,10 @@
     }
 
     function closeCarryPanel(panelId) {
+        if (isWindowPanel(panelId)) {
+            dispatchWorldNavigation('world.close', panelId);
+            return;
+        }
         state.carryPanels = (state.carryPanels || []).filter(function (panel) {
             return String(panel.id || '') !== panelId;
         });
@@ -780,7 +837,7 @@
         if (panelId === 'workspace-results') {
             return state.workspacePanel || null;
         }
-        (state.carryPanels || []).some(function (panel) {
+        (state.carryPanels || []).concat(state.windowPanels || []).some(function (panel) {
             if (String(panel.id || '') === panelId) {
                 match = panel;
                 return true;
@@ -792,7 +849,7 @@
 
     function nextCarryZ() {
         var max = 20;
-        (state.carryPanels || []).forEach(function (panel) {
+        (state.carryPanels || []).concat(state.windowPanels || []).forEach(function (panel) {
             max = Math.max(max, Number(panel.z || 0));
         });
         if (state.workspacePanel) {
@@ -867,6 +924,7 @@
             renderer.status('Carry panels could not be saved locally.', 'error');
         }
         persistWorkspacePanel();
+        persistWindowPanels();
     }
 
     function persistWorkspacePanel() {
@@ -912,6 +970,136 @@
             z: Number(saved.z || 10),
             collapsed: saved.collapsed === true
         };
+    }
+
+    /*
+     * Per-window floating-panel geometry, persisted by window id the same way carry panels
+     * persist by object id. A window World reports gets a saved position or a fresh staggered
+     * one; geometry for a window that no longer exists is dropped.
+     */
+    function reconcileWindowPanels(windows, saved) {
+        var rootBounds = root.getBoundingClientRect();
+        var savedById = {};
+        (Array.isArray(saved) ? saved : []).forEach(function (entry) {
+            savedById[String(entry && entry.windowId || '')] = entry || {};
+        });
+        return windows.map(function (win, index) {
+            var prior = savedById[String(win.id || '')] || {};
+            var width = clamp(Number(prior.width || 380), 240, Math.max(240, rootBounds.width - 16));
+            var height = clamp(Number(prior.height || 320), 140, Math.max(140, rootBounds.height - 90));
+            var defaultX = 96 + index * 30;
+            var defaultY = 96 + index * 30;
+            var x = clamp(prior.x != null ? Number(prior.x) : defaultX, 8, Math.max(8, rootBounds.width - width - 8));
+            var y = clamp(prior.y != null ? Number(prior.y) : defaultY, 56, Math.max(56, rootBounds.height - height - 40));
+            return {
+                id: String(win.id || ''),
+                windowId: String(win.id || ''),
+                x: x,
+                y: y,
+                width: width,
+                height: height,
+                z: Number(prior.z || nextCarryZ()),
+                collapsed: prior.collapsed === true
+            };
+        }).filter(function (panel) {
+            return panel.windowId !== '';
+        });
+    }
+
+    function loadWindowPanels() {
+        try {
+            var stored = window.localStorage ? window.localStorage.getItem(windowPanelStorageKey) : '';
+            return stored ? JSON.parse(stored) : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function persistWindowPanels() {
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(windowPanelStorageKey, JSON.stringify(state && state.windowPanels || []));
+            }
+        } catch (error) {
+            renderer.status('Window panels could not be saved locally.', 'error');
+        }
+    }
+
+    function isWindowPanel(panelId) {
+        return (state && state.windowPanels || []).some(function (panel) {
+            return String(panel.id || '') === String(panelId || '');
+        });
+    }
+
+    function windowModeOf(windowId) {
+        var match = 'object';
+        (state && state.windows || []).some(function (win) {
+            if (String(win.id || '') === String(windowId || '')) {
+                match = win.mode === 'dashboard' ? 'dashboard' : 'object';
+                return true;
+            }
+            return false;
+        });
+        return match;
+    }
+
+    function originWindowFor(node) {
+        var host = node && node.closest ? node.closest('[data-origin-window]') : null;
+        if (host && host.dataset.originWindow) {
+            return String(host.dataset.originWindow);
+        }
+        var panel = node && node.closest ? node.closest('[data-carry-panel-id]') : null;
+        var id = panel ? String(panel.dataset.carryPanelId || '') : '';
+        return isWindowPanel(id) ? id : '';
+    }
+
+    function openActionForObject(objectId) {
+        var match = null;
+        ((state && state.dataset && state.dataset.actions) || []).some(function (action) {
+            var invocation = action.operation_invocation && typeof action.operation_invocation === 'object' ? action.operation_invocation : null;
+            if (String(action.target_id || '') === String(objectId || '')
+                && (action.window === 'dashboard' || action.window === 'object')
+                && invocation) {
+                match = {invocation: invocation, window: action.window};
+                return true;
+            }
+            return false;
+        });
+        return match;
+    }
+
+    /*
+     * Focusing a card that opens a window: from a dashboard window (or from nowhere) it opens
+     * its own window; from an object window it navigates that window in place. The pull-out
+     * marker forces its own window regardless of origin.
+     */
+    function openObjectWindow(objectId, originWindow, forceNewWindow) {
+        var open = openActionForObject(objectId);
+        if (!open) {
+            selectObject(objectId);
+            carryObject(objectId);
+            renderState();
+            return;
+        }
+        var inPlace = !forceNewWindow && originWindow !== '' && windowModeOf(originWindow) === 'object';
+        dispatchOperationInvocation(open.invocation, {
+            originWindow: inPlace ? originWindow : '',
+            openIn: inPlace ? '' : 'new_window'
+        });
+    }
+
+    function dispatchWorldNavigation(operation, windowId) {
+        if (String(windowId || '') === '') {
+            return;
+        }
+        renderer.status('Requesting World Dataset.', 'loading');
+        loadDataset({
+            operation: operation,
+            originWindow: String(windowId),
+            runtimeSessionId: state ? state.runtimeSessionId : '',
+            selectedObjectId: state ? state.selectedObjectId : '',
+            inputText: operation
+        });
     }
 
     function restoreLocalUiState() {

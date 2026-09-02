@@ -79,6 +79,12 @@
             if (state.operationInvocation && typeof state.operationInvocation === 'object' && !Array.isArray(state.operationInvocation)) {
                 call.content.operation_invocation = state.operationInvocation;
             }
+            if (String(state.openIn || '') === 'new_window') {
+                call.content.open_in = 'new_window';
+            }
+            if (String(state.originWindow || '') !== '') {
+                call.context.runtime_state.origin_window = String(state.originWindow);
+            }
             if (String(state.selectedObjectId || '') !== '') {
                 call.context.focus.object_id = String(state.selectedObjectId);
             }

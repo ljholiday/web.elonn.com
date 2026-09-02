@@ -40,7 +40,11 @@ $sinks = [
  *
  * @var array<string, array<int, string>>
  */
-$allowlist = [];
+$allowlist = [
+    // Bare glyphs used as icons on the window chrome, not words: the back chevron and the
+    // "pull this into its own window" target marker.
+    'public/assets/js/runtime-kit/web-renderer.js' => ['‹', '⧉'],
+];
 
 /** @var array<int, string> $violations */
 $violations = [];

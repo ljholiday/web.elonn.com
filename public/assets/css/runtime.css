@@ -678,7 +678,52 @@ figure {
 
 .world-object-entry {
     display: grid;
-    gap: 4px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 4px 6px;
+}
+
+.world-object-entry > .world-object {
+    grid-column: 1;
+}
+
+/* The "pull this card into its own window" target, on every card that opens a window. */
+.world-object__pullout {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    min-width: 28px;
+    min-height: 28px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(184, 255, 243, 0.25);
+    border-radius: 6px;
+    background: rgba(25, 39, 42, 0.88);
+    color: #b8fff3;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.world-object__pullout:hover,
+.world-object__pullout:focus {
+    border-color: rgba(184, 255, 243, 0.72);
+    background: rgba(34, 52, 56, 0.96);
+    outline: none;
+}
+
+/* A window is the same floating panel as a carry object, with a mode accent and, for an
+   object window that has been navigated into, a back step in its header. */
+.world-window--dashboard > .carry-object-panel__bar {
+    border-bottom-color: rgba(184, 255, 243, 0.4);
+}
+
+.world-window--object > .carry-object-panel__bar {
+    border-bottom-color: rgba(255, 214, 165, 0.4);
+}
+
+.world-window__back {
+    font-size: 1.1rem;
+    line-height: 1;
 }
 
 .world-object {
