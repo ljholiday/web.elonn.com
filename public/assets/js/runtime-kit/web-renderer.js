@@ -470,18 +470,22 @@
          */
         function sequenceNode(collection, mode) {
             var section = document.createElement('section');
-            var header = document.createElement('header');
-            var title = document.createElement('h3');
-            var summary = document.createElement('p');
             var flow = document.createElement('div');
             section.className = 'world-collection world-collection--' + common.text(mode, 'panel') + ' world-sequence';
             section.dataset.collectionId = collection.id;
             section.dataset.selected = collection.selected ? 'true' : 'false';
-            title.textContent = collection.title;
-            summary.textContent = collection.summary;
-            header.appendChild(title);
-            if (collection.summary !== '' && mode !== 'compact') {
-                header.appendChild(summary);
+            // Inside a window the replies just flow -- no "Messages" heading, no count line.
+            if (mode !== 'window') {
+                var header = document.createElement('header');
+                var title = document.createElement('h3');
+                title.textContent = collection.title;
+                header.appendChild(title);
+                if (collection.summary !== '' && mode !== 'compact') {
+                    var summary = document.createElement('p');
+                    summary.textContent = collection.summary;
+                    header.appendChild(summary);
+                }
+                section.appendChild(header);
             }
             flow.className = 'world-sequence-flow';
             if (collection.objects.length === 0) {
@@ -491,7 +495,6 @@
                     flow.appendChild(sequenceGroupNode(group, mode));
                 });
             }
-            section.appendChild(header);
             section.appendChild(flow);
             return section;
         }
@@ -891,29 +894,23 @@
         }
 
         /*
-         * A window body is its root Object's working controls followed by its Collections,
-         * nothing else. The Object's own detail fields (visibility, discovery, search
-         * scoring, counts, links) are indexing metadata, not something the member reads --
-         * a conversation window is its replies and its people, a dashboard window is its
-         * entrances. So this never runs the generic field-dump objectSurface() here.
+         * A window body is its content and one place to act on it, nothing else -- no field
+         * dump, no counts, no chrome. A dashboard window leads with its entrances; an object
+         * window (a conversation, a thread) leads with its Collections -- the replies flow
+         * first, oldest to newest -- and puts the one working control (the reply form) at the
+         * bottom, the way a conversation reads everywhere else.
          */
         function windowBodyNodes(win) {
-            var nodes = [];
+            var contentNodes = collections(win.collections || [], 'window');
+            var actionNodes = [];
             (win.objects || []).forEach(function (object) {
-                if (object.summary !== '') {
-                    var summary = document.createElement('p');
-                    summary.className = 'world-window__summary';
-                    summary.textContent = object.summary;
-                    nodes.push(summary);
-                }
                 actionLinks(object).forEach(function (node) {
-                    nodes.push(node);
+                    actionNodes.push(node);
                 });
             });
-            collections(win.collections || [], 'overlay').forEach(function (node) {
-                nodes.push(node);
-            });
-            return nodes;
+            return win.mode === 'dashboard'
+                ? actionNodes.concat(contentNodes)
+                : contentNodes.concat(actionNodes);
         }
 
         function objectSurface(object) {
@@ -1390,17 +1387,21 @@
 
         function operationLine(label, text, operationInvocation, windowFlag) {
             var row = document.createElement('p');
-            var strong = document.createElement('strong');
             var button = document.createElement('button');
             row.className = 'meta-line';
-            strong.textContent = label;
             button.type = 'button';
             button.dataset.operationInvocation = JSON.stringify(operationInvocation);
             if (windowFlag === 'dashboard' || windowFlag === 'object') {
                 button.dataset.actionWindow = windowFlag;
             }
-            button.textContent = common.text(text, 'Action');
-            row.appendChild(strong);
+            button.textContent = common.text(text, common.text(label, ''));
+            // A generic "Action" caption is noise -- the button's own label already says what
+            // it does. Only prepend a caption when the caller gave a real one.
+            if (common.text(label, '') !== '' && label !== 'Action') {
+                var strong = document.createElement('strong');
+                strong.textContent = label;
+                row.appendChild(strong);
+            }
             row.appendChild(button);
             return row;
         }
