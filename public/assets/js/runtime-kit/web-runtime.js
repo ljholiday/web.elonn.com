@@ -377,11 +377,19 @@
     }
 
     function submitQuery(text) {
+        // A fresh Entry search is a new search of the member's whole world -- it carries no
+        // focused-Finding context. Sending a stale selected object id makes World read the
+        // Call as focusing a Finding (isBareFreeText -> false) and open it on Carry instead
+        // of returning Findings. Clear the selection and submit the query bare.
+        if (state) {
+            state.selectedObjectId = '';
+            state.selectedCollectionId = '';
+        }
         var request = {
             inputText: text,
             runtimeSessionId: state ? state.runtimeSessionId : '',
-            selectedObjectId: state ? state.selectedObjectId : '',
-            selectedCollectionId: state ? state.selectedCollectionId : ''
+            selectedObjectId: '',
+            selectedCollectionId: ''
         };
 
         var panel = carryPanel('workspace-results');
