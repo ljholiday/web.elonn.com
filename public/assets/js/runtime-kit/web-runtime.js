@@ -453,6 +453,7 @@
     function carryPanelSeed() {
         var byObject = {};
         var order = [];
+        var topZ = 20;
         loadCarryPanels().forEach(function (panel) {
             var objectId = String(panel && (panel.objectId || panel.id) || '');
             if (objectId === '' || byObject[objectId]) {
@@ -460,26 +461,36 @@
             }
             byObject[objectId] = Object.assign({}, panel, {id: 'carry-panel:' + objectId, objectId: objectId});
             order.push(objectId);
+            topZ = Math.max(topZ, Number(panel.z || 0));
         });
-        (state && state.openedObjects || []).forEach(function (opened, index) {
+        if (state && state.workspacePanel) {
+            topZ = Math.max(topZ, Number(state.workspacePanel.z || 0));
+        }
+        // World lists the just-opened Object first in openedObjects (its carry Placement is
+        // prepended), so lower index == more recently opened. On a cold load several opened
+        // Objects seed here at once; the newest must land ON TOP, not behind an Object that
+        // was already open (e.g. the Dashboard it was launched from).
+        var openedList = (state && state.openedObjects || []);
+        var newIndex = 0;
+        openedList.forEach(function (opened, listIndex) {
             var objectId = String(opened.id || '');
             if (objectId === '') {
                 return;
             }
             if (!byObject[objectId]) {
-                // A freshly opened Object gets room to show a conversation or a dashboard,
-                // staggered down-left so it clears the Results pane. z must be above the
-                // Results pane (10) and the field layers, or the box renders but pointer
-                // events land on whatever is in front of it. Persisted geometry (from a prior
-                // drag/resize) always wins over these defaults.
+                // A freshly opened Object gets room to show a conversation or a browse,
+                // staggered so it clears the Results pane, and a z ABOVE every existing box
+                // and the Results pane -- it opens in front, and its controls actually
+                // receive pointer events. Persisted geometry (a prior drag/resize) wins.
+                newIndex += 1;
                 byObject[objectId] = {
                     id: 'carry-panel:' + objectId,
                     objectId: objectId,
-                    x: 24 + index * 24,
-                    y: 88 + index * 24,
+                    x: 24 + newIndex * 24,
+                    y: 88 + newIndex * 24,
                     width: 400,
                     height: 420,
-                    z: 21 + index
+                    z: topZ + (openedList.length - listIndex)
                 };
                 order.push(objectId);
             }
