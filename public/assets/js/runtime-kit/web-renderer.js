@@ -868,16 +868,12 @@
          * bottom, the way a conversation reads everywhere else.
          */
         function openedObjectBody(panel) {
+            // The Object's own Collections flow first (a conversation's replies, a browse's
+            // grouped lists). Its member Objects appear as cards inside those Collections --
+            // only the container Object's own working actions (a reply form, Mute/Leave) go
+            // at the bottom; member Objects' actions are not dumped here.
             var contentNodes = collections(panel.collections || [], 'object');
-            var actionNodes = [];
-            actionLinks(panel.object).forEach(function (node) {
-                actionNodes.push(node);
-            });
-            (panel.memberObjects || []).forEach(function (object) {
-                actionLinks(object).forEach(function (node) {
-                    actionNodes.push(node);
-                });
-            });
+            var actionNodes = actionLinks(panel.object);
             return contentNodes.concat(actionNodes);
         }
 
