@@ -870,10 +870,32 @@
         function openedObjectBody(panel) {
             // The Object's own Collections flow first (a conversation's replies, a browse's
             // grouped lists). Its member Objects appear as cards inside those Collections --
-            // only the container Object's own working actions (a reply form, Mute/Leave) go
-            // at the bottom; member Objects' actions are not dumped here.
+            // their actions are not dumped in the footer (a browse list would fill with every
+            // row's reply/mute/leave). The exception: a container navigated INTO one member
+            // Object (a conversation opened from a list) shows that Object's messages
+            // Collection inside it, so its own actions -- its reply form -- belong here too.
+            // "Navigated into" is data-visible: a member Collection's id contains the member
+            // Object's id (e.g. collection:social.conversation:12:messages:... for
+            // social.conversation:12). A plain list has no such per-member Collection.
             var contentNodes = collections(panel.collections || [], 'object');
             var actionNodes = actionLinks(panel.object);
+            var collectionIds = (panel.collections || []).map(function (collection) {
+                return String(collection.id || '');
+            });
+            (panel.memberObjects || []).forEach(function (member) {
+                var memberId = String(member.id || '');
+                if (memberId === '') {
+                    return;
+                }
+                var ownsShownCollection = collectionIds.some(function (collectionId) {
+                    return collectionId.indexOf(memberId) !== -1;
+                });
+                if (ownsShownCollection) {
+                    actionLinks(member).forEach(function (node) {
+                        actionNodes.push(node);
+                    });
+                }
+            });
             return contentNodes.concat(actionNodes);
         }
 
