@@ -103,7 +103,7 @@ const paintDataset = Object.assign({}, dataset, {
       data_url: 'data:image/png;base64,iVBORw0KGgo='
     }
   }],
-  placements: [{id: 'placement:paint:workspace', type: 'workspace', content: {object: 'paint.document:test'}}]
+  placements: [{id: 'placement:paint:carry', type: 'carry', content: {object: 'paint.document:test'}}]
 });
 
 const parsed = runtime.DatasetParser.parse(dataset);
@@ -139,7 +139,7 @@ const operationDataset = Object.assign({}, dataset, {
     }
   }],
   collections: [{id: 'collection:paint.workspace', type: 'collection', content: {items: ['paint.workspace']}}],
-  placements: [{id: 'placement:paint.workspace:workspace', type: 'workspace', content: {collection: 'collection:paint.workspace'}}]
+  placements: []
 });
 const operationState = runtime.StateIndexer.build(runtime.DatasetParser.parse(operationDataset), null);
 const operationScene = runtime.SceneModel.fromState(operationState);
@@ -212,13 +212,13 @@ const websiteDataset = Object.assign({}, dataset, {
     content: {order: 1}
   }],
   collections: [{id: 'collection:website', type: 'resource.segmented', content: {items: ['finding:website']}}],
-  placements: [{id: 'placement:website:workspace', type: 'workspace', content: {collection: 'collection:website'}}]
+  placements: []
 });
 const websiteState = runtime.StateIndexer.build(runtime.DatasetParser.parse(websiteDataset), null);
 const websiteScene = runtime.SceneModel.fromState(websiteState);
 if (websiteScene.focus.resources[1].kind !== 'website.document') throw new Error('website JSON Resource was not projected');
 if (websiteScene.focus.resources[1].content.sections[0].text !== 'Wood-fired pizza.') throw new Error('website JSON sections were not preserved');
-if (websiteScene.layers[1].zones[0].collections[0].objects.length !== 1) throw new Error('segmented resource children were rendered as first-level result cards');
+if (websiteScene.findings.collections[0].objects.length !== 1) throw new Error('segmented resource children were rendered as first-level result cards');
 if (websiteScene.focus.containedObjects[0].type !== 'menu') throw new Error('segmented resource child object was not projected through containment');
 if (websiteScene.focus.containedObjects[0].content.parts[0].href !== 'https://ballard.example.test/menu') throw new Error('segmented resource child parts were not projected');
 if (websiteScene.focus.containedObjects[0].resources[1].kind !== 'website.document') throw new Error('segmented resource child object did not keep website JSON Resource');
@@ -237,58 +237,36 @@ state.carryPanels = [{
 const staleCarryScene = runtime.SceneModel.fromState(state);
 if (staleCarryScene.carryPanels.length !== 0) throw new Error('stale local carry panel snapshot was rendered without a Dataset Object');
 
-const workspaceDataset = Object.assign({}, dataset, {
-  id: 'dataset:world:workspace',
-  collections: [{id: 'collection:workspace', type: 'collection', content: {items: ['object:one']}}],
-  placements: [{id: 'placement:one:workspace', type: 'workspace', content: {collection: 'collection:workspace'}}]
+// Unplaced content is Findings, presented in the Results pane -- not on a layer (dev.elonn
+// canonical/layout.md). It belongs to no opened Object.
+const findingsDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:findings',
+  collections: [{id: 'collection:findings', type: 'collection', content: {items: ['object:one']}}],
+  placements: []
 });
-const workspaceState = runtime.StateIndexer.build(runtime.DatasetParser.parse(workspaceDataset), null);
-if (workspaceState.layers[1].id !== 'workspace') throw new Error('workspace layer was not indexed');
-if (workspaceState.layers[1].zones[0].collectionIds[0] !== 'collection:workspace') throw new Error('workspace placement was not projected');
-if (workspaceState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('workspace collection leaked into carry');
-const workspaceScene = runtime.SceneModel.fromState(workspaceState);
-if (workspaceScene.focus.layer !== 'workspace') throw new Error('selected workspace object was labeled as carry');
+const findingsState = runtime.StateIndexer.build(runtime.DatasetParser.parse(findingsDataset), null);
+if (findingsState.layers.map((layer) => layer.id).join(',') !== 'carry,field') throw new Error('layers are exactly carry and field');
+if (findingsState.findings.collectionIds[0] !== 'collection:findings') throw new Error('unplaced collection was not projected as a Finding');
+if (findingsState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('an unplaced collection leaked onto the carry layer');
+const findingsScene = runtime.SceneModel.fromState(findingsState);
+if (findingsScene.findings.collections[0].id !== 'collection:findings') throw new Error('Findings were not projected into the scene');
+if (findingsScene.focus.layer !== 'carry') throw new Error('a focused Object defaults to the carry layer');
 
-const previousSearchDataset = runtime.DatasetParser.parse(Object.assign({}, dataset, {
-  id: 'dataset:world:previous-search',
-  objects: [{id: 'object:old', type: 'finding', content: {name: 'Old result'}}],
-  collections: [{
-    id: 'collection:old',
-    type: 'collection',
-    content: {items: ['object:old']}
-  }, {
-    id: 'collection:old-empty',
-    type: 'mind.notice.results',
-    content: {description: 'No results matched "old".', items: []}
-  }],
-  placements: [{
-    id: 'placement:old:workspace',
-    type: 'workspace',
-    content: {collection: 'collection:old'}
-  }, {
-    id: 'placement:old-empty:workspace',
-    type: 'workspace',
-    content: {collection: 'collection:old-empty'}
-  }]
-}));
-const nextSearchDataset = runtime.DatasetParser.parse(Object.assign({}, dataset, {
-  id: 'dataset:world:next-search',
-  objects: [{id: 'object:new', type: 'finding', content: {name: 'New result'}}],
-  collections: [{
-    id: 'collection:new',
-    type: 'collection',
-    content: {items: ['object:new']}
-  }],
-  placements: [{
-    id: 'placement:new:workspace',
-    type: 'workspace',
-    content: {collection: 'collection:new'}
-  }]
-}));
-const mergedSearchDataset = runtime.StateIndexer.mergeDatasets(previousSearchDataset, nextSearchDataset);
-if (mergedSearchDataset.objects.map((object) => object.id).join(',') !== 'object:new,object:old') throw new Error('new search did not preserve previous result objects');
-if (mergedSearchDataset.collections.map((collection) => collection.id).join(',') !== 'collection:new,collection:old') throw new Error('new search did not preserve only actual previous result collections');
-if (mergedSearchDataset.placements.map((placement) => placement.id).join(',') !== 'placement:new:workspace,placement:old:workspace') throw new Error('new search did not preserve only placements with visible targets');
+// An Object with a carry Placement is opened on Carry: it gets a context.objects entry and
+// world.back/close act on its id.
+const openedDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:opened',
+  placements: [{id: 'placement:one:carry', type: 'carry', content: {object: 'object:one'}}],
+  context: {objects: {'object:one': {title: 'One', depth: 1, history: [{}], members: ['collection:one']}}}
+});
+const openedState = runtime.StateIndexer.build(runtime.DatasetParser.parse(openedDataset), null);
+if (openedState.openedObjects.length !== 1 || openedState.openedObjects[0].id !== 'object:one') throw new Error('carry-placed Object was not registered as opened');
+if (openedState.openedObjects[0].depth !== 1) throw new Error('per-Object navigation depth was not projected');
+openedState.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 10, y: 10, width: 320, height: 200, z: 21, collapsed: false}];
+const openedScene = runtime.SceneModel.fromState(openedState);
+if (openedScene.carryPanels[0].opened !== true) throw new Error('the opened Object panel was not marked opened');
+if (openedScene.carryPanels[0].depth !== 1) throw new Error('the opened Object panel did not carry its navigation depth');
+if ((openedScene.carryPanels[0].collections[0] || {}).id !== 'collection:one') throw new Error('the opened Object panel did not carry its member Collection');
 
 let rejected = false;
 try {

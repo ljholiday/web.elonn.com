@@ -241,18 +241,18 @@ $checks = [
         && str_contains($webRuntime, 'clearResults')
         && str_contains($webRuntime, 'workspaceResultsCleared = true;')
         && str_contains($webRuntime, "renderer.status('Results cleared.', 'neutral')")
-        // Clear is client-side only: it never round-trips to world.clear (which re-saves
-        // world state and drops field-placed objects). It clears the results list, nothing else.
-        && !str_contains(substr($webRuntime, strpos($webRuntime, 'function clearResults()'), 700), "operation: 'world.clear'")
+        // The clear control clears the Results pane (dev.elonn canonical/layout.md): it fires
+        // world.clear, which drops the Findings from saved state and touches nothing else. The
+        // local flag hides the list first so there is no round-trip flicker.
+        && str_contains(substr($webRuntime, strpos($webRuntime, 'function clearResults()'), 900), "operation: 'world.clear'")
         && !str_contains($webRuntime, 'function openObjectIds()')
         && str_contains($webRuntime, 'workspaceToggle')
-        && str_contains($webRuntime, 'replaceResults: workspaceResultsCleared')
+        && !str_contains($webRuntime, 'replaceResults')
         // Clear lives in the panel header (with Hide), not the query composer.
         && str_contains($webRenderer, 'headerActions: [clearButton, toggleButton]')
         && !str_contains($webRenderer, 'actions.appendChild(clear);')
-        && str_contains(read_file($root . '/public/assets/js/runtime-kit/world-client.js'), 'replace_results: state.replaceResults === true')
-        && str_contains($webRuntime, "String(runtimeState.inputText || '').trim() === ''")
-        && str_contains($webRuntime, 'runtimeState.replaceResults !== true')
+        && !str_contains(read_file($root . '/public/assets/js/runtime-kit/world-client.js'), 'replace_results')
+        && !str_contains($webRuntime, 'runtimeState.replaceResults')
         && str_contains($webRenderer, "collection.objects.length > 0")
         && str_contains($webRenderer, 'options.emptyVisible === true')
         && !str_contains($webRuntime, 'function clearWorkspaceResults')
@@ -346,18 +346,21 @@ $checks = [
         && !str_contains($webRuntime, 'dataset: datasetPayload || saved.dataset || null')
         && !str_contains($webRuntime, 'runtimeStorageKey'),
     'Runtime does not revive stale local carry panel Object snapshots' => str_contains($webRuntime, 'state.indexes.objects[String(panel.objectId || \'\')] || null')
-        && str_contains($webRuntime, 'reconcileCarryPanels(loadCarryPanels())')
+        && str_contains($webRuntime, 'reconcileCarryPanels(carryPanelSeed())')
         && str_contains($webRuntime, 'object: carrySnapshot(object)')
         && str_contains($webRenderer, 'carryPanelNodes')
         && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'stale local carry panel snapshot')
         && !str_contains($webRuntime, '|| panel.object || null')
         && !str_contains(read_file($root . '/public/assets/js/runtime-kit/scene-model.js'), '|| panel.object || null'),
     'Runtime projects canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
-        && str_contains($scripts, "['carry', 'workspace', 'field']")
+        && str_contains($scripts, "['carry', 'field']")
+        && !str_contains($scripts, "'workspace'")
+        && !str_contains($scripts, "type: 'window'")
         && str_contains($scripts, 'objectIds')
         && !str_contains($template, 'data-layer-zone="carry:main_content"')
         && !str_contains($template, 'data-layer-zone="carry:bottom_dock"')
-        && str_contains($webRenderer, "zoneMap['workspace:workspace']")
+        && str_contains($webRenderer, 'scene.findings')
+        && str_contains($scripts, 'context.objects')
         && str_contains($template, 'data-layer-zone="field:field"'),
     'Runtime carries continuity through local Dataset state' => str_contains($scripts, 'runtimeSessionId')
         && str_contains($scripts, 'dataset_id')

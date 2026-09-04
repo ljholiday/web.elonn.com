@@ -37,7 +37,8 @@
             var selectedObject = state.indexes.objects[state.selectedObjectId] || null;
             return {
                 layers: layers(state),
-                windows: windowViews(state),
+                openedObjects: openedObjectViews(state),
+                findings: findingsView(state),
                 focus: selectedObject ? objectView(state, selectedObject, true, true) : {kind: 'empty', title: 'No object selected.', summary: ''},
                 carryPanels: carryPanels(state),
                 actions: selectedObject ? actionsForObject(state, selectedObject.id) : [],
@@ -80,28 +81,52 @@
     }
 
     /*
-     * One view per open window (see dev.elonn canonical/placement.md). A dashboard window is
-     * a launcher of entrance cards; an object window is a working view with its Collections
-     * inline and a depth-count back step. Both render through the same floating panel.
+     * One view per Object opened on Carry (see dev.elonn canonical/layout.md). Its container
+     * shows the Object itself plus the content currently navigated into it; depth > 0 means a
+     * back step is available. A runtime renders each through the same floating panel.
      */
-    function windowViews(state) {
-        return (state.windows || []).map(function (win) {
+    function openedObjectViews(state) {
+        return (state.openedObjects || []).map(function (opened) {
+            var object = state.indexes.objects[String(opened.id || '')] || null;
+            if (!object) {
+                return null;
+            }
+            var view = objectView(state, object, String(object.id || '') === state.selectedObjectId, true);
             return {
-                id: String(win.id || ''),
-                mode: win.mode === 'dashboard' ? 'dashboard' : 'object',
-                title: common.text(win.title, ''),
-                depth: Math.max(0, parseInt(win.depth, 10) || 0),
-                collections: (win.collectionIds || []).map(function (collectionId) {
+                id: String(opened.id || ''),
+                title: common.text(opened.title, view.title),
+                depth: Math.max(0, parseInt(opened.depth, 10) || 0),
+                object: view,
+                collections: (opened.collectionIds || []).map(function (collectionId) {
                     return collectionView(state, state.indexes.collections[collectionId] || {});
                 }).filter(function (collection) {
                     return collection.id !== '';
                 }),
-                objects: (win.objectIds || []).map(function (objectId) {
-                    var object = state.indexes.objects[String(objectId || '')] || null;
-                    return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId, true) : null;
+                objects: (opened.objectIds || []).map(function (objectId) {
+                    var member = state.indexes.objects[String(objectId || '')] || null;
+                    return member ? objectView(state, member, String(member.id || '') === state.selectedObjectId, true) : null;
                 }).filter(Boolean)
             };
-        });
+        }).filter(Boolean);
+    }
+
+    /*
+     * The Findings returned for the current Call, for the Results pane. Unplaced content that
+     * belongs to no opened Object (see StateIndexer.findings).
+     */
+    function findingsView(state) {
+        var f = state.findings || {collectionIds: [], objectIds: []};
+        return {
+            collections: (f.collectionIds || []).map(function (collectionId) {
+                return collectionView(state, state.indexes.collections[collectionId] || {});
+            }).filter(function (collection) {
+                return collection.id !== '';
+            }),
+            objects: (f.objectIds || []).map(function (objectId) {
+                var object = state.indexes.objects[String(objectId || '')] || null;
+                return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId, true) : null;
+            }).filter(Boolean)
+        };
     }
 
     function collectionView(state, collection) {
@@ -173,7 +198,6 @@
                 label: common.text(action.label, 'Action'),
                 type: common.text(action.type, 'action'),
                 group: common.text(action.group, ''),
-                window: action.window === 'dashboard' || action.window === 'object' ? action.window : '',
                 endpoint: String(action.endpoint || ''),
                 href: href,
                 operationInvocation: operationInvocation,
@@ -230,14 +254,26 @@
     }
 
     function carryPanels(state) {
+        var openedById = {};
+        (state.openedObjects || []).forEach(function (opened) {
+            openedById[String(opened.id || '')] = opened;
+        });
         return (state.carryPanels || []).map(function (panel) {
-            var object = state.indexes.objects[String(panel.objectId || '')] || null;
+            var objectId = String(panel.objectId || '');
+            var object = state.indexes.objects[objectId] || null;
+            var opened = openedById[objectId] || null;
             if (!object) {
                 return null;
             }
+            var view = objectView(state, object, objectId === state.selectedObjectId, true);
             return {
                 id: String(panel.id || ''),
-                object: objectView(state, object, String(object.id || '') === state.selectedObjectId, true),
+                object: view,
+                opened: !!opened,
+                title: opened ? common.text(opened.title, view.title) : view.title,
+                depth: opened ? Math.max(0, parseInt(opened.depth, 10) || 0) : 0,
+                collections: opened ? openedCollections(state, opened) : [],
+                memberObjects: opened ? openedMemberObjects(state, opened) : [],
                 x: Number(panel.x || 0),
                 y: Number(panel.y || 0),
                 width: Number(panel.width || 320),
@@ -248,6 +284,21 @@
         }).filter(function (panel) {
             return panel && panel.id !== '' && panel.object.id !== '';
         });
+    }
+
+    function openedCollections(state, opened) {
+        return (opened.collectionIds || []).map(function (collectionId) {
+            return collectionView(state, state.indexes.collections[collectionId] || {});
+        }).filter(function (collection) {
+            return collection.id !== '';
+        });
+    }
+
+    function openedMemberObjects(state, opened) {
+        return (opened.objectIds || []).map(function (objectId) {
+            var member = state.indexes.objects[String(objectId || '')] || null;
+            return member ? objectView(state, member, false, true) : null;
+        }).filter(Boolean);
     }
 
     function objectLayer(state, objectId) {
@@ -269,7 +320,7 @@
             }
         });
 
-        return collectionIds.filter(Boolean)[0] || 'workspace';
+        return collectionIds.filter(Boolean)[0] || 'carry';
     }
 
     function statusRows(state) {

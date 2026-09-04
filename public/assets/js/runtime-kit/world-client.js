@@ -60,8 +60,7 @@
                     runtime_state: {
                         dataset_id: String(state.runtimeSessionId || ''),
                         selected_object_id: String(state.selectedObjectId || ''),
-                        selected_collection_id: String(state.selectedCollectionId || ''),
-                        replace_results: state.replaceResults === true
+                        selected_collection_id: String(state.selectedCollectionId || '')
                     },
                     focus: {}
                 }
@@ -79,11 +78,10 @@
             if (state.operationInvocation && typeof state.operationInvocation === 'object' && !Array.isArray(state.operationInvocation)) {
                 call.content.operation_invocation = state.operationInvocation;
             }
-            if (String(state.openIn || '') === 'new_window') {
-                call.content.open_in = 'new_window';
-            }
-            if (String(state.originWindow || '') !== '') {
-                call.context.runtime_state.origin_window = String(state.originWindow);
+            // Following a link inside an Object opened on Carry: World navigates that Object in
+            // place (see dev.elonn canonical/layout.md, Object navigation).
+            if (String(state.originObject || '') !== '') {
+                call.context.runtime_state.origin_object = String(state.originObject);
             }
             if (String(state.selectedObjectId || '') !== '') {
                 call.context.focus.object_id = String(state.selectedObjectId);
@@ -93,11 +91,6 @@
             }
             if (String(state.runtimeSessionId || '') !== '') {
                 call.context.runtime_state.dataset_id = String(state.runtimeSessionId);
-            }
-            if (Array.isArray(state.preservedObjectIds)) {
-                call.context.runtime_state.preserved_object_ids = state.preservedObjectIds.map(function (objectId) {
-                    return String(objectId || '');
-                }).filter(Boolean);
             }
 
             return call;

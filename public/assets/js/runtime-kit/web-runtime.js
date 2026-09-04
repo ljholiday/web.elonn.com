@@ -15,7 +15,6 @@
     var recognition = null;
     var carryStorageKey = 'elonn.web.carry.panels.v1';
     var workspacePanelStorageKey = 'elonn.web.workspace.panel.v1';
-    var windowPanelStorageKey = 'elonn.web.window.panels.v1';
     var uiStorageKey = 'elonn.web.runtime.ui.v1';
     var drag = null;
     var resize = null;
@@ -88,7 +87,6 @@
         var objectButton = event.target.closest('button[data-object-id]');
         var worldBack = event.target.closest('[data-world-back]');
         var worldClose = event.target.closest('[data-world-close]');
-        var objectPullout = event.target.closest('[data-object-pullout]');
 
         if (closeButton && state) {
             event.preventDefault();
@@ -105,12 +103,6 @@
         if (worldClose && state) {
             event.preventDefault();
             dispatchWorldNavigation('world.close', String(worldClose.dataset.worldClose || ''));
-            return;
-        }
-
-        if (objectPullout && state) {
-            event.preventDefault();
-            openObjectWindow(String(objectPullout.dataset.objectPullout || ''), originWindowFor(objectPullout), true);
             return;
         }
 
@@ -161,16 +153,19 @@
 
         if (objectButton && state) {
             var focusedId = String(objectButton.dataset.objectId || '');
+            var originObject = originObjectFor(objectButton);
             selectObject(focusedId);
             if (openActionForObject(focusedId)) {
-                // A card with a window-opening `open` action opens (or navigates) a window.
-                openObjectWindow(focusedId, originWindowFor(objectButton), false);
-            } else if (originWindowFor(objectButton) !== '') {
-                // Inside a window, a card with no open action (a message, a participant) is
-                // terminal content -- select it, never spawn a separate panel for it.
+                // A card with an `open` action opens its Object on Carry. Fired from inside an
+                // opened Object panel, World navigates that Object in place instead.
+                openObject(focusedId, originObject);
+            } else if (originObject !== '') {
+                // Inside an opened Object, a card with no open action (a message, a participant)
+                // is terminal content -- select it, never spawn a separate panel for it.
                 renderState();
             } else {
-                // In the results pane, a card with no open action carries into its own panel.
+                // A Finding with no open action: focusing it opens the referenced Object on
+                // Carry (see dev.elonn canonical/layout.md).
                 carryObject(focusedId);
                 renderState();
             }
@@ -377,10 +372,9 @@
     function submitQuery(text) {
         var request = {
             inputText: text,
-            runtimeSessionId: state && !workspaceResultsCleared ? state.runtimeSessionId : '',
+            runtimeSessionId: state ? state.runtimeSessionId : '',
             selectedObjectId: state ? state.selectedObjectId : '',
-            selectedCollectionId: state && !workspaceResultsCleared ? state.selectedCollectionId : '',
-            replaceResults: workspaceResultsCleared
+            selectedCollectionId: state ? state.selectedCollectionId : ''
         };
 
         var panel = carryPanel('workspace-results');
@@ -426,27 +420,62 @@
         });
     }
 
-    function shouldMergeDataset(runtimeState) {
-        return !!state
-            && !!runtimeState
-            && String(runtimeState.inputText || '').trim() === ''
-            && !runtimeState.operationInvocation
-            && runtimeState.replaceResults !== true;
+    // World returns a full cumulative snapshot on every path (composeFindings merges prior
+    // Findings forward; back/close/clear return the whole placed state). The client never
+    // re-merges -- a stale client merge would revive an Object World just dropped.
+    function shouldMergeDataset() {
+        return false;
     }
 
     function replaceDataset(payload, mergeWithPrevious, runtimeState) {
         var parsed = runtime.DatasetParser.parse(payload);
-        if (mergeWithPrevious) {
-            parsed = runtime.StateIndexer.mergeDatasets(state ? state.dataset : null, parsed);
-        }
         var next = runtime.StateIndexer.build(parsed, state);
         state = runtime.ContinuityReconciler.reconcile(state, next);
-        state.carryPanels = reconcileCarryPanels(loadCarryPanels());
+        state.carryPanels = reconcileCarryPanels(carryPanelSeed());
         state.workspacePanel = reconcileWorkspacePanel(loadWorkspacePanel());
-        state.windowPanels = reconcileWindowPanels(state.windows || [], loadWindowPanels());
         persistCarryPanels();
         persistLocalUiState();
         renderState();
+    }
+
+    /*
+     * The set of object panels to show: every Object World placed on Carry (an opened Object),
+     * plus any the member pulled out client-side from a Finding, keyed by object id so persisted
+     * geometry is reused. An opened Object dropped by World (world.close) falls out here.
+     */
+    function carryPanelSeed() {
+        var byObject = {};
+        var order = [];
+        loadCarryPanels().forEach(function (panel) {
+            var objectId = String(panel && (panel.objectId || panel.id) || '');
+            if (objectId === '' || byObject[objectId]) {
+                return;
+            }
+            byObject[objectId] = Object.assign({}, panel, {id: 'carry-panel:' + objectId, objectId: objectId});
+            order.push(objectId);
+        });
+        (state && state.openedObjects || []).forEach(function (opened) {
+            var objectId = String(opened.id || '');
+            if (objectId === '') {
+                return;
+            }
+            if (!byObject[objectId]) {
+                byObject[objectId] = {id: 'carry-panel:' + objectId, objectId: objectId};
+                order.push(objectId);
+            }
+            byObject[objectId].opened = true;
+        });
+        return order.filter(function (objectId) {
+            return !!(state && state.indexes && state.indexes.objects[objectId]);
+        }).map(function (objectId) {
+            return byObject[objectId];
+        });
+    }
+
+    function isOpenedObjectPanel(objectId) {
+        return (state && state.openedObjects || []).some(function (opened) {
+            return String(opened.id || '') === String(objectId || '');
+        });
     }
 
     function renderState() {
@@ -462,18 +491,17 @@
                 height: panel.height,
                 z: panel.z,
                 findScope: findScope
-            },
-            windows: state.windowPanels || []
+            }
         });
         runtime.AdapterRegistry.mountAll(root, adapterContext());
     }
 
     /*
-     * Clear empties the results list in the workspace panel only -- it is not a
-     * workspace-wide reset. It stays entirely client-side: it never calls world.clear,
-     * which also re-saves world state and would drop field-placed objects. The cleared
-     * flag is persisted locally, so the emptied list survives a reload; the next query
-     * clears the flag and shows fresh results.
+     * The clear control clears the Results pane (see dev.elonn canonical/layout.md, Entry).
+     * world.clear removes the Findings from saved World state and has no effect on Carry,
+     * Field, or Objects placed on either layer. The local flag hides the list immediately so
+     * there is no round-trip flicker; the world.clear response resets it with the (now empty)
+     * Findings.
      */
     function clearResults() {
         var panel = carryPanel('workspace-results');
@@ -488,7 +516,20 @@
         persistCarryPanels();
         persistLocalUiState();
         renderState();
-        renderer.status('Results cleared.', 'neutral');
+        loadDataset({
+            operation: 'world.clear',
+            runtimeSessionId: state ? state.runtimeSessionId : '',
+            inputText: 'world.clear'
+        }).then(function () {
+            workspaceResultsCleared = false;
+            persistLocalUiState();
+            renderState();
+            renderer.status('Results cleared.', 'neutral');
+        }).catch(function () {
+            workspaceResultsCleared = false;
+            persistLocalUiState();
+            renderState();
+        });
     }
 
     function toggleWorkspaceResults() {
@@ -509,10 +550,10 @@
     function dispatchOperationInvocation(command, opts) {
         opts = opts && typeof opts === 'object' ? opts : {};
         var objectId = String(command && command.object_id || '');
-        var originWindow = String(opts.originWindow || '');
-        if (originWindow === '') {
-            // A result with no target window renders into the workspace results panel -- make
-            // sure it is visible and on top so the member sees what they asked for.
+        var originObject = String(opts.originObject || '');
+        if (originObject === '') {
+            // A result not navigated into an opened Object lands as Findings in the Results
+            // pane -- make sure it is visible and on top so the member sees what they asked for.
             var panel = carryPanel('workspace-results');
             if (panel) {
                 panel.collapsed = false;
@@ -527,8 +568,7 @@
             selectedCollectionId: state ? state.selectedCollectionId : '',
             inputText: String(command && command.input_text || 'operation invocation'),
             operationInvocation: command,
-            originWindow: originWindow,
-            openIn: String(opts.openIn || '')
+            originObject: originObject
         });
     }
 
@@ -544,23 +584,10 @@
             renderer.status('Action could not be read.', 'error');
             return;
         }
-        var actionWindow = String(control.dataset.actionWindow || '');
-        var originWindow = originWindowFor(control);
-        var opts = {};
-        if (actionWindow === 'dashboard' || actionWindow === 'object') {
-            // A window-opening entrance: in place when it sits inside an object window,
-            // otherwise its own new window.
-            if (originWindow !== '' && windowModeOf(originWindow) === 'object') {
-                opts.originWindow = originWindow;
-            } else {
-                opts.openIn = 'new_window';
-            }
-        } else if (originWindow !== '') {
-            // A plain action fired from inside a window (Reply, RSVP, Save) keeps its result
-            // in that window.
-            opts.originWindow = originWindow;
-        }
-        dispatchOperationInvocation(command, opts);
+        // An action fired from inside an opened Object panel (Reply, RSVP, Save, a nested
+        // entrance) navigates that Object in place; otherwise its result lands as Findings.
+        var originObject = originObjectFor(control);
+        dispatchOperationInvocation(command, originObject !== '' ? {originObject: originObject} : {});
     }
 
     function removeObjectSurface(objectId) {
@@ -739,7 +766,6 @@
         var url = String(details.url || '').trim();
         var id = 'runtime.website.link:' + stableHash(url);
         var resourceId = 'resource:' + id + ':url';
-        var placementId = 'placement:' + id + ':workspace';
         var label = String(details.label || '').trim();
         var domain = domainFromUrl(url);
         var panels = [];
@@ -767,7 +793,7 @@
                 resourceIds: [resourceId],
                 metadata: {
                     service: 'web.runtime',
-                    anchor: 'workspace'
+                    anchor: 'carry'
                 }
             });
             state.dataset.resources.unshift({
@@ -784,13 +810,8 @@
                 },
                 availability: {state: 'enabled'}
             });
-            state.dataset.placements.unshift({
-                id: placementId,
-                type: 'workspace',
-                object_id: id,
-                collection_id: '',
-                resource_id: ''
-            });
+            // No Placement: this synthetic link Object is pulled onto Carry client-side by the
+            // caller (openRuntimeUrl -> carryObject), not placed by World.
             state = runtime.StateIndexer.build(state.dataset, state);
             state.carryPanels = panels;
         }
@@ -809,8 +830,13 @@
     }
 
     function closeCarryPanel(panelId) {
-        if (isWindowPanel(panelId)) {
-            dispatchWorldNavigation('world.close', panelId);
+        var objectId = String(panelId || '').indexOf('carry-panel:') === 0
+            ? String(panelId).slice('carry-panel:'.length)
+            : String(panelId || '');
+        // Closing an Object World opened on Carry is a world.close (it leaves saved state).
+        // Closing a client-only Finding panel just removes the panel.
+        if (isOpenedObjectPanel(objectId)) {
+            dispatchWorldNavigation('world.close', objectId);
             return;
         }
         state.carryPanels = (state.carryPanels || []).filter(function (panel) {
@@ -841,7 +867,7 @@
         if (panelId === 'workspace-results') {
             return state.workspacePanel || null;
         }
-        (state.carryPanels || []).concat(state.windowPanels || []).some(function (panel) {
+        (state.carryPanels || []).some(function (panel) {
             if (String(panel.id || '') === panelId) {
                 match = panel;
                 return true;
@@ -853,7 +879,7 @@
 
     function nextCarryZ() {
         var max = 20;
-        (state.carryPanels || []).concat(state.windowPanels || []).forEach(function (panel) {
+        (state.carryPanels || []).forEach(function (panel) {
             max = Math.max(max, Number(panel.z || 0));
         });
         if (state.workspacePanel) {
@@ -928,7 +954,6 @@
             renderer.status('Carry panels could not be saved locally.', 'error');
         }
         persistWorkspacePanel();
-        persistWindowPanels();
     }
 
     function persistWorkspacePanel() {
@@ -981,80 +1006,20 @@
      * persist by object id. A window World reports gets a saved position or a fresh staggered
      * one; geometry for a window that no longer exists is dropped.
      */
-    function reconcileWindowPanels(windows, saved) {
-        var rootBounds = root.getBoundingClientRect();
-        var savedById = {};
-        (Array.isArray(saved) ? saved : []).forEach(function (entry) {
-            savedById[String(entry && entry.windowId || '')] = entry || {};
-        });
-        return windows.map(function (win, index) {
-            var prior = savedById[String(win.id || '')] || {};
-            var width = clamp(Number(prior.width || 380), 240, Math.max(240, rootBounds.width - 16));
-            var height = clamp(Number(prior.height || 320), 140, Math.max(140, rootBounds.height - 90));
-            var defaultX = 96 + index * 30;
-            var defaultY = 96 + index * 30;
-            var x = clamp(prior.x != null ? Number(prior.x) : defaultX, 8, Math.max(8, rootBounds.width - width - 8));
-            var y = clamp(prior.y != null ? Number(prior.y) : defaultY, 56, Math.max(56, rootBounds.height - height - 40));
-            return {
-                id: String(win.id || ''),
-                windowId: String(win.id || ''),
-                x: x,
-                y: y,
-                width: width,
-                height: height,
-                z: Number(prior.z || nextCarryZ()),
-                collapsed: prior.collapsed === true
-            };
-        }).filter(function (panel) {
-            return panel.windowId !== '';
-        });
-    }
-
-    function loadWindowPanels() {
-        try {
-            var stored = window.localStorage ? window.localStorage.getItem(windowPanelStorageKey) : '';
-            return stored ? JSON.parse(stored) : [];
-        } catch (error) {
-            return [];
-        }
-    }
-
-    function persistWindowPanels() {
-        try {
-            if (window.localStorage) {
-                window.localStorage.setItem(windowPanelStorageKey, JSON.stringify(state && state.windowPanels || []));
-            }
-        } catch (error) {
-            renderer.status('Window panels could not be saved locally.', 'error');
-        }
-    }
-
-    function isWindowPanel(panelId) {
-        return (state && state.windowPanels || []).some(function (panel) {
-            return String(panel.id || '') === String(panelId || '');
-        });
-    }
-
-    function windowModeOf(windowId) {
-        var match = 'object';
-        (state && state.windows || []).some(function (win) {
-            if (String(win.id || '') === String(windowId || '')) {
-                match = win.mode === 'dashboard' ? 'dashboard' : 'object';
-                return true;
-            }
-            return false;
-        });
-        return match;
-    }
-
-    function originWindowFor(node) {
-        var host = node && node.closest ? node.closest('[data-origin-window]') : null;
-        if (host && host.dataset.originWindow) {
-            return String(host.dataset.originWindow);
+    /*
+     * The id of the opened Object a node sits inside, if any: an explicit [data-origin-object]
+     * host, else the enclosing carry panel when that panel is an opened Object. A click in the
+     * Results pane or a client-only Finding panel returns ''.
+     */
+    function originObjectFor(node) {
+        var host = node && node.closest ? node.closest('[data-origin-object]') : null;
+        if (host && host.dataset.originObject) {
+            return String(host.dataset.originObject);
         }
         var panel = node && node.closest ? node.closest('[data-carry-panel-id]') : null;
         var id = panel ? String(panel.dataset.carryPanelId || '') : '';
-        return isWindowPanel(id) ? id : '';
+        var objectId = id.indexOf('carry-panel:') === 0 ? id.slice('carry-panel:'.length) : id;
+        return isOpenedObjectPanel(objectId) ? objectId : '';
     }
 
     function openActionForObject(objectId) {
@@ -1062,9 +1027,9 @@
         ((state && state.dataset && state.dataset.actions) || []).some(function (action) {
             var invocation = action.operation_invocation && typeof action.operation_invocation === 'object' ? action.operation_invocation : null;
             if (String(action.target_id || '') === String(objectId || '')
-                && (action.window === 'dashboard' || action.window === 'object')
+                && (action.type === 'open' || action.type === 'open_object')
                 && invocation) {
-                match = {invocation: invocation, window: action.window};
+                match = {invocation: invocation};
                 return true;
             }
             return false;
@@ -1073,11 +1038,12 @@
     }
 
     /*
-     * Focusing a card that opens a window: from a dashboard window (or from nowhere) it opens
-     * its own window; from an object window it navigates that window in place. The pull-out
-     * marker forces its own window regardless of origin.
+     * Focusing a card that opens an Object: with an open action, invoke it -- the Service places
+     * the Object on Carry and World opens it (or, fired from inside an opened Object, navigates
+     * that Object in place). With no open action, pull the referenced Object onto Carry
+     * client-side.
      */
-    function openObjectWindow(objectId, originWindow, forceNewWindow) {
+    function openObject(objectId, originObject) {
         var open = openActionForObject(objectId);
         if (!open) {
             selectObject(objectId);
@@ -1085,21 +1051,17 @@
             renderState();
             return;
         }
-        var inPlace = !forceNewWindow && originWindow !== '' && windowModeOf(originWindow) === 'object';
-        dispatchOperationInvocation(open.invocation, {
-            originWindow: inPlace ? originWindow : '',
-            openIn: inPlace ? '' : 'new_window'
-        });
+        dispatchOperationInvocation(open.invocation, originObject !== '' ? {originObject: originObject} : {});
     }
 
-    function dispatchWorldNavigation(operation, windowId) {
-        if (String(windowId || '') === '') {
+    function dispatchWorldNavigation(operation, objectId) {
+        if (String(objectId || '') === '') {
             return;
         }
         renderer.status('Requesting World Dataset.', 'loading');
         loadDataset({
             operation: operation,
-            originWindow: String(windowId),
+            originObject: String(objectId),
             runtimeSessionId: state ? state.runtimeSessionId : '',
             selectedObjectId: state ? state.selectedObjectId : '',
             inputText: operation

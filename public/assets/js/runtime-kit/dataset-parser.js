@@ -40,7 +40,7 @@
                 resources: this.resources(dataset),
                 placements: this.placements(dataset),
                 errors: this.errors(dataset),
-                windows: this.windows(dataset),
+                navigation: this.navigation(dataset),
                 context: dataset.context && typeof dataset.context === 'object' ? dataset.context : {}
             };
         },
@@ -96,7 +96,6 @@
                     type: String(action.type || 'action'),
                     label: common.text(content.label || content.name || action.label || action.name, 'Action'),
                     group: common.text(content.group || action.group, ''),
-                    window: common.text(content.window || action.window, ''),
                     target_id: String(target || ''),
                     href: String(content.href || content.url || action.href || ''),
                     operation_invocation: content.operation_invocation && typeof content.operation_invocation === 'object' && !Array.isArray(content.operation_invocation)
@@ -161,25 +160,28 @@
                     type: String(placement.type || ''),
                     object_id: String(content.object || ''),
                     collection_id: String(content.collection || ''),
-                    resource_id: String(content.resource || ''),
-                    window_id: String(content.window || ''),
-                    window_mode: String(content.mode || '')
+                    resource_id: String(content.resource || '')
                 };
             }).filter(function (placement) {
-                return placement.id !== '' && ['carry', 'field', 'workspace', 'window'].indexOf(placement.type) !== -1;
+                return placement.id !== '' && ['carry', 'field'].indexOf(placement.type) !== -1;
             });
         },
 
-        windows: function (dataset) {
+        /*
+         * context.objects: per-Object navigation state World owns for each Object opened on
+         * Carry (see dev.elonn canonical/layout.md). title + depth drive the panel title bar;
+         * members lists the ids of the content currently shown inside that Object's container.
+         */
+        navigation: function (dataset) {
             var context = dataset.context && typeof dataset.context === 'object' ? dataset.context : {};
-            var windows = context.windows && typeof context.windows === 'object' && !Array.isArray(context.windows) ? context.windows : {};
+            var objects = context.objects && typeof context.objects === 'object' && !Array.isArray(context.objects) ? context.objects : {};
             var parsed = {};
-            Object.keys(windows).forEach(function (windowId) {
-                var entry = windows[windowId] && typeof windows[windowId] === 'object' ? windows[windowId] : {};
-                parsed[String(windowId)] = {
-                    mode: entry.mode === 'dashboard' ? 'dashboard' : 'object',
+            Object.keys(objects).forEach(function (objectId) {
+                var entry = objects[objectId] && typeof objects[objectId] === 'object' ? objects[objectId] : {};
+                parsed[String(objectId)] = {
                     title: common.text(entry.title, ''),
-                    depth: Math.max(0, parseInt(entry.depth, 10) || 0)
+                    depth: Math.max(0, parseInt(entry.depth, 10) || 0),
+                    members: (Array.isArray(entry.members) ? entry.members : []).map(String).filter(Boolean)
                 };
             });
             return parsed;

@@ -18,7 +18,7 @@
         };
         var workspacePanelEl = null;
         var workspaceToggleButton = null;
-        var windowLabels = {};
+        var objectLabels = {};
 
         function status(message, state) {
             if (!nodes.status) {
@@ -33,19 +33,17 @@
             var workspaceOptions = options.workspace || {};
             var zoneMap = zonesByKey(scene.layers || []);
             var content = scene.content && typeof scene.content === 'object' ? scene.content : {};
-            windowLabels = content.window && typeof content.window === 'object' ? content.window : {};
+            // Object title-bar labels (back / close) -- keyed 'object' in world-content.json.
+            objectLabels = content.object && typeof content.object === 'object' ? content.object : {};
             ensureWorkspacePanel(workspaceOptions);
             updateFloatingPanelChrome(workspacePanelEl, workspaceOptions);
             updateWorkspaceContent(scene.content || {}, workspaceOptions.findScope);
             if (workspaceToggleButton) {
                 workspaceToggleButton.textContent = workspaceOptions.collapsed === true ? 'Show' : 'Hide';
             }
-            renderWorkspace(nodes.workspace, zoneMap['workspace:workspace'], zoneMap['carry:carry'], workspaceOptions);
+            renderWorkspace(nodes.workspace, scene.findings || {collections: [], objects: []}, workspaceOptions);
             renderField(nodes.field, zoneMap['field:field']);
-            common.replaceChildren(
-                nodes.carryPanels,
-                windowPanelNodes(scene.windows || [], options.windows || []).concat(carryPanelNodes(scene.carryPanels || []))
-            );
+            common.replaceChildren(nodes.carryPanels, carryPanelNodes(scene.carryPanels || []));
             common.replaceChildren(nodes.statusRows, (scene.status || []).map(statusNode));
         }
 
@@ -117,7 +115,12 @@
             });
         }
 
-        function renderWorkspace(node, zone, selfZone, options) {
+        /*
+         * The Results pane: the Findings returned for the current Call (see dev.elonn
+         * canonical/layout.md). Only Findings render here -- placed Objects are their own
+         * panels. Hidden while collapsed or freshly cleared.
+         */
+        function renderWorkspace(node, findings, options) {
             var content = [];
             if (!node) {
                 return;
@@ -127,15 +130,8 @@
                 return;
             }
 
-            content = objectList((selfZone && selfZone.objects) || [], 'overlay');
-            if (zone) {
-                content = content.concat(collections(zone.collections || [], 'overlay')).concat(objectList(zone.objects || [], 'overlay'));
-            }
-            if (content.length === 0) {
-                common.replaceChildren(node, []);
-                return;
-            }
-
+            content = collections((findings && findings.collections) || [], 'overlay')
+                .concat(objectList((findings && findings.objects) || [], 'overlay'));
             common.replaceChildren(node, content);
         }
 
@@ -474,8 +470,9 @@
             section.className = 'world-collection world-collection--' + common.text(mode, 'panel') + ' world-sequence';
             section.dataset.collectionId = collection.id;
             section.dataset.selected = collection.selected ? 'true' : 'false';
-            // Inside a window the replies just flow -- no "Messages" heading, no count line.
-            if (mode !== 'window') {
+            // Inside an opened Object panel the replies just flow -- no "Messages" heading, no
+            // count line.
+            if (mode !== 'object') {
                 var header = document.createElement('header');
                 var title = document.createElement('h3');
                 title.textContent = collection.title;
@@ -673,9 +670,6 @@
             }
             wrapper.appendChild(button);
             if (mode !== 'compact') {
-                if (opensAWindow(object)) {
-                    wrapper.appendChild(pulloutMarker(object.id));
-                }
                 cardLinks(object).forEach(function (link) {
                     wrapper.appendChild(link);
                 });
@@ -683,34 +677,15 @@
             return wrapper;
         }
 
-        function opensAWindow(object) {
-            return (Array.isArray(object.actions) ? object.actions : []).some(function (action) {
-                return action.window === 'dashboard' || action.window === 'object';
-            });
-        }
-
-        // An "open me" action (a dashboard finding's self-open, or a list card's open
-        // conversation) is meaningless once the object is the window's own root -- never draw
-        // it as a button inside the window it would open.
-        function opensThisObjectAsDashboard(action, object) {
-            if (!action || (action.window !== 'dashboard' && action.window !== 'object')) {
+        // An "open me" action (a Dashboard's self-open, or a list card's open conversation) is
+        // meaningless once the Object is the opened panel's own root -- never draw it as a
+        // button inside the panel it would open.
+        function opensThisObject(action, object) {
+            if (!action || (action.type !== 'open' && action.type !== 'open_object')) {
                 return false;
             }
             var invocation = action.operationInvocation && typeof action.operationInvocation === 'object' ? action.operationInvocation : null;
             return !!invocation && String(invocation.object_id || '') === String(object.id || '');
-        }
-
-        // The visible "pull this into its own window" target on every card that opens a window.
-        function pulloutMarker(objectId) {
-            var button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'world-object__pullout';
-            button.dataset.objectPullout = objectId;
-            if (common.text(windowLabels.pull_out_label, '') !== '') {
-                button.setAttribute('aria-label', windowLabels.pull_out_label);
-            }
-            button.textContent = '⧉';
-            return button;
         }
 
         function cardLinks(object) {
@@ -808,12 +783,24 @@
             return positions[index % positions.length];
         }
 
+        /*
+         * One floating panel per panel in state.carryPanels -- an Object World opened on Carry,
+         * or one the member pulled out client-side from a Finding. Both use the same
+         * floatingPanel() the Results pane uses (drag / resize / collapse / z-order via the
+         * generic [data-carry-panel-*] handlers). An opened Object's body leads with its
+         * Collections (replies flow first) and puts working actions at the bottom, with a back
+         * step in the title bar once it has been navigated into; a pulled-out Finding gets a
+         * plain summary + preview.
+         */
         function carryPanelNodes(panels) {
             return panels.map(function (panel) {
+                var opened = panel.opened === true;
+                var headerActions = opened && Number(panel.depth || 0) > 0 ? [objectBackButton(panel.object.id)] : [];
                 return floatingPanel({
                     id: panel.id,
                     objectId: panel.object.id,
-                    title: panel.object.title,
+                    className: opened ? 'carry-object-panel--opened' : '',
+                    title: common.text(panel.title, panel.object.title),
                     closable: true,
                     collapsed: panel.collapsed,
                     x: panel.x,
@@ -821,8 +808,18 @@
                     width: panel.width,
                     height: panel.height,
                     z: panel.z,
-                    closeLabel: 'Close ' + panel.object.title,
+                    headerActions: headerActions,
+                    closeLabel: opened && common.text(objectLabels.close_label, '') !== ''
+                        ? objectLabels.close_label
+                        : 'Close ' + panel.object.title,
                     buildContent: function (content) {
+                        if (opened) {
+                            content.dataset.originObject = panel.object.id;
+                            openedObjectBody(panel).forEach(function (node) {
+                                content.appendChild(node);
+                            });
+                            return;
+                        }
                         var type = document.createElement('span');
                         var summary = document.createElement('p');
                         type.className = 'object-type';
@@ -842,75 +839,36 @@
             return metaLine(row.label, row.value);
         }
 
-        /*
-         * One floating panel per open window (see dev.elonn canonical/placement.md), built
-         * through the same floatingPanel() carry panels and the workspace panel use. A
-         * dashboard window is a launcher; an object window is a working view with a
-         * depth-count back step in its header. Geometry comes from the runtime's per-window
-         * panel store, keyed by window id.
-         */
-        function windowPanelNodes(windows, geometry) {
-            var geomById = {};
-            (Array.isArray(geometry) ? geometry : []).forEach(function (entry) {
-                geomById[String(entry && entry.id || '')] = entry || {};
-            });
-            return (Array.isArray(windows) ? windows : []).map(function (win) {
-                var geom = geomById[String(win.id || '')] || {};
-                var headerActions = win.mode === 'object' && win.depth > 0 ? [windowBackButton(win.id)] : [];
-                return floatingPanel({
-                    id: win.id,
-                    className: 'world-window world-window--' + win.mode,
-                    title: win.title,
-                    closable: true,
-                    collapsed: geom.collapsed === true,
-                    x: geom.x,
-                    y: geom.y,
-                    width: geom.width,
-                    height: geom.height,
-                    z: geom.z,
-                    headerActions: headerActions,
-                    closeLabel: common.text(windowLabels.close_label, ''),
-                    buildContent: function (content) {
-                        content.dataset.originWindow = win.id;
-                        content.dataset.windowMode = win.mode;
-                        windowBodyNodes(win).forEach(function (node) {
-                            content.appendChild(node);
-                        });
-                    }
-                });
-            });
-        }
-
-        function windowBackButton(windowId) {
+        function objectBackButton(objectId) {
             var button = document.createElement('button');
             button.type = 'button';
-            button.className = 'carry-object-panel__close world-window__back';
-            button.dataset.worldBack = windowId;
-            if (common.text(windowLabels.back_label, '') !== '') {
-                button.setAttribute('aria-label', windowLabels.back_label);
+            button.className = 'carry-object-panel__close world-object__back';
+            button.dataset.worldBack = objectId;
+            if (common.text(objectLabels.back_label, '') !== '') {
+                button.setAttribute('aria-label', objectLabels.back_label);
             }
             button.textContent = '‹';
             return button;
         }
 
         /*
-         * A window body is its content and one place to act on it, nothing else -- no field
-         * dump, no counts, no chrome. A dashboard window leads with its entrances; an object
-         * window (a conversation, a thread) leads with its Collections -- the replies flow
-         * first, oldest to newest -- and puts the one working control (the reply form) at the
+         * An opened Object's body: the content shown inside its container and one place to act
+         * on it, nothing else -- no field dump, no counts, no chrome. Collections flow first
+         * (a conversation's replies, oldest to newest), working controls (a reply form) at the
          * bottom, the way a conversation reads everywhere else.
          */
-        function windowBodyNodes(win) {
-            var contentNodes = collections(win.collections || [], 'window');
+        function openedObjectBody(panel) {
+            var contentNodes = collections(panel.collections || [], 'object');
             var actionNodes = [];
-            (win.objects || []).forEach(function (object) {
+            actionLinks(panel.object).forEach(function (node) {
+                actionNodes.push(node);
+            });
+            (panel.memberObjects || []).forEach(function (object) {
                 actionLinks(object).forEach(function (node) {
                     actionNodes.push(node);
                 });
             });
-            return win.mode === 'dashboard'
-                ? actionNodes.concat(contentNodes)
-                : contentNodes.concat(actionNodes);
+            return contentNodes.concat(actionNodes);
         }
 
         function objectSurface(object) {
@@ -1311,7 +1269,7 @@
                 if (hasModelArguments(action.operationInvocation)) {
                     return operationForm(action, object);
                 }
-                return operationLine('Action', action.label, action.operationInvocation, action.window);
+                return operationLine('Action', action.label, action.operationInvocation);
             }
             return linkLine('Action', action.label, action.href, object.id);
         }
@@ -1321,9 +1279,6 @@
             button.type = 'button';
             button.className = 'dashboard-action';
             button.dataset.operationInvocation = JSON.stringify(action.operationInvocation);
-            if (action.window === 'dashboard' || action.window === 'object') {
-                button.dataset.actionWindow = action.window;
-            }
             // action.label is already resolved (scene-model applies the fallback); no literal here.
             button.textContent = action.label;
             return button;
@@ -1337,7 +1292,7 @@
                 return action.availability
                     && action.availability.state === 'enabled'
                     && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'))
-                    && !opensThisObjectAsDashboard(action, object);
+                    && !opensThisObject(action, object);
             });
 
             var grouped = actions.some(function (action) {
@@ -1385,15 +1340,12 @@
             return !!args && typeof args === 'object' && !Array.isArray(args) && Object.keys(args).length > 0;
         }
 
-        function operationLine(label, text, operationInvocation, windowFlag) {
+        function operationLine(label, text, operationInvocation) {
             var row = document.createElement('p');
             var button = document.createElement('button');
             row.className = 'meta-line';
             button.type = 'button';
             button.dataset.operationInvocation = JSON.stringify(operationInvocation);
-            if (windowFlag === 'dashboard' || windowFlag === 'object') {
-                button.dataset.actionWindow = windowFlag;
-            }
             button.textContent = common.text(text, common.text(label, ''));
             // A generic "Action" caption is noise -- the button's own label already says what
             // it does. Only prepend a caption when the caller gave a real one.
