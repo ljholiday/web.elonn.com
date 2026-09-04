@@ -1033,15 +1033,26 @@
      * host, else the enclosing carry panel when that panel is an opened Object. A click in the
      * Results pane or a client-only Finding panel returns ''.
      */
+    /*
+     * The id of the opened Object a node sits inside, for in-place navigation -- or '' when
+     * the node is in the Results pane, a client-only Finding box, OR a Dashboard. A Dashboard
+     * is a stable launcher (layout.md, Dashboard): activating one of its entry points always
+     * opens a NEW Object (or a new Dashboard) on Carry, never navigates the Dashboard itself.
+     */
     function originObjectFor(node) {
         var host = node && node.closest ? node.closest('[data-origin-object]') : null;
         if (host && host.dataset.originObject) {
-            return String(host.dataset.originObject);
+            return isDashboard(String(host.dataset.originObject)) ? '' : String(host.dataset.originObject);
         }
         var panel = node && node.closest ? node.closest('[data-carry-panel-id]') : null;
         var id = panel ? String(panel.dataset.carryPanelId || '') : '';
         var objectId = id.indexOf('carry-panel:') === 0 ? id.slice('carry-panel:'.length) : id;
-        return isOpenedObjectPanel(objectId) ? objectId : '';
+        return (isOpenedObjectPanel(objectId) && !isDashboard(objectId)) ? objectId : '';
+    }
+
+    function isDashboard(objectId) {
+        var object = state && state.indexes ? state.indexes.objects[String(objectId || '')] : null;
+        return !!object && String(object.type || '') === 'service.dashboard';
     }
 
     function openActionForObject(objectId) {
