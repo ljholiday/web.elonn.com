@@ -468,15 +468,18 @@
             }
             if (!byObject[objectId]) {
                 // A freshly opened Object gets room to show a conversation or a dashboard,
-                // staggered down-left so it clears the Results pane. Persisted geometry (from
-                // a prior drag/resize) always wins over these defaults.
+                // staggered down-left so it clears the Results pane. z must be above the
+                // Results pane (10) and the field layers, or the box renders but pointer
+                // events land on whatever is in front of it. Persisted geometry (from a prior
+                // drag/resize) always wins over these defaults.
                 byObject[objectId] = {
                     id: 'carry-panel:' + objectId,
                     objectId: objectId,
                     x: 24 + index * 24,
                     y: 88 + index * 24,
                     width: 400,
-                    height: 420
+                    height: 420,
+                    z: 21 + index
                 };
                 order.push(objectId);
             }
@@ -944,7 +947,9 @@
                 y: y,
                 width: width,
                 height: height,
-                z: Number(panel.z || 1),
+                // Floor at 21: above the Results pane (10) and the field layers, so the box
+                // is the frontmost thing at its position and actually receives pointer events.
+                z: Math.max(21, Number(panel.z || 0)),
                 collapsed: panel.collapsed === true
             };
         }).filter(function (panel) {
