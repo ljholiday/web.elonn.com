@@ -795,7 +795,13 @@
         function carryPanelNodes(panels) {
             return panels.map(function (panel) {
                 var opened = panel.opened === true;
-                var headerActions = opened && Number(panel.depth || 0) > 0 ? [objectBackButton(panel.object.id)] : [];
+                // Title bar controls (layout.md, Object presentation): back -- only with a
+                // navigation history -- then collapse, then close (close is floatingPanel's own).
+                var headerActions = [];
+                if (opened && Number(panel.depth || 0) > 0) {
+                    headerActions.push(objectBackButton(panel.object.id));
+                }
+                headerActions.push(collapseButton(panel.id, panel.collapsed === true));
                 return floatingPanel({
                     id: panel.id,
                     objectId: panel.object.id,
@@ -820,16 +826,9 @@
                             });
                             return;
                         }
-                        var type = document.createElement('span');
-                        var summary = document.createElement('p');
-                        type.className = 'object-type';
-                        type.textContent = panel.object.type + ' / ' + panel.object.layer;
-                        summary.textContent = panel.object.summary;
-                        content.appendChild(type);
-                        if (panel.object.summary !== '') {
-                            content.appendChild(summary);
-                        }
-                        content.appendChild(objectSurface(panel.object));
+                        carryFindingBody(panel.object).forEach(function (node) {
+                            content.appendChild(node);
+                        });
                     }
                 });
             });
@@ -848,6 +847,17 @@
                 button.setAttribute('aria-label', objectLabels.back_label);
             }
             button.textContent = '‹';
+            return button;
+        }
+
+        function collapseButton(panelId, collapsed) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'carry-object-panel__close world-object__collapse';
+            button.dataset.carryPanelCollapse = panelId;
+            button.setAttribute('aria-label', collapsed ? 'Expand' : 'Collapse');
+            button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            button.textContent = collapsed ? '▸' : '▾';
             return button;
         }
 
@@ -877,6 +887,37 @@
             }
 
             return genericPreview(object);
+        }
+
+        /*
+         * The body of a Finding pulled onto Carry (a result with no open operation). Its
+         * content and one place to act on it -- no field dump, no counts, no Visibility /
+         * Permissions rows -- the same rule an opened Object body follows (see layout.md,
+         * Object presentation). A hosted Object keeps its editor surface.
+         */
+        function carryFindingBody(object) {
+            if (object.surface && object.surface.mode === 'hosted') {
+                return [hostedSurface(object)];
+            }
+            var nodes = [];
+            var segment = segmentNode(object);
+            var website = segment ? null : websiteDocument(object);
+            if (segment) {
+                nodes.push(segment);
+            } else if (website) {
+                nodes.push(websiteNode(website, object));
+            } else if (common.text(object.summary, '') !== '') {
+                var summary = document.createElement('p');
+                summary.className = 'object-summary';
+                summary.textContent = object.summary;
+                nodes.push(summary);
+            }
+            containedObjectNodes(object).forEach(function (node) { nodes.push(node); });
+            resourceLinks(object).forEach(function (link) { nodes.push(link); });
+            if (!website) {
+                actionLinks(object).forEach(function (link) { nodes.push(link); });
+            }
+            return nodes;
         }
 
         function hostedSurface(object) {

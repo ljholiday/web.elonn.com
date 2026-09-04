@@ -693,7 +693,8 @@ figure {
     border-bottom-color: rgba(255, 214, 165, 0.4);
 }
 
-.world-object__back {
+.world-object__back,
+.world-object__collapse {
     font-size: 1.1rem;
     line-height: 1;
 }

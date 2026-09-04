@@ -75,6 +75,7 @@
 
     root.addEventListener('click', function (event) {
         var closeButton = event.target.closest('[data-carry-panel-close]');
+        var collapseButton = event.target.closest('[data-carry-panel-collapse]');
         var resizeHandle = event.target.closest('[data-carry-panel-resize]');
         var panelTitle = event.target.closest('[data-carry-panel-title]');
         var hostedSurface = event.target.closest('[data-hosted-surface]');
@@ -91,6 +92,12 @@
         if (closeButton && state) {
             event.preventDefault();
             closeCarryPanel(String(closeButton.dataset.carryPanelClose || ''));
+            return;
+        }
+
+        if (collapseButton && state) {
+            event.preventDefault();
+            toggleCarryPanel(String(collapseButton.dataset.carryPanelCollapse || ''));
             return;
         }
 
@@ -454,13 +461,23 @@
             byObject[objectId] = Object.assign({}, panel, {id: 'carry-panel:' + objectId, objectId: objectId});
             order.push(objectId);
         });
-        (state && state.openedObjects || []).forEach(function (opened) {
+        (state && state.openedObjects || []).forEach(function (opened, index) {
             var objectId = String(opened.id || '');
             if (objectId === '') {
                 return;
             }
             if (!byObject[objectId]) {
-                byObject[objectId] = {id: 'carry-panel:' + objectId, objectId: objectId};
+                // A freshly opened Object gets room to show a conversation or a dashboard,
+                // staggered down-left so it clears the Results pane. Persisted geometry (from
+                // a prior drag/resize) always wins over these defaults.
+                byObject[objectId] = {
+                    id: 'carry-panel:' + objectId,
+                    objectId: objectId,
+                    x: 24 + index * 24,
+                    y: 88 + index * 24,
+                    width: 400,
+                    height: 420
+                };
                 order.push(objectId);
             }
             byObject[objectId].opened = true;
