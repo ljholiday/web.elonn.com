@@ -877,12 +877,27 @@
             // "Navigated into" is data-visible: a member Collection's id contains the member
             // Object's id (e.g. collection:social.conversation:12:messages:... for
             // social.conversation:12). A plain list has no such per-member Collection.
+            // An interpreted web document (Find's find.open result) renders as the document:
+            // its structured content tree, with in-document links navigating in place. When a
+            // document member is present it IS the body; a standalone video member renders
+            // only when no document claims it.
+            var members = Array.isArray(panel.memberObjects) ? panel.memberObjects : [];
+            var documentMembers = members.filter(isInterpretedDocument);
+            if (documentMembers.length > 0) {
+                return documentMembers.map(documentNode);
+            }
+            var mediaMembers = members.filter(function (member) {
+                var type = String(member.type || '');
+                return type === 'video' || type === 'audio';
+            });
+            var mediaNodes = mediaMembers.map(mediaObjectNode);
+
             var contentNodes = collections(panel.collections || [], 'object');
             var actionNodes = actionLinks(panel.object);
             var collectionIds = (panel.collections || []).map(function (collection) {
                 return String(collection.id || '');
             });
-            (panel.memberObjects || []).forEach(function (member) {
+            members.forEach(function (member) {
                 var memberId = String(member.id || '');
                 if (memberId === '') {
                     return;
@@ -896,7 +911,232 @@
                     });
                 }
             });
-            return contentNodes.concat(actionNodes);
+            return mediaNodes.concat(contentNodes, actionNodes);
+        }
+
+        /*
+         * An interpreted web document -- a `document` Object whose content.content is the
+         * ordered structured-content tree Find's HTML interpreter produced (see
+         * dev.elonn canonical/html.md). The runtime does not parse HTML; it walks that tree.
+         */
+        function isInterpretedDocument(object) {
+            return !!object
+                && String(object.type || '') === 'document'
+                && Array.isArray((object.content || {}).content);
+        }
+
+        function documentNode(object) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var article = document.createElement('article');
+            article.className = 'web-document';
+            contentTreeNodes(Array.isArray(content.content) ? content.content : []).forEach(function (node) {
+                article.appendChild(node);
+            });
+            var source = common.text(content.source, '');
+            if (source !== '') {
+                article.appendChild(documentSourceLink(source, object.id));
+            }
+            return article;
+        }
+
+        /*
+         * The document's own source URL, opened the same way any other dataset-owned external
+         * URL is (data-runtime-url -> a runtime website.link Object), never a raw new tab.
+         */
+        function documentSourceLink(source, parentId) {
+            var link = externalHref(source) ? document.createElement('button') : document.createElement('a');
+            link.className = 'web-document__source';
+            if (externalHref(source)) {
+                link.type = 'button';
+                link.className += ' world-object-link--runtime';
+                link.dataset.runtimeUrl = source;
+                link.dataset.runtimeUrlLabel = source;
+                link.dataset.runtimeUrlParent = common.text(parentId, '');
+            } else {
+                link.href = source;
+                link.rel = 'noopener noreferrer';
+            }
+            link.appendChild(document.createTextNode(source));
+            return link;
+        }
+
+        function contentTreeNodes(treeNodes) {
+            var out = [];
+            (Array.isArray(treeNodes) ? treeNodes : []).forEach(function (node) {
+                if (!node || typeof node !== 'object') {
+                    return;
+                }
+                var kind = String(node.node || '');
+                if (kind === 'heading') {
+                    var level = Math.min(6, Math.max(1, Number(node.level || 2) + 2));
+                    var heading = document.createElement('h' + level);
+                    heading.className = 'web-document__heading';
+                    heading.appendChild(document.createTextNode(common.text(node.text, '')));
+                    out.push(heading);
+                } else if (kind === 'paragraph') {
+                    out.push(documentParagraph(node));
+                } else if (kind === 'section') {
+                    var section = document.createElement('section');
+                    section.className = 'web-document__section';
+                    contentTreeNodes(Array.isArray(node.content) ? node.content : []).forEach(function (child) {
+                        section.appendChild(child);
+                    });
+                    out.push(section);
+                } else if (kind === 'media') {
+                    var media = documentMedia(node);
+                    if (media) {
+                        out.push(media);
+                    }
+                }
+            });
+            return out;
+        }
+
+        function documentParagraph(node) {
+            var paragraph = document.createElement('p');
+            paragraph.className = 'web-document__p';
+            var text = common.text(node.text, '');
+            var links = Array.isArray(node.links) ? node.links : [];
+            if (links.length === 0) {
+                paragraph.appendChild(document.createTextNode(text));
+                return paragraph;
+            }
+            // Splice each link's own text back into the paragraph as an anchor; plain text
+            // between. A plain click navigates the document in place (data-operation-invocation
+            // + the panel's data-origin-object); the href keeps open-in-new-tab honest.
+            var remaining = text;
+            links.forEach(function (link) {
+                var label = common.text(link.text, '');
+                var at = label !== '' ? remaining.indexOf(label) : -1;
+                if (at === -1) {
+                    return;
+                }
+                var anchor = documentAnchor(link, label);
+                if (!anchor) {
+                    return;
+                }
+                if (at > 0) {
+                    paragraph.appendChild(document.createTextNode(remaining.slice(0, at)));
+                }
+                paragraph.appendChild(anchor);
+                remaining = remaining.slice(at + label.length);
+            });
+            if (remaining !== '') {
+                paragraph.appendChild(document.createTextNode(remaining));
+            }
+            return paragraph;
+        }
+
+        /*
+         * An in-document link. The invocation that follows it is authored by the Service in the
+         * link descriptor (link.invocation) -- the runtime copies it, it never names a Service.
+         * The panel's data-origin-object makes World navigate the document in place.
+         */
+        function documentAnchor(link, label) {
+            var href = common.text(link.href, '');
+            var invocation = link.invocation && typeof link.invocation === 'object' ? link.invocation : null;
+            if (href === '' || !invocation) {
+                return null;
+            }
+            var anchor = document.createElement('a');
+            anchor.className = 'web-document__link';
+            anchor.href = href;
+            anchor.dataset.operationInvocation = JSON.stringify(invocation);
+            anchor.appendChild(document.createTextNode(label));
+            return anchor;
+        }
+
+        function documentMedia(node) {
+            var kind = String(node.kind || '');
+            if (kind === 'image') {
+                var src = common.text(node.src, '');
+                if (src === '') {
+                    return null;
+                }
+                var image = document.createElement('img');
+                image.className = 'web-document__image';
+                image.src = src;
+                image.alt = common.text(node.alt, '');
+                image.loading = 'lazy';
+                return image;
+            }
+            if (kind === 'video' || kind === 'audio' || kind === 'embed') {
+                var source = common.text(node.source, '');
+                if (source === '') {
+                    return null;
+                }
+                if (String(node.playback || '') === 'native') {
+                    var element = document.createElement(kind === 'audio' ? 'audio' : 'video');
+                    element.className = 'web-video__native';
+                    element.src = source;
+                    element.controls = true;
+                    element.preload = 'none';
+                    return element;
+                }
+                return embedFrame(source, node.aspect);
+            }
+            return null;
+        }
+
+        /*
+         * A promoted media Object (a `video` or `audio` from the interpreted document). An
+         * external provider (YouTube) renders as its embed; native playback renders as a
+         * real <video>/<audio> element from the source; anything else falls back to opening
+         * the source URL as a runtime Object.
+         */
+        function mediaObjectNode(object) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var frame = document.createElement('div');
+            frame.className = 'web-video';
+            var title = common.text(content.title, common.text(object.title, ''));
+            if (title !== '') {
+                var heading = document.createElement('h4');
+                heading.className = 'web-video__title';
+                heading.appendChild(document.createTextNode(title));
+                frame.appendChild(heading);
+            }
+            var embedSource = videoEmbedSource(content);
+            var source = common.text(content.source, '');
+            if (embedSource !== '') {
+                frame.appendChild(embedFrame(embedSource, content.aspect));
+            } else if (String(content.playback || '') === 'native' && source !== '') {
+                var kind = String(object.type || '') === 'audio' ? 'audio' : 'video';
+                var element = document.createElement(kind);
+                element.className = 'web-video__native';
+                element.src = source;
+                element.controls = true;
+                element.preload = 'none';
+                frame.appendChild(element);
+            } else if (source !== '') {
+                frame.appendChild(documentSourceLink(source, object.id));
+            }
+            return frame;
+        }
+
+        function videoEmbedSource(content) {
+            if (String(content.provider || '') === 'YouTube' && common.text(content.provider_id, '') !== '') {
+                return 'https://www.youtube.com/embed/' + encodeURIComponent(content.provider_id);
+            }
+            var source = common.text(content.source, '');
+            if (source.indexOf('youtube.com/embed/') !== -1 || source.indexOf('youtube-nocookie.com/embed/') !== -1) {
+                return source;
+            }
+            return '';
+        }
+
+        function embedFrame(source, aspect) {
+            var wrap = document.createElement('div');
+            wrap.className = 'web-document__embed';
+            wrap.style.aspectRatio = (typeof aspect === 'string' && aspect.indexOf(':') !== -1)
+                ? aspect.replace(':', ' / ')
+                : '16 / 9';
+            var frame = document.createElement('iframe');
+            frame.src = source;
+            frame.loading = 'lazy';
+            frame.setAttribute('allowfullscreen', '');
+            frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+            wrap.appendChild(frame);
+            return wrap;
         }
 
         function objectSurface(object) {
