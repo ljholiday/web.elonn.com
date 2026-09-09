@@ -1328,12 +1328,6 @@
                 if (hasModelArguments(action.operationInvocation)) {
                     return operationForm(action, object);
                 }
-                // A no-input navigation action (an entry point that opens another Object, e.g.
-                // the profile's "Manage CalDAV passwords" / "Log out") gets a real button with
-                // presence, not a subdued meta-line.
-                if (action.type === 'navigate') {
-                    return actionButton(action);
-                }
                 return operationLine('Action', action.label, action.operationInvocation);
             }
             return linkLine('Action', action.label, action.href, object.id);

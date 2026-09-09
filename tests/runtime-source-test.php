@@ -284,9 +284,6 @@ $checks = [
         && str_contains($scripts, "operationLine('Action'")
         && str_contains($scripts, 'dispatchOperationAction')
         && !str_contains($scripts, 'dispatchWorldAction'),
-    'A no-input navigate action renders as a real button, not a meta-line' =>
-        str_contains($webRenderer, "if (action.type === 'navigate') {")
-        && str_contains($webRenderer, 'return actionButton(action);'),
     'Grouped Dashboard actions lay out as one row per entry-point group, in fixed order' =>
         str_contains($webRenderer, "ACTION_GROUP_ORDER = ['view', 'circle', 'create']")
         && str_contains($webRenderer, "common.text(action.group, '') !== ''")
