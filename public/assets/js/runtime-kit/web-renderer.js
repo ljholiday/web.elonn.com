@@ -1503,6 +1503,12 @@
                     input.step = '1';
                 }
                 input.value = (value === '' || value === null || value === undefined) ? '' : String(value);
+            } else if (type === 'password') {
+                // A secret field (e.g. the auth-form password): masked, never prefilled, and
+                // hinted for the right password manager behaviour by field name.
+                input = document.createElement('input');
+                input.type = 'password';
+                input.autocomplete = key === 'password' ? 'current-password' : 'new-password';
             } else {
                 input = document.createElement('input');
                 input.type = 'text';

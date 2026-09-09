@@ -7,6 +7,7 @@
     var runtime = window.ElonnWorldRuntime;
     var root = document.querySelector('[data-world-runtime]');
     var client = null;
+    var authClient = null;
     var renderer = null;
     var state = null;
     var queryForm = null;
@@ -21,12 +22,17 @@
     var lastCarryTitleTap = null;
     var workspaceResultsCleared = false;
     var findScope = '';
+    // Set by the server when there is no auth cookie. In this mode the runtime renders
+    // api.elonn's login / register Dataset instead of the member's world, and every operation
+    // dispatch is an auth submission, not a World Call.
+    var authMode = String(root && root.dataset.authMode || '') !== '';
 
     if (!root || !runtime) {
         return;
     }
 
     client = runtime.WorldClient(root);
+    authClient = runtime.AuthClient(root);
     renderer = runtime.WebRenderer(root);
     recognition = speechRecognition();
 
@@ -40,7 +46,11 @@
     voiceButton = root.querySelector('[data-runtime-voice]');
 
     restoreLocalUiState();
-    loadDataset({operation: 'world.restore'});
+    if (authMode) {
+        renderAuthForm('login');
+    } else {
+        loadDataset({operation: 'world.restore'});
+    }
 
     if (voiceButton) {
         voiceButton.disabled = !recognition;
@@ -377,6 +387,9 @@
     }
 
     function submitQuery(text) {
+        if (authMode) {
+            return;
+        }
         // A fresh Entry search is a new search of the member's whole world -- it carries no
         // focused-Finding context. Sending a stale selected object id makes World read the
         // Call as focusing a Finding (isBareFreeText -> false) and open it on Carry instead
@@ -586,7 +599,50 @@
         };
     }
 
+    // Fetch api.elonn's login / register screen and render it through the ordinary Dataset
+    // pipeline -- the same parser, scene model and renderer used for the member's world. All
+    // display copy (title, help, error text) rides on the Dataset; nothing is authored here.
+    function renderAuthForm(mode) {
+        return authClient.loadForm(mode).then(function (dataset) {
+            replaceDataset(dataset, false, {operation: 'identity.auth_form'});
+            renderer.status(datasetStatus(dataset), datasetStatusState(dataset));
+        }).catch(function (error) {
+            renderer.status(authFailureText(error), 'error');
+        });
+    }
+
+    function authFailureText(error) {
+        return error && error.message ? error.message : datasetStatus({errors: [{class: 'dependency'}]});
+    }
+
+    // In authMode every operation dispatch is an auth action, never a World Call.
+    function handleAuthInvocation(command) {
+        var operation = String(command && command.operation || '');
+        if (operation === 'identity.auth_form') {
+            return renderAuthForm(String(command && command.switch_mode || 'login'));
+        }
+        if (operation !== 'identity.login' && operation !== 'identity.register') {
+            return Promise.resolve();
+        }
+        return authClient.submit(operation, command && command.payload).then(function (result) {
+            var context = result && typeof result.context === 'object' ? result.context : {};
+            if (context.status === 'ok') {
+                // The shared auth cookie is set; reload into the authenticated world.
+                window.location.reload();
+                return;
+            }
+            // api returned the same form Dataset with a validation / credential error on it;
+            // the error text rides on the form object, so re-rendering it is enough.
+            replaceDataset(result, false, {operation: 'identity.auth_form'});
+        }).catch(function (error) {
+            renderer.status(authFailureText(error), 'error');
+        });
+    }
+
     function dispatchOperationInvocation(command, opts) {
+        if (authMode) {
+            return handleAuthInvocation(command);
+        }
         opts = opts && typeof opts === 'object' ? opts : {};
         var objectId = String(command && command.object_id || '');
         var originObject = String(opts.originObject || '');

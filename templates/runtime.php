@@ -10,13 +10,17 @@ declare(strict_types=1);
  * Carry remains the member-following layer for selected objects and controls.
  */
 /** @var array{base_url:string} $world */
+/** @var array{base_url:string} $api */
 /** @var array{environment:string, debug:bool, url:string} $app */
 /** @var string $title */
+/** @var bool $authMode */
 /** @var array<string, mixed>|null $fallbackDataset */
+$authMode = $authMode ?? false;
 $assetVersion = (string) filemtime(BASE_PATH . '/public/assets/css/runtime.css');
 $scripts = [
     'common.js',
     'world-client.js',
+    'auth-client.js',
     'dataset-parser.js',
     'state-indexer.js',
     'continuity-reconciler.js',
@@ -52,6 +56,8 @@ $pageUrl = rtrim($app['url'], '/') . '/';
         class="runtime-shell"
         data-world-runtime
         data-world-base-url="<?= htmlspecialchars($world['base_url'], ENT_QUOTES, 'UTF-8') ?>"
+        data-api-base-url="<?= htmlspecialchars($api['base_url'], ENT_QUOTES, 'UTF-8') ?>"
+        <?php if ($authMode): ?>data-auth-mode="login"<?php endif; ?>
         data-runtime-name="web"
     >
         <h1 class="visually-hidden">Elonn Web Runtime</h1>

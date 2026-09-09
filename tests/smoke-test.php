@@ -14,9 +14,9 @@ $ready = ob_get_clean();
 $readyPayload = json_decode(is_string($ready) ? $ready : '', true);
 
 $template = file_get_contents($root . '/templates/runtime.php') ?: '';
-$loginTemplate = file_get_contents($root . '/templates/login.php') ?: '';
 $index = file_get_contents($root . '/public/index.php') ?: '';
 $webRenderer = file_get_contents($root . '/public/assets/js/runtime-kit/web-renderer.js') ?: '';
+$authClient = file_get_contents($root . '/public/assets/js/runtime-kit/auth-client.js') ?: '';
 
 $checks = [
     'Ready endpoint identifies the fresh Web runtime' => is_array($readyPayload)
@@ -34,11 +34,13 @@ $checks = [
         && str_contains($webRenderer, "form.setAttribute('data-runtime-query-form'")
         && str_contains($webRenderer, "input.setAttribute('data-runtime-query-input'")
         && str_contains($webRenderer, "voice.setAttribute('data-runtime-voice'"),
-    'Runtime owns its login screen' => str_contains($index, "\$path === '/login'")
-        && str_contains($index, 'web_runtime_api_login')
-        && str_contains($index, 'web_runtime_set_auth_cookie')
-        && str_contains($loginTemplate, 'Elonn Web')
-        && str_contains($loginTemplate, 'action="/login"'),
+    'Login is api-owned data the runtime renders, not a Web-authored screen' => !str_contains($index, "\$path === '/login'")
+        && !str_contains($index, 'web_runtime_api_login')
+        && !file_exists($root . '/templates/login.php')
+        && str_contains($template, "'auth-client.js'")
+        && str_contains($template, 'data-auth-mode="login"')
+        && str_contains($authClient, '/identity/auth-form?mode=')
+        && str_contains($index, "\$authMode = \$token === null"),
     'Public routes do not expose legacy compatibility pages' => !str_contains($index, 'templates/runtime-dataset.php')
         && !str_contains($index, 'data-runtime-shell'),
     'HTTPS redirects are canonical-host bounded' => str_contains($index, 'web_runtime_https_redirect_target')

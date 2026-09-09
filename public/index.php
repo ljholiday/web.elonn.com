@@ -77,69 +77,16 @@ if ($path === '/metrics') {
     return;
 }
 
-if ($path === '/login' && $method === 'GET') {
-    if (web_runtime_auth_token() !== null) {
-        web_runtime_redirect('/');
-        return;
-    }
-
-    $title = 'Log in to Elonn Web';
-    $app = $config['app'];
-    $api = $config['api'];
-    $world = $config['world'];
-    $canonicalPath = $path;
-    $error = web_runtime_login_error($_GET['error'] ?? null);
-    $old = [];
-
-    require BASE_PATH . '/templates/login.php';
-    return;
-}
-
-if ($path === '/login' && $method === 'POST') {
-    $email = web_runtime_normalize_email($_POST['email'] ?? null);
-    $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
-
-    if ($email === null || $password === '') {
-        $title = 'Log in to Elonn Web';
-        $app = $config['app'];
-        $api = $config['api'];
-        $world = $config['world'];
-        $canonicalPath = $path;
-        $error = 'Email and password are required.';
-        $old = ['email' => is_string($_POST['email'] ?? null) ? (string) $_POST['email'] : ''];
-
-        http_response_code(400);
-        require BASE_PATH . '/templates/login.php';
-        return;
-    }
-
-    $login = web_runtime_api_login($config['api'], $email, $password);
-    if (!$login['ok'] || !isset($login['token'], $login['expires_at'])) {
-        $title = 'Log in to Elonn Web';
-        $app = $config['app'];
-        $api = $config['api'];
-        $world = $config['world'];
-        $canonicalPath = $path;
-        $error = 'Invalid email or password.';
-        $old = ['email' => $email];
-
-        http_response_code(401);
-        require BASE_PATH . '/templates/login.php';
-        return;
-    }
-
-    web_runtime_set_auth_cookie($login['token'], $login['expires_at'], $config['auth']['cookie_domain']);
-    web_runtime_redirect('/');
-    return;
-}
-
+// The web runtime owns no login markup. When a member session is logged out it POSTs to
+// api.elonn's identity/logout, clears the shared cookie, and returns to the shell -- which
+// then renders api.elonn's login Dataset itself.
 if ($path === '/logout' && $method === 'POST') {
     $token = web_runtime_auth_token();
     if ($token !== null) {
         web_runtime_api_logout($config['api'], $token);
     }
     web_runtime_clear_auth_cookie($config['auth']['cookie_domain']);
-    web_runtime_redirect('/login');
+    web_runtime_redirect('/');
     return;
 }
 
@@ -150,24 +97,17 @@ if ($path !== '/' && $path !== '/runtime-dataset') {
     return;
 }
 
-if (web_runtime_auth_token() === null) {
-    $title = 'Log in to Elonn Web';
-    $app = $config['app'];
-    $api = $config['api'];
-    $world = $config['world'];
-    $canonicalPath = $path;
-    $error = null;
-    $old = [];
+$token = web_runtime_auth_token();
+$authMode = $token === null;
 
-    require BASE_PATH . '/templates/login.php';
-    return;
-}
-
-$title = 'Elonn Web';
+$title = $authMode ? 'Log in to Elonn Web' : 'Elonn Web';
 $app = $config['app'];
+$api = $config['api'];
 $world = $config['world'];
 $canonicalPath = $path;
-$fallbackDataset = web_runtime_fallback_dataset($world, web_runtime_auth_token());
+// No World Call is possible before authentication -- the shell fetches api.elonn's login
+// Dataset client-side instead.
+$fallbackDataset = $authMode ? null : web_runtime_fallback_dataset($world, $token);
 
 require BASE_PATH . '/templates/runtime.php';
 
@@ -265,27 +205,6 @@ function web_runtime_service_authenticated(array $config, string $expectedServic
 
 /**
  * @param array{base_url:string} $api
- * @return array{ok:bool,status:int,token?:string,expires_at?:string,error?:string}
- */
-function web_runtime_api_login(array $api, string $email, string $password): array
-{
-    $response = web_runtime_api_request($api, 'POST', '/identity/login', [
-        'email' => $email,
-        'password' => $password,
-    ], null);
-    $json = is_array($response['json']) ? $response['json'] : [];
-
-    return [
-        'ok' => $response['status'] >= 200 && $response['status'] < 300,
-        'status' => $response['status'],
-        'token' => is_string($json['token'] ?? null) ? $json['token'] : null,
-        'expires_at' => is_string($json['expires_at'] ?? null) ? $json['expires_at'] : null,
-        'error' => is_string($json['error'] ?? null) ? $json['error'] : null,
-    ];
-}
-
-/**
- * @param array{base_url:string} $api
  */
 function web_runtime_api_logout(array $api, string $token): void
 {
@@ -333,25 +252,6 @@ function web_runtime_api_request(array $api, string $method, string $path, ?arra
         'status' => $status,
         'json' => is_string($raw) ? json_decode($raw, true) : null,
     ];
-}
-
-function web_runtime_normalize_email(mixed $email): ?string
-{
-    if (!is_string($email)) {
-        return null;
-    }
-
-    $email = strtolower(trim($email));
-    return filter_var($email, FILTER_VALIDATE_EMAIL) === false ? null : $email;
-}
-
-function web_runtime_login_error(mixed $error): ?string
-{
-    return match ($error) {
-        'missing_fields' => 'Email and password are required.',
-        'invalid_login' => 'Invalid email or password.',
-        default => null,
-    };
 }
 
 function web_runtime_set_auth_cookie(string $token, string $expiresAt, string $domain): void

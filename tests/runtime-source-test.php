@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $template = read_file($root . '/templates/runtime.php');
-$loginTemplate = read_file($root . '/templates/login.php');
 $index = read_file($root . '/public/index.php');
+$authClient = read_file($root . '/public/assets/js/runtime-kit/auth-client.js');
 $config = read_file($root . '/config/config.php');
 $envExample = read_file($root . '/.env.example');
 $readme = read_file($root . '/README.md');
@@ -43,17 +43,27 @@ $checks = [
         && !str_contains($envExample, 'ELONN_FIND_BASE_URL')
         && !str_contains($envExample, 'ELONN_SOCIAL_BASE_URL')
         && !str_contains($envExample, 'ELONN_TIME_BASE_URL'),
-    'Runtime authentication is owned by Web and login is backed by API' => str_contains($index, 'web_runtime_auth_token')
-        && !str_contains($index, "web_runtime_api_request(\$api, 'GET', '/identity/me'")
-        && str_contains($index, "web_runtime_api_request(\$api, 'POST', '/identity/login'")
-        && str_contains($index, "web_runtime_api_request(\$api, 'POST', '/identity/logout'")
-        && str_contains($index, 'elonn_api_token')
-        && str_contains($index, "\$path === '/login'")
+    // api.elonn owns the login / register screen; the runtime only renders it. There is no
+    // login markup, no /login route, and no credential-handling code in Web -- when there is
+    // no auth cookie the shell fetches api.elonn's auth-form Dataset and renders it with the
+    // same generic renderer used for the member's world (decision.member_surface_consolidation).
+    'The login screen is api-owned data the runtime only renders' => str_contains($index, 'web_runtime_auth_token')
+        && !str_contains($index, "\$path === '/login'")
+        && !str_contains($index, 'web_runtime_api_login')
+        && !str_contains($index, 'templates/login.php')
+        && !file_exists($root . '/templates/login.php')
+        && str_contains($index, "\$authMode = \$token === null")
+        && str_contains($template, "'auth-client.js'")
+        && str_contains($template, 'data-api-base-url')
+        && str_contains($template, 'data-auth-mode="login"')
         && str_contains($index, "\$path === '/logout'")
-        && str_contains($loginTemplate, 'Runtime-owned login for Elonn Web')
-        && str_contains($loginTemplate, 'action="/login"')
-        && !str_contains($index . $template . $loginTemplate, 'elonn.local/account/login')
-        && !str_contains($index . $template . $loginTemplate, 'elonn.com/account/login'),
+        && str_contains($index, "web_runtime_api_request(\$api, 'POST', '/identity/logout'")
+        && str_contains($authClient, "'/identity/auth-form?mode='")
+        && str_contains($authClient, "'X-Elonn-Runtime': 'web'")
+        && str_contains($webRuntime, 'authMode')
+        && str_contains($webRuntime, 'renderAuthForm')
+        && !str_contains($index . $template . $authClient, 'elonn.local/account/login')
+        && !str_contains($index . $template . $authClient, 'elonn.com/account/login'),
     'Web sends runtime calls directly to World with the access token cookie' => !str_contains($index, "\$path === '/world/call'")
         && !str_contains($index, 'web_runtime_world_call')
         && str_contains($template, 'data-world-base-url="<?= htmlspecialchars($world')
