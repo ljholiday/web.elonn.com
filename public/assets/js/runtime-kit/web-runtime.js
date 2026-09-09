@@ -45,10 +45,13 @@
     queryInput = root.querySelector('[data-runtime-query-input]');
     voiceButton = root.querySelector('[data-runtime-voice]');
 
-    restoreLocalUiState();
     if (authMode) {
+        // No member session -- the previous member's browser-local panels, workspace query
+        // text and UI state must not bleed onto (or behind) the login screen.
+        clearLocalRuntimeState();
         renderAuthForm('login');
     } else {
+        restoreLocalUiState();
         loadDataset({operation: 'world.restore'});
     }
 
@@ -1046,6 +1049,20 @@
             return stored ? JSON.parse(stored) : [];
         } catch (error) {
             return [];
+        }
+    }
+
+    // Drop every browser-local trace of a member session (carry panels, workspace panel +
+    // its query text, misc UI state). Used when the runtime loads with no auth cookie.
+    function clearLocalRuntimeState() {
+        try {
+            if (window.localStorage) {
+                window.localStorage.removeItem(carryStorageKey);
+                window.localStorage.removeItem(workspacePanelStorageKey);
+                window.localStorage.removeItem(uiStorageKey);
+            }
+        } catch (error) {
+            // localStorage unavailable / full -- nothing to clear.
         }
     }
 
