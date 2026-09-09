@@ -60,8 +60,10 @@ $checks = [
         && str_contains($index, "web_runtime_api_request(\$api, 'POST', '/identity/logout'")
         && str_contains($authClient, "'/identity/auth-form?mode='")
         && str_contains($authClient, "'X-Elonn-Runtime': 'web'")
+        && str_contains($authClient, "'/identity/logout'")
         && str_contains($webRuntime, 'authMode')
         && str_contains($webRuntime, 'renderAuthForm')
+        && str_contains($webRuntime, "=== 'identity.logout'")
         && !str_contains($index . $template . $authClient, 'elonn.local/account/login')
         && !str_contains($index . $template . $authClient, 'elonn.com/account/login'),
     'Web sends runtime calls directly to World with the access token cookie' => !str_contains($index, "\$path === '/world/call'")

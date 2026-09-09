@@ -44,9 +44,21 @@
             }).then(readJson);
         }
 
+        // Clears the shared auth cookie via api; the caller then reloads into the login screen.
+        function logout() {
+            return fetch(apiBaseUrl + '/identity/logout', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {'Accept': 'application/json', 'X-Elonn-Runtime': 'web'}
+            }).then(readJson).catch(function () {
+                return {};
+            });
+        }
+
         return {
             loadForm: loadForm,
-            submit: submit
+            submit: submit,
+            logout: logout
         };
     };
 }());

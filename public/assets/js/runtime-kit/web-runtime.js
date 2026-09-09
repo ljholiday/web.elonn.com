@@ -640,6 +640,13 @@
     }
 
     function dispatchOperationInvocation(command, opts) {
+        // Logout rides on every member.profile object; it is a direct api call, not a World
+        // Call, in or out of authMode.
+        if (String(command && command.operation || '') === 'identity.logout') {
+            return authClient.logout().then(function () {
+                window.location.reload();
+            });
+        }
         if (authMode) {
             return handleAuthInvocation(command);
         }
