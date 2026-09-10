@@ -541,7 +541,6 @@
             entry.className = 'world-sequence-entry';
             entry.dataset.objectId = object.id;
             entry.dataset.objectType = object.type;
-            entry.dataset.layer = object.layer;
             entry.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
             body.className = 'world-sequence-entry__body';
             body.textContent = common.text(content.body, object.summary);
@@ -613,7 +612,6 @@
             entry.className = 'world-roster-entry';
             entry.dataset.objectId = object.id;
             entry.dataset.objectType = object.type;
-            entry.dataset.layer = object.layer;
             entry.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
             name.className = 'world-roster-entry__name';
             name.textContent = object.title;
@@ -648,7 +646,6 @@
             button.className = 'world-object world-object--' + common.text(mode, 'panel');
             button.dataset.objectId = object.id;
             button.dataset.objectType = object.type;
-            button.dataset.layer = object.layer;
             button.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
             type.className = 'object-type';
             type.textContent = object.type;

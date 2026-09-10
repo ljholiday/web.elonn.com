@@ -146,7 +146,6 @@
     }
 
     function objectView(state, object, selected, includeContained) {
-        var metadata = object.metadata && typeof object.metadata === 'object' ? object.metadata : {};
         var content = object.content && typeof object.content === 'object' ? object.content : {};
         var visibility = object.visibility && typeof object.visibility === 'object' ? object.visibility : {};
         var permissions = object.permissions && typeof object.permissions === 'object' ? object.permissions : {};
@@ -155,7 +154,6 @@
             title: common.text(object.title, ''),
             summary: common.text(object.summary, ''),
             type: common.text(object.type, 'object'),
-            layer: common.text(metadata.anchor, objectLayer(state, object.id)),
             content: content,
             surface: surface(content.surface),
             selected: selected,
@@ -302,27 +300,6 @@
         }).filter(Boolean);
     }
 
-    function objectLayer(state, objectId) {
-        var id = String(objectId || '');
-        var dataset = state.dataset || {};
-        var placements = common.sectionItems(dataset.placements);
-        var collections = state.indexes.collections || {};
-        var collectionIds = [];
-
-        placements.forEach(function (placement) {
-            if (String(placement.object_id || '') === id) {
-                collectionIds.push(String(placement.type || ''));
-            }
-            if (placement.collection_id !== '') {
-                var collection = collections[String(placement.collection_id || '')] || {};
-                if (common.itemIds(collection.items).indexOf(id) !== -1) {
-                    collectionIds.push(String(placement.type || ''));
-                }
-            }
-        });
-
-        return collectionIds.filter(Boolean)[0] || 'carry';
-    }
 
     function statusRows(state) {
         var rows = [
