@@ -275,9 +275,18 @@ $checks = [
         && str_contains($runtimeCss, '.workspace-results-panel[data-collapsed="true"] .workspace-results-panel__content')
         && str_contains($runtimeCss, '.carry-object-panel__resize')
         && !str_contains($runtimeCss, '.workspace-layer {'),
-    'Returned remote actions remain unavailable without operation invocation controls' => str_contains($scripts, 'Action execution is not available yet.')
-        && str_contains($scripts, 'operationInvocation !== null')
-        && str_contains($scripts, 'enabled ?')
+    'Action availability is rendered from World, never synthesised from the action shape' =>
+        // The authored "unavailable" copy and the shape synthesis are gone from scene-model.
+        !str_contains($sceneModel = read_file($root . '/public/assets/js/runtime-kit/scene-model.js'), 'Action execution is not available yet.')
+        && !str_contains($sceneModel, "enabled ? 'enabled' : 'unavailable'")
+        && !str_contains($sceneModel, "requiredCapability: enabled ?")
+        // scene-model passes World's {state, reason} straight through (Composer::withNormalisedAvailability).
+        && str_contains($sceneModel, "state: common.text(source.state, 'enabled')")
+        && str_contains($sceneModel, "reason: common.text(source.reason, '')")
+        // A non-enabled action is shown disabled with World's reason, not dropped or re-enabled.
+        && str_contains($webRenderer, 'function disabledActionNode(action)')
+        && str_contains($webRenderer, "action.availability.state !== 'enabled'")
+        && str_contains($webRenderer, "action.availability.state === 'enabled'")
         && !str_contains($template, 'data-runtime-actions')
         && !str_contains($scripts, 'world-action')
         && !str_contains($scripts, 'button.disabled = true')

@@ -36,7 +36,7 @@ const dataset = {
   mode: 'snapshot',
   created: '2026-07-17T20:00:01Z',
   objects: [{id: 'object:one', type: 'note', content: {name: 'One'}}],
-  actions: [{id: 'action:one:open', type: 'open', target: 'object:one', content: {label: 'Open'}}],
+  actions: [{id: 'action:one:open', type: 'open', target: 'object:one', availability: {state: 'unavailable', reason: 'Reply once you have joined.'}, content: {label: 'Open'}}],
   relationships: [],
   collections: [{id: 'collection:one', type: 'collection', content: {items: ['object:one']}}],
   resources: [],
@@ -116,8 +116,9 @@ if (parsed.actions[0].target_id !== 'object:one') throw new Error('canonical act
 const state = runtime.StateIndexer.build(parsed, null);
 if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Error('carry placement was not projected');
 const scene = runtime.SceneModel.fromState(state);
-if (scene.actions[0].availability.state !== 'unavailable') throw new Error('returned actions must be unavailable until Web supports execution');
-if (scene.actions[0].availability.reason !== 'Action execution is not available yet.') throw new Error('unavailable action reason was not set');
+// World owns availability (Composer::withNormalisedAvailability); the runtime renders {state, reason} verbatim.
+if (scene.actions[0].availability.state !== 'unavailable') throw new Error('runtime must pass through the World-set availability state, not synthesise one');
+if (scene.actions[0].availability.reason !== 'Reply once you have joined.') throw new Error('runtime must pass through the World-set availability reason verbatim');
 
 const operationDataset = Object.assign({}, dataset, {
   id: 'dataset:world:operation-action',

@@ -190,22 +190,20 @@
         return common.sectionItems(state.dataset.actions).filter(function (action) {
             return String(action.target_id || '') === String(objectId || '');
         }).map(function (action) {
-            var sourceAvailability = availability(action.availability);
-            var href = common.text(action.href || (action.source && action.source.href), '');
-            var operationInvocation = action.operation_invocation && typeof action.operation_invocation === 'object' ? action.operation_invocation : null;
-            var enabled = href !== '' || operationInvocation !== null;
+            var source = action.availability && typeof action.availability === 'object' ? action.availability : {};
             return {
                 id: String(action.id || ''),
                 label: common.text(action.label, 'Action'),
                 type: common.text(action.type, 'action'),
                 group: common.text(action.group, ''),
                 endpoint: String(action.endpoint || ''),
-                href: href,
-                operationInvocation: operationInvocation,
+                href: common.text(action.href || (action.source && action.source.href), ''),
+                operationInvocation: action.operation_invocation && typeof action.operation_invocation === 'object' ? action.operation_invocation : null,
+                // World owns availability (Composer::withNormalisedAvailability): {state, reason},
+                // rendered verbatim. The runtime never derives it from the action's shape.
                 availability: {
-                    state: enabled ? 'enabled' : 'unavailable',
-                    reason: enabled ? '' : common.text(sourceAvailability.reason, 'Action execution is not available yet.'),
-                    requiredCapability: enabled ? '' : common.text(sourceAvailability.requiredCapability, 'action_dispatch')
+                    state: common.text(source.state, 'enabled'),
+                    reason: common.text(source.reason, '')
                 },
                 source: action
             };

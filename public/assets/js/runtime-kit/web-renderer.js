@@ -1430,13 +1430,43 @@
             if (websiteDocument(object)) {
                 return [];
             }
-            var actions = (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
+            var candidates = (Array.isArray(object.actions) ? object.actions : []).filter(function (action) {
+                return !opensThisObject(action, object);
+            });
+            var enabled = candidates.filter(function (action) {
                 return action.availability
                     && action.availability.state === 'enabled'
-                    && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'))
-                    && !opensThisObject(action, object);
+                    && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'));
+            });
+            // A non-enabled action is World's call (Composer::withNormalisedAvailability), not
+            // the runtime's to re-derive or silently drop: render it disabled, with World's reason.
+            var blocked = candidates.filter(function (action) {
+                return !action.availability || action.availability.state !== 'enabled';
             });
 
+            var nodes = enabledActionNodes(enabled, object);
+            blocked.forEach(function (action) {
+                nodes.push(disabledActionNode(action));
+            });
+            return nodes;
+        }
+
+        function disabledActionNode(action) {
+            var row = document.createElement('p');
+            row.className = 'meta-line meta-line--blocked';
+            var strong = document.createElement('strong');
+            strong.textContent = action.label;
+            row.appendChild(strong);
+            var reason = common.text(action.availability && action.availability.reason, '');
+            if (reason !== '') {
+                var detail = document.createElement('span');
+                detail.textContent = reason;
+                row.appendChild(detail);
+            }
+            return row;
+        }
+
+        function enabledActionNodes(actions, object) {
             var grouped = actions.some(function (action) {
                 return common.text(action.group, '') !== '';
             });

@@ -1090,6 +1090,15 @@ figure {
     color: #eefaf8;
 }
 
+/* A World-marked non-enabled action: shown, not hidden, with World's reason. */
+.meta-line--blocked {
+    opacity: 0.55;
+}
+
+.meta-line--blocked span {
+    text-align: right;
+}
+
 .empty {
     margin-bottom: 0;
 }
