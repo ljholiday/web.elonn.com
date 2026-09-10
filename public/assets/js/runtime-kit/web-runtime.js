@@ -364,7 +364,7 @@
 
     function loadDataset(runtimeState) {
         return client.loadDataset(runtimeState).then(function (payload) {
-            replaceDataset(payload, shouldMergeDataset(runtimeState), runtimeState);
+            replaceDataset(payload, runtimeState);
             runtime.AdapterRegistry.handleResponse(payload, runtimeState, adapterContext());
             var status = datasetStatus(payload);
             renderer.status(status.message, status.state);
@@ -443,12 +443,8 @@
 
     // World returns a full cumulative snapshot on every path (composeFindings merges prior
     // Findings forward; back/close/clear return the whole placed state). The client never
-    // re-merges -- a stale client merge would revive an Object World just dropped.
-    function shouldMergeDataset() {
-        return false;
-    }
-
-    function replaceDataset(payload, mergeWithPrevious, runtimeState) {
+    // re-merges a Dataset -- a stale client merge would revive an Object World just dropped.
+    function replaceDataset(payload, runtimeState) {
         var parsed = runtime.DatasetParser.parse(payload);
         var next = runtime.StateIndexer.build(parsed, state);
         state = runtime.ContinuityReconciler.reconcile(state, next);
@@ -597,7 +593,7 @@
     // display copy (title, help, error text) rides on the Dataset; nothing is authored here.
     function renderAuthForm(mode) {
         return authClient.loadForm(mode).then(function (dataset) {
-            replaceDataset(dataset, false, {operation: 'identity.auth_form'});
+            replaceDataset(dataset, {operation: 'identity.auth_form'});
             var status = datasetStatus(dataset);
             renderer.status(status.message, status.state);
         }).catch(function (error) {
@@ -629,7 +625,7 @@
             }
             // api returned the same form Dataset with a validation / credential error on it;
             // the error text rides on the form object, so re-rendering it is enough.
-            replaceDataset(result, false, {operation: 'identity.auth_form'});
+            replaceDataset(result, {operation: 'identity.auth_form'});
         }).catch(function (error) {
             renderer.status(authFailureText(error), 'error');
         });
