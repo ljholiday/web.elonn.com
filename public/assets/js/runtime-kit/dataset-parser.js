@@ -218,10 +218,10 @@
 
     function availability(value) {
         var source = value && typeof value === 'object' ? value : {};
+        // Canonical availability is {state, reason} (dev.elonn canonical/action.md).
         return {
             state: common.text(source.state, 'enabled'),
-            reason: common.text(source.reason, ''),
-            required_capability: common.text(source.required_capability, '')
+            reason: common.text(source.reason, '')
         };
     }
 

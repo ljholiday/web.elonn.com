@@ -337,10 +337,11 @@
 
     function availability(value) {
         var availability = value && typeof value === 'object' ? value : {};
+        // Canonical availability is {state, reason} (dev.elonn canonical/action.md); a
+        // missing availability means available.
         return {
-            state: common.text(availability.state, 'unknown'),
-            reason: common.text(availability.reason, ''),
-            requiredCapability: common.text(availability.required_capability, '')
+            state: common.text(availability.state, 'enabled'),
+            reason: common.text(availability.reason, '')
         };
     }
 }());
