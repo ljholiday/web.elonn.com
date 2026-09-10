@@ -217,6 +217,7 @@ const websiteDataset = Object.assign({}, dataset, {
   }],
   collections: [{id: 'collection:website', type: 'resource.segmented', content: {items: ['finding:website']}}],
   placements: [],
+  findings: [{id: 'finding:collection:website', content: {collection: 'collection:website'}}],
   context: {focus: {object_id: 'finding:website'}}
 });
 const websiteState = runtime.StateIndexer.build(runtime.DatasetParser.parse(websiteDataset), null);
@@ -248,6 +249,7 @@ const findingsDataset = Object.assign({}, dataset, {
   id: 'dataset:world:findings',
   collections: [{id: 'collection:findings', type: 'collection', content: {items: ['object:one']}}],
   placements: [],
+  findings: [{id: 'finding:collection:findings', content: {collection: 'collection:findings'}}],
   // A bare search focuses nothing (World sends context.focus.object_id "").
   context: {focus: {object_id: ''}}
 });

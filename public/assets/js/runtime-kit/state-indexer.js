@@ -30,7 +30,7 @@
                 }).filter(Boolean),
                 layers: layers(dataset, indexes),
                 openedObjects: openedObjects(dataset, indexes),
-                findings: findings(dataset, indexes),
+                findings: findings(dataset),
                 runtimeSessionId: String(dataset.id || ''),
                 selectedObjectId: selectedObjectId,
                 selectedCollectionId: selectedCollectionId,
@@ -118,37 +118,15 @@
     }
 
     /*
-     * Findings: everything returned for a Call that no Placement puts on a layer and that
-     * belongs to no opened Object. A Runtime presents these in the Results pane (layout.md).
+     * Findings: the Results-pane results, as World composed them into dataset.findings
+     * (dev.elonn canonical/finding.md). Split by the entity kind each entry references. The
+     * runtime does not decide what is a Finding -- it reads the list World wrote.
      */
-    function findings(dataset, indexes) {
-        var claimed = {};
-        dataset.placements.forEach(function (placement) {
-            if (placement.object_id !== '') { claimed[placement.object_id] = true; }
-            if (placement.collection_id !== '') { claimed[placement.collection_id] = true; }
-            if (placement.resource_id !== '') { claimed[placement.resource_id] = true; }
-        });
-        var nav = dataset.navigation && typeof dataset.navigation === 'object' ? dataset.navigation : {};
-        Object.keys(nav).forEach(function (objectId) {
-            claimed[objectId] = true;
-            (Array.isArray(nav[objectId].members) ? nav[objectId].members : []).forEach(function (memberId) {
-                claimed[String(memberId)] = true;
-            });
-        });
-        var placedObjectIds = {};
-        dataset.collections.forEach(function (collection) {
-            if (claimed[collection.id]) {
-                common.itemIds(collection.items).forEach(function (itemId) { placedObjectIds[itemId] = true; });
-            }
-        });
-
+    function findings(dataset) {
+        var list = Array.isArray(dataset.findings) ? dataset.findings : [];
         return {
-            collectionIds: unique(dataset.collections.filter(function (collection) {
-                return !claimed[collection.id];
-            }).map(function (collection) { return collection.id; })),
-            objectIds: unique(dataset.objects.filter(function (object) {
-                return !claimed[object.id] && !placedObjectIds[object.id];
-            }).map(function (object) { return object.id; }))
+            collectionIds: unique(list.map(function (finding) { return String(finding.collection_id || ''); })),
+            objectIds: unique(list.map(function (finding) { return String(finding.object_id || ''); }))
         };
     }
 

@@ -17,6 +17,7 @@
         'collections',
         'resources',
         'placements',
+        'findings',
         'errors',
         'context'
     ];
@@ -39,6 +40,7 @@
                 collections: this.collections(dataset),
                 resources: this.resources(dataset),
                 placements: this.placements(dataset),
+                findings: this.findings(dataset),
                 errors: this.errors(dataset),
                 navigation: this.navigation(dataset),
                 focus: this.focus(dataset),
@@ -178,6 +180,25 @@
                 };
             }).filter(function (placement) {
                 return placement.id !== '' && ['carry', 'field'].indexOf(placement.type) !== -1;
+            });
+        },
+
+        /*
+         * dataset.findings: the Results-pane results, composed explicitly by World (see
+         * dev.elonn canonical/finding.md). Each entry references one Object or one Collection.
+         * The runtime reads this list; it does not decide what is a Finding.
+         */
+        findings: function (dataset) {
+            var list = Array.isArray(dataset.findings) ? dataset.findings : [];
+            return list.filter(isObject).map(function (finding) {
+                var content = finding.content && typeof finding.content === 'object' ? finding.content : {};
+                return {
+                    id: String(finding.id || ''),
+                    object_id: String(content.object || ''),
+                    collection_id: String(content.collection || '')
+                };
+            }).filter(function (finding) {
+                return finding.id !== '' && (finding.object_id !== '' || finding.collection_id !== '');
             });
         },
 

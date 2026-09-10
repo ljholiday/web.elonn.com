@@ -22,7 +22,8 @@ $oldWorkspaceTerms = [
     'Find' . 'ings Layer',
     'find' . 'ing-overlay',
     'find' . 'ings:find' . 'ings',
-    "'find" . "ings'",
+    // 'findings' as a bare quoted string is no longer legacy: it is the canonical
+    // Dataset field (dev.elonn canonical/finding.md, dataset.md) the runtime kit reads.
 ];
 
 $checks = [
