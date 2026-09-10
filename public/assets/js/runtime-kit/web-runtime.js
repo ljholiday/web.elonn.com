@@ -373,7 +373,8 @@
         return client.loadDataset(runtimeState).then(function (payload) {
             replaceDataset(payload, shouldMergeDataset(runtimeState), runtimeState);
             runtime.AdapterRegistry.handleResponse(payload, runtimeState, adapterContext());
-            renderer.status(datasetStatus(payload), datasetStatusState(payload));
+            var status = datasetStatus(payload);
+            renderer.status(status.message, status.state);
             return payload;
         }).catch(function (error) {
             var message = error && error.message ? error.message : 'World Dataset unavailable.';
@@ -608,14 +609,17 @@
     function renderAuthForm(mode) {
         return authClient.loadForm(mode).then(function (dataset) {
             replaceDataset(dataset, false, {operation: 'identity.auth_form'});
-            renderer.status(datasetStatus(dataset), datasetStatusState(dataset));
+            var status = datasetStatus(dataset);
+            renderer.status(status.message, status.state);
         }).catch(function (error) {
             renderer.status(authFailureText(error), 'error');
         });
     }
 
+    // The auth request itself failed (network / api.elonn down) -- there is no Dataset to
+    // read a status from, so this is the runtime's own fallback, not World-authored copy.
     function authFailureText(error) {
-        return error && error.message ? error.message : datasetStatus({errors: [{class: 'dependency'}]});
+        return error && error.message ? error.message : 'Sign-in is unavailable right now.';
     }
 
     // In authMode every operation dispatch is an auth action, never a World Call.
@@ -1343,30 +1347,26 @@
         }) || runtime.Common.itemIds(collection.items).indexOf(objectId) !== -1;
     }
 
+    /*
+     * The status line for a World Dataset comes from World: context.status carries the one
+     * severity it resolved for this response and the member-facing message for it (see
+     * world.elonn StatusResolver). The runtime renders that message and maps the severity to
+     * a display state; it does not inspect the error list to decide severity or author copy.
+     * A Dataset with no World-resolved status (an api.elonn auth form) reports only whether
+     * it carries errors.
+     */
     function datasetStatus(payload) {
+        var context = payload && typeof payload.context === 'object' ? payload.context : null;
+        var status = context && typeof context.status === 'object' ? context.status : null;
+        if (status) {
+            var severity = String(status.severity || 'ok');
+            return {
+                message: String(status.message || ''),
+                state: severity === 'error' ? 'error' : (severity === 'notice' ? 'notice' : 'ready')
+            };
+        }
         var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
-        if (errors.length > 0) {
-            if (errors.every(function (error) {
-                return error && error.class === 'dependency';
-            })) {
-                return 'Some results could not be loaded.';
-            }
-            return 'World Dataset returned errors.';
-        }
-        return 'World Dataset loaded.';
-    }
-
-    function datasetStatusState(payload) {
-        var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
-        if (errors.length === 0) {
-            return 'ready';
-        }
-        if (errors.every(function (error) {
-            return error && error.class === 'dependency';
-        })) {
-            return 'ready';
-        }
-        return 'error';
+        return {message: '', state: errors.length > 0 ? 'error' : 'ready'};
     }
 
     function speechRecognition() {

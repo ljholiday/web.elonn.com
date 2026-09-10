@@ -187,13 +187,16 @@ $checks = [
         && str_contains($scripts, "'errors'")
         && !str_contains($scripts, "contract.name !== 'elonn.world.dataset'")
         && !str_contains($scripts, "'layout'"),
-    'Runtime treats dependency Dataset errors as degraded loaded state' => str_contains($scripts, 'datasetStatusState')
-        && str_contains($scripts, "error.class === 'dependency'")
-        && str_contains($scripts, "return 'ready';")
-        && str_contains($scripts, "return 'error';"),
-    'Runtime does not repeat provider diagnostics in the status line' => str_contains($scripts, 'Some results could not be loaded.')
-        && str_contains($scripts, 'World Dataset returned errors.')
-        && !str_contains($scripts, "return String(errors[0].message || 'World Dataset returned errors.');"),
+    'Runtime reads the Dataset status from World, never derives severity itself' => str_contains($scripts, 'context.status')
+        && str_contains($scripts, "severity === 'error' ? 'error'")
+        && str_contains($scripts, "severity === 'notice' ? 'notice'")
+        && !str_contains($scripts, 'datasetStatusState')
+        && !str_contains($scripts, "error.class === 'dependency'")
+        && !str_contains($scripts, "return 'World Dataset returned errors.'")
+        && !str_contains($scripts, 'Some results could not be loaded.'),
+    'Runtime does not author a status line from the raw provider error' =>
+        !str_contains($webRuntime, 'errors[0].message')
+        && !str_contains($webRuntime, "return String(errors[0]"),
     'Collections and resources are first-class scene inputs' => str_contains($scripts, 'state.indexes.collections[collectionId]')
         && str_contains($scripts, 'resourcesForObject')
         && str_contains($scripts, 'resourceIds'),
