@@ -184,10 +184,10 @@
                 // is terminal content -- select it, never spawn a separate panel for it.
                 renderState();
             } else {
-                // A Finding with no open action: focusing it opens the referenced Object on
-                // Carry (see dev.elonn canonical/layout.md).
-                carryObject(focusedId);
-                renderState();
+                // A Finding with no open action: World opens the referenced Object on Carry
+                // (dev.elonn canonical/layout.md, Finding). The runtime asks -- world.focus --
+                // it does not pull the Object onto Carry itself.
+                dispatchWorldNavigation('world.focus', focusedId);
             }
             return;
         }
@@ -394,14 +394,10 @@
         if (authMode) {
             return;
         }
-        // A fresh Entry search is a new search of the member's whole world -- it carries no
-        // focused-Finding context. Sending a stale selected object id makes World read the
-        // Call as focusing a Finding (isBareFreeText -> false) and open it on Carry instead
-        // of returning Findings. Clear the selection and submit the query bare.
-        if (state) {
-            state.selectedObjectId = '';
-            state.selectedCollectionId = '';
-        }
+        // A fresh Entry search carries no focused-Finding context. World distinguishes a
+        // bare search from focusing a Finding by the operation (world.compose vs world.focus
+        // / an open Action), not by context.focus, so the runtime does not scrub its own
+        // selection here -- it just does not echo one on a bare search.
         var request = {
             inputText: text,
             runtimeSessionId: state ? state.runtimeSessionId : '',
@@ -1176,15 +1172,13 @@
     /*
      * Focusing a card that opens an Object: with an open action, invoke it -- the Service places
      * the Object on Carry and World opens it (or, fired from inside an opened Object, navigates
-     * that Object in place). With no open action, pull the referenced Object onto Carry
-     * client-side.
+     * that Object in place). With no open action, ask World to focus it (world.focus) -- World
+     * places it on Carry.
      */
     function openObject(objectId, originObject) {
         var open = openActionForObject(objectId);
         if (!open) {
-            selectObject(objectId);
-            carryObject(objectId);
-            renderState();
+            dispatchWorldNavigation('world.focus', objectId);
             return;
         }
         dispatchOperationInvocation(open.invocation, originObject !== '' ? {originObject: originObject} : {});

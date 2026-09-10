@@ -41,8 +41,20 @@
                 placements: this.placements(dataset),
                 errors: this.errors(dataset),
                 navigation: this.navigation(dataset),
+                focus: this.focus(dataset),
                 context: dataset.context && typeof dataset.context === 'object' ? dataset.context : {}
             };
+        },
+
+        /*
+         * context.focus: the one Object World considers focused for this response (see
+         * dev.elonn canonical/dataset.md). '' means nothing is focused -- a bare search, a
+         * restore, a close. The runtime highlights this Object; it never picks one itself.
+         */
+        focus: function (dataset) {
+            var context = dataset.context && typeof dataset.context === 'object' ? dataset.context : {};
+            var focus = context.focus && typeof context.focus === 'object' && !Array.isArray(context.focus) ? context.focus : {};
+            return {object_id: String(focus.object_id || '')};
         },
 
         validateDataset: function (dataset) {

@@ -42,7 +42,8 @@ const dataset = {
   resources: [],
   placements: [{id: 'placement:one:carry', type: 'carry', content: {collection: 'collection:one'}}],
   errors: [],
-  context: {}
+  // World names the focused Object; the runtime never picks one (dev.elonn canonical/dataset.md).
+  context: {focus: {object_id: 'object:one'}}
 };
 
 const paintDataset = Object.assign({}, dataset, {
@@ -76,6 +77,7 @@ const paintDataset = Object.assign({}, dataset, {
     ]
   }],
   collections: [{id: 'collection:paint', type: 'collection', content: {items: ['paint.document:test']}}],
+  context: {focus: {object_id: 'paint.document:test'}},
   resources: [{
     id: 'resource:11111111111111111111111111111111',
     type: 'application/vnd.elonn.paint+json',
@@ -139,7 +141,8 @@ const operationDataset = Object.assign({}, dataset, {
     }
   }],
   collections: [{id: 'collection:paint.workspace', type: 'collection', content: {items: ['paint.workspace']}}],
-  placements: []
+  placements: [],
+  context: {focus: {object_id: 'paint.workspace'}}
 });
 const operationState = runtime.StateIndexer.build(runtime.DatasetParser.parse(operationDataset), null);
 const operationScene = runtime.SceneModel.fromState(operationState);
@@ -212,7 +215,8 @@ const websiteDataset = Object.assign({}, dataset, {
     content: {order: 1}
   }],
   collections: [{id: 'collection:website', type: 'resource.segmented', content: {items: ['finding:website']}}],
-  placements: []
+  placements: [],
+  context: {focus: {object_id: 'finding:website'}}
 });
 const websiteState = runtime.StateIndexer.build(runtime.DatasetParser.parse(websiteDataset), null);
 const websiteScene = runtime.SceneModel.fromState(websiteState);
@@ -242,22 +246,28 @@ if (staleCarryScene.carryPanels.length !== 0) throw new Error('stale local carry
 const findingsDataset = Object.assign({}, dataset, {
   id: 'dataset:world:findings',
   collections: [{id: 'collection:findings', type: 'collection', content: {items: ['object:one']}}],
-  placements: []
+  placements: [],
+  // A bare search focuses nothing (World sends context.focus.object_id "").
+  context: {focus: {object_id: ''}}
 });
 const findingsState = runtime.StateIndexer.build(runtime.DatasetParser.parse(findingsDataset), null);
 if (findingsState.layers.map((layer) => layer.id).join(',') !== 'carry,field') throw new Error('layers are exactly carry and field');
 if (findingsState.findings.collectionIds[0] !== 'collection:findings') throw new Error('unplaced collection was not projected as a Finding');
 if (findingsState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('an unplaced collection leaked onto the carry layer');
+if (findingsState.selectedObjectId !== '') throw new Error('a Findings-only Dataset focuses nothing until the member focuses a Finding');
 const findingsScene = runtime.SceneModel.fromState(findingsState);
 if (findingsScene.findings.collections[0].id !== 'collection:findings') throw new Error('Findings were not projected into the scene');
-if (findingsScene.focus.layer !== 'carry') throw new Error('a focused Object defaults to the carry layer');
+if (findingsScene.focus.kind !== 'empty') throw new Error('nothing is focused in a Findings-only scene');
 
 // An Object with a carry Placement is opened on Carry: it gets a context.objects entry and
 // world.back/close act on its id.
 const openedDataset = Object.assign({}, dataset, {
   id: 'dataset:world:opened',
   placements: [{id: 'placement:one:carry', type: 'carry', content: {object: 'object:one'}}],
-  context: {objects: {'object:one': {title: 'One', depth: 1, history: [{}], members: ['collection:one']}}}
+  context: {
+    objects: {'object:one': {title: 'One', depth: 1, history: [{}], members: ['collection:one']}},
+    focus: {object_id: 'object:one'}
+  }
 });
 const openedState = runtime.StateIndexer.build(runtime.DatasetParser.parse(openedDataset), null);
 if (openedState.openedObjects.length !== 1 || openedState.openedObjects[0].id !== 'object:one') throw new Error('carry-placed Object was not registered as opened');

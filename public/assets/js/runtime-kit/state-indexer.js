@@ -29,17 +29,13 @@
                 collections: common.indexBy(dataset.collections, 'id'),
                 resources: common.indexBy(dataset.resources, 'id')
             };
-            var firstCollection = dataset.collections[0] || {};
-            var firstObject = dataset.objects[0] || {};
-            var selectedObjectId = String(previous && previous.selectedObjectId || firstObject.id || '');
-            var selectedCollectionId = String(previous && previous.selectedCollectionId || firstCollection.id || '');
-
-            if (!indexes.objects[selectedObjectId]) {
-                selectedObjectId = String(firstObject.id || '');
-            }
-            if (!indexes.collections[selectedCollectionId]) {
-                selectedCollectionId = String(firstCollection.id || '');
-            }
+            // Focus is World's: context.focus.object_id names the one focused Object, or '' for
+            // none. The runtime does not fall back to the first Object -- nothing is focused
+            // until the member focuses a Finding or navigates an Object. The selected
+            // Collection follows the focused Object (the Collection that contains it), if any.
+            var focusedId = String((dataset.focus && dataset.focus.object_id) || '');
+            var selectedObjectId = indexes.objects[focusedId] ? focusedId : '';
+            var selectedCollectionId = selectedObjectId ? collectionIdContaining(dataset, selectedObjectId) : '';
 
             return {
                 dataset: dataset,
@@ -208,6 +204,18 @@
                 return !claimed[object.id] && !placedObjectIds[object.id];
             }).map(function (object) { return object.id; }))
         };
+    }
+
+    function collectionIdContaining(dataset, objectId) {
+        var match = '';
+        (dataset.collections || []).some(function (collection) {
+            if (common.itemIds(collection.items).indexOf(objectId) !== -1) {
+                match = String(collection.id || '');
+                return true;
+            }
+            return false;
+        });
+        return match;
     }
 
     function unique(items) {

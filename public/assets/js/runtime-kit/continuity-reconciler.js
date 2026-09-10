@@ -1,21 +1,15 @@
 /*
- * Reconciles selected runtime state across replacement World Datasets.
+ * Reconciles transient runtime state across replacement World Datasets.
+ *
+ * Focus is not reconciled here: context.focus.object_id on each World Dataset is
+ * authoritative (see StateIndexer.build). Carrying a stale client selection forward would
+ * be the runtime overriding World's focus.
  */
 (function () {
     'use strict';
 
     window.ElonnWorldRuntime.ContinuityReconciler = {
         reconcile: function (previous, next) {
-            var indexes = next.indexes || {};
-            var selectedObjectId = String(previous && previous.selectedObjectId || '');
-            var selectedCollectionId = String(previous && previous.selectedCollectionId || '');
-
-            if (selectedObjectId !== '' && indexes.objects && indexes.objects[selectedObjectId]) {
-                next.selectedObjectId = selectedObjectId;
-            }
-            if (selectedCollectionId !== '' && indexes.collections && indexes.collections[selectedCollectionId]) {
-                next.selectedCollectionId = selectedCollectionId;
-            }
             if (previous && previous.actionResult) {
                 next.actionResult = previous.actionResult;
             }
