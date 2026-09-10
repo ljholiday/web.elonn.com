@@ -706,20 +706,16 @@
             });
         }
 
-        function cardLink(label, text, href, objectId) {
-            var link = externalHref(href) ? document.createElement('button') : document.createElement('a');
-            link.className = 'world-object-link';
+        function cardLink(label, text, href) {
             if (externalHref(href)) {
-                link.type = 'button';
-                link.className += ' world-object-link--runtime';
-                link.dataset.runtimeUrl = href;
-                link.dataset.runtimeUrlLabel = common.text(text, href);
-                link.dataset.runtimeUrlParent = common.text(objectId, '');
-                link.title = href;
-            } else {
-                link.href = href;
-                link.rel = 'noopener noreferrer';
+                var ref = externalRef(href, text);
+                ref.textContent = label + ': ' + (common.text(text, '') !== '' ? text : domainFromUrl(href));
+                return ref;
             }
+            var link = document.createElement('a');
+            link.className = 'world-object-link';
+            link.href = href;
+            link.rel = 'noopener noreferrer';
             link.textContent = label + ': ' + text;
             return link;
         }
@@ -925,28 +921,26 @@
             });
             var source = common.text(content.source, '');
             if (source !== '') {
-                article.appendChild(documentSourceLink(source, object.id));
+                article.appendChild(documentSourceLink(source));
             }
             return article;
         }
 
         /*
-         * The document's own source URL, opened the same way any other dataset-owned external
-         * URL is (data-runtime-url -> a runtime website.link Object), never a raw new tab.
+         * The document's own source URL -- provenance shown under the interpreted content.
+         * An external URL is inert (a runtime never navigates out of the app and never
+         * fabricates an Object from a URL string); a same-origin path stays a real link.
          */
-        function documentSourceLink(source, parentId) {
-            var link = externalHref(source) ? document.createElement('button') : document.createElement('a');
-            link.className = 'web-document__source';
+        function documentSourceLink(source) {
             if (externalHref(source)) {
-                link.type = 'button';
-                link.className += ' world-object-link--runtime';
-                link.dataset.runtimeUrl = source;
-                link.dataset.runtimeUrlLabel = source;
-                link.dataset.runtimeUrlParent = common.text(parentId, '');
-            } else {
-                link.href = source;
-                link.rel = 'noopener noreferrer';
+                var ref = externalRef(source, source);
+                ref.className = 'web-document__source world-object-link--external';
+                return ref;
             }
+            var link = document.createElement('a');
+            link.className = 'web-document__source';
+            link.href = source;
+            link.rel = 'noopener noreferrer';
             link.appendChild(document.createTextNode(source));
             return link;
         }
@@ -1099,7 +1093,7 @@
                 element.preload = 'none';
                 frame.appendChild(element);
             } else if (source !== '') {
-                frame.appendChild(documentSourceLink(source, object.id));
+                frame.appendChild(documentSourceLink(source));
             }
             return frame;
         }
@@ -1237,7 +1231,6 @@
             var node = document.createElement('section');
             var heading = document.createElement('h5');
             var paragraph = document.createElement('p');
-            var button = null;
             if (title === '' && text === '' && href === '') {
                 return null;
             }
@@ -1249,14 +1242,7 @@
                 node.appendChild(paragraph);
             }
             if (href !== '') {
-                button = document.createElement('button');
-                button.type = 'button';
-                button.dataset.runtimeUrl = href;
-                button.dataset.runtimeUrlLabel = title !== '' ? title : domainFromUrl(href);
-                button.dataset.runtimeUrlParent = common.text(object && object.id, '');
-                button.textContent = button.dataset.runtimeUrlLabel;
-                button.title = href;
-                node.appendChild(button);
+                node.appendChild(externalRef(href, title));
             }
             return node;
         }
@@ -1369,16 +1355,9 @@
             list.className = 'website-document__links';
             links.slice(0, 8).forEach(function (link) {
                 var item = document.createElement('li');
-                var button = document.createElement('button');
                 var label = common.text(link && link.label, '');
                 var href = common.text(link && link.href, '');
-                button.type = 'button';
-                button.dataset.runtimeUrl = href;
-                button.dataset.runtimeUrlLabel = label !== '' ? label : domainFromUrl(href);
-                button.dataset.runtimeUrlParent = common.text(object && object.id, '');
-                button.textContent = button.dataset.runtimeUrlLabel;
-                button.title = href;
-                item.appendChild(button);
+                item.appendChild(externalRef(href, label));
                 list.appendChild(item);
             });
             return [list];
@@ -1638,17 +1617,14 @@
         function linkLine(label, text, href, objectId) {
             var row = document.createElement('p');
             var strong = document.createElement('strong');
-            var link = externalHref(href) ? document.createElement('button') : document.createElement('a');
+            var link;
             row.className = 'meta-line';
             strong.textContent = label;
-            link.textContent = common.text(text, href);
             if (externalHref(href)) {
-                link.type = 'button';
-                link.dataset.runtimeUrl = href;
-                link.dataset.runtimeUrlLabel = common.text(text, href);
-                link.dataset.runtimeUrlParent = common.text(objectId, '');
-                link.title = href;
+                link = externalRef(href, common.text(text, href));
             } else {
+                link = document.createElement('a');
+                link.textContent = common.text(text, href);
                 link.href = href;
                 link.rel = 'noopener noreferrer';
             }
@@ -1659,6 +1635,19 @@
 
         function externalHref(href) {
             return /^https?:\/\//i.test(common.text(href, ''));
+        }
+
+        // A bare external URL with no Service-authored operation to follow it. A runtime
+        // never navigates the member outside the app (dev.elonn canonical/layout.md) and
+        // never fabricates an Object from a URL string (canonical/dataset.md), so it shows
+        // the reference inert -- the domain, with the full URL on hover.
+        function externalRef(href, text) {
+            var span = document.createElement('span');
+            span.className = 'world-object-link world-object-link--external';
+            span.title = href;
+            var shown = common.text(text, '');
+            span.textContent = shown !== '' ? shown : domainFromUrl(href);
+            return span;
         }
 
         function domainFromUrl(value) {

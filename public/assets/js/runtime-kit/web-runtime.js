@@ -92,7 +92,6 @@
         var resizeHandle = event.target.closest('[data-carry-panel-resize]');
         var panelTitle = event.target.closest('[data-carry-panel-title]');
         var hostedSurface = event.target.closest('[data-hosted-surface]');
-        var runtimeUrl = event.target.closest('[data-runtime-url]');
         var operationAction = event.target.closest('[data-operation-invocation]');
         var workspaceToggle = event.target.closest('[data-workspace-results-toggle]');
         var workspaceClear = event.target.closest('[data-workspace-results-clear]');
@@ -123,12 +122,6 @@
         if (worldClose && state) {
             event.preventDefault();
             dispatchWorldNavigation('world.close', String(worldClose.dataset.worldClose || ''));
-            return;
-        }
-
-        if (runtimeUrl && state) {
-            event.preventDefault();
-            openRuntimeUrl(runtimeUrl);
             return;
         }
 
@@ -733,196 +726,6 @@
         state.selectedCollectionId = collectionContainingObject(state, objectId) || state.selectedCollectionId;
     }
 
-    function carryObject(objectId) {
-        var object = state.indexes.objects[objectId] || null;
-        var panels = state.carryPanels || [];
-        var existing = null;
-        if (!object) {
-            return;
-        }
-        panels.some(function (panel) {
-            if (String(panel.objectId || '') === objectId) {
-                existing = panel;
-                return true;
-            }
-            return false;
-        });
-        if (existing) {
-            bringCarryPanelForward(existing.id);
-            persistCarryPanels();
-            return;
-        }
-        panels.push({
-            id: 'carry-panel:' + objectId,
-            objectId: objectId,
-            object: carrySnapshot(object),
-            x: 72 + panels.length * 26,
-            y: 116 + panels.length * 26,
-            width: 320,
-            height: 180,
-            z: nextCarryZ(),
-            collapsed: false
-        });
-        state.carryPanels = panels;
-        persistCarryPanels();
-    }
-
-    function openRuntimeUrl(control) {
-        var url = String(control.dataset.runtimeUrl || '').trim();
-        var objectId = objectIdForRuntimeUrl(url, String(control.dataset.runtimeUrlParent || ''));
-        if (objectId === '') {
-            objectId = ensureRuntimeUrlObject({
-                url: url,
-                label: String(control.dataset.runtimeUrlLabel || ''),
-                parentObjectId: String(control.dataset.runtimeUrlParent || '')
-            });
-        }
-        if (objectId === '') {
-            return;
-        }
-        selectObject(objectId);
-        carryObject(objectId);
-        persistCarryPanels();
-        renderState();
-    }
-
-    function objectIdForRuntimeUrl(url, parentObjectId) {
-        var normalizedUrl = normalizeRuntimeUrl(url);
-        var parent = state && state.indexes ? state.indexes.objects[String(parentObjectId || '')] || null : null;
-        var objects = state && state.dataset ? state.dataset.objects || [] : [];
-        var resources = state && state.indexes ? state.indexes.resources || {} : {};
-        var matchedResourceIds = [];
-        if (normalizedUrl === '') {
-            return '';
-        }
-        if (parent && objectOwnsRuntimeUrl(parent, normalizedUrl, resources)) {
-            return String(parent.id || '');
-        }
-        Object.keys(resources).forEach(function (resourceId) {
-            if (resourceOwnsRuntimeUrl(resources[resourceId], normalizedUrl)) {
-                matchedResourceIds.push(String(resourceId || ''));
-            }
-        });
-        for (var index = 0; index < objects.length; index += 1) {
-            if (objectOwnsRuntimeUrl(objects[index], normalizedUrl, resources, matchedResourceIds)) {
-                return String(objects[index].id || '');
-            }
-        }
-        return '';
-    }
-
-    function objectOwnsRuntimeUrl(object, normalizedUrl, resources, matchedResourceIds) {
-        var content = object && typeof object.content === 'object' ? object.content : {};
-        var resourceIds = common.itemIds(object.resourceIds || object.resources || []);
-        if (runtimeUrlMatches(normalizedUrl, [content.source_url, content.canonical_url, content.url])) {
-            return true;
-        }
-        if (Array.isArray(matchedResourceIds)) {
-            for (var index = 0; index < matchedResourceIds.length; index += 1) {
-                if (resourceIds.indexOf(matchedResourceIds[index]) !== -1) {
-                    return true;
-                }
-            }
-        }
-        for (var resourceIndex = 0; resourceIndex < resourceIds.length; resourceIndex += 1) {
-            if (resourceOwnsRuntimeUrl(resources[String(resourceIds[resourceIndex] || '')], normalizedUrl)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function resourceOwnsRuntimeUrl(resource, normalizedUrl) {
-        var content = resource && typeof resource.content === 'object' ? resource.content : {};
-        return runtimeUrlMatches(normalizedUrl, [
-            resource && resource.href,
-            content.href,
-            content.url,
-            content.source_url,
-            content.canonical_url
-        ]);
-    }
-
-    function runtimeUrlMatches(normalizedUrl, candidates) {
-        return candidates.some(function (candidate) {
-            return normalizeRuntimeUrl(candidate) === normalizedUrl;
-        });
-    }
-
-    function normalizeRuntimeUrl(value) {
-        var text = String(value || '').trim();
-        var parsed = null;
-        if (text === '') {
-            return '';
-        }
-        try {
-            parsed = new URL(text, window.location.origin);
-            parsed.hash = '';
-            if (parsed.pathname !== '/') {
-                parsed.pathname = parsed.pathname.replace(/\/+$/, '');
-            }
-            return parsed.protocol.toLowerCase() + '//' + parsed.hostname.toLowerCase() + parsed.pathname + parsed.search;
-        } catch (error) {
-            return text.replace(/\/+$/, '').toLowerCase();
-        }
-    }
-
-    function ensureRuntimeUrlObject(details) {
-        var url = String(details.url || '').trim();
-        var id = 'runtime.website.link:' + stableHash(url);
-        var resourceId = 'resource:' + id + ':url';
-        var label = String(details.label || '').trim();
-        var domain = domainFromUrl(url);
-        var panels = [];
-        if (url === '' || !state) {
-            return '';
-        }
-        if (!state.indexes.objects[id]) {
-            panels = state.carryPanels || [];
-            state.dataset.objects.unshift({
-                id: id,
-                type: 'website.link',
-                title: label !== '' ? label : (domain !== '' ? domain : url),
-                summary: domain,
-                content: {
-                    name: label !== '' ? label : (domain !== '' ? domain : url),
-                    description: domain,
-                    source_url: url,
-                    source_domain: domain,
-                    canonical_url: url,
-                    parent_object_id: String(details.parentObjectId || '')
-                },
-                visibility: {},
-                permissions: {},
-                availability: {state: 'enabled'},
-                resourceIds: [resourceId],
-                metadata: {
-                    service: 'web.runtime',
-                    anchor: 'carry'
-                }
-            });
-            state.dataset.resources.unshift({
-                id: resourceId,
-                kind: 'website.link',
-                media_type: 'application/vnd.elonn.website-link+json',
-                href: '',
-                label: label !== '' ? label : url,
-                content: {
-                    kind: 'website.link',
-                    url: url,
-                    domain: domain,
-                    parent_object_id: String(details.parentObjectId || '')
-                },
-                availability: {state: 'enabled'}
-            });
-            // No Placement: this synthetic link Object is pulled onto Carry client-side by the
-            // caller (openRuntimeUrl -> carryObject), not placed by World.
-            state = runtime.StateIndexer.build(state.dataset, state);
-            state.carryPanels = panels;
-        }
-        return id;
-    }
-
     function toggleCarryPanel(panelId) {
         var panel = carryPanel(panelId);
         if (!panel) {
@@ -1275,16 +1078,6 @@
         };
     }
 
-    function stableHash(value) {
-        var text = String(value || '');
-        var hash = 2166136261;
-        var index = 0;
-        for (index = 0; index < text.length; index++) {
-            hash ^= text.charCodeAt(index);
-            hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-        }
-        return (hash >>> 0).toString(16);
-    }
 
     function domainFromUrl(value) {
         try {

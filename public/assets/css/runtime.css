@@ -748,13 +748,11 @@ figure {
     color: #eefaf8;
 }
 
-.world-object-link--runtime {
-    appearance: none;
-    border: 0;
-    background: transparent;
-    padding: 0;
-    cursor: pointer;
+/* A bare external URL the runtime shows for reference only -- not navigable. */
+.world-object-link--external {
     text-decoration: none;
+    cursor: default;
+    opacity: 0.7;
 }
 
 .object-preview {

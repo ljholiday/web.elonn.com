@@ -308,23 +308,27 @@ $checks = [
         && str_contains($runtimeCss, '.world-object-link')
         && str_contains($scripts, "wrapper.appendChild(button)")
         && strpos($webRenderer, "firstHref(object.resources, 'Source'") < strpos($webRenderer, 'if (websiteDocument(object))'),
-    'Runtime opens dataset-owned external URLs as existing runtime objects' => str_contains($webRenderer, 'externalHref')
-        && str_contains($webRenderer, "document.createElement('button') : document.createElement('a')")
-        && str_contains($webRenderer, 'dataset.runtimeUrl')
-        && str_contains($webRenderer, 'dataset.runtimeUrlParent')
-        && !str_contains($webRenderer, 'dataset.runtimeUrlObject')
-        && str_contains($webRuntime, 'openRuntimeUrl')
-        && str_contains($webRuntime, 'objectIdForRuntimeUrl')
-        && strpos($webRuntime, 'objectIdForRuntimeUrl(url') < strpos($webRuntime, 'ensureRuntimeUrlObject')
-        && str_contains($webRuntime, 'objectOwnsRuntimeUrl')
-        && str_contains($webRuntime, 'resourceOwnsRuntimeUrl')
-        && str_contains($webRuntime, 'normalizeRuntimeUrl')
-        && str_contains($webRuntime, 'ensureRuntimeUrlObject')
-        && str_contains($webRuntime, "type: 'website.link'")
-        && str_contains($runtimeCss, '.world-object-link--runtime')
+    'Runtime never fabricates an Object from a URL string or navigates out of the app' =>
+        // The whole URL-fabrication machinery is gone (runtime-edict record 268, #4).
+        !str_contains($webRuntime, 'openRuntimeUrl')
+        && !str_contains($webRuntime, 'objectIdForRuntimeUrl')
+        && !str_contains($webRuntime, 'ensureRuntimeUrlObject')
+        && !str_contains($webRuntime, 'objectOwnsRuntimeUrl')
+        && !str_contains($webRuntime, 'resourceOwnsRuntimeUrl')
+        && !str_contains($webRuntime, 'normalizeRuntimeUrl')
+        && !str_contains($webRuntime, "type: 'website.link'")
+        && !str_contains($scripts, 'data-runtime-url')
+        && !str_contains($scripts, 'dataset.runtimeUrl')
+        && !str_contains($runtimeCss, '.world-object-link--runtime')
+        // A bare external URL renders as an inert reference; the runtime never opens it.
+        && str_contains($webRenderer, 'function externalRef(href, text)')
+        && str_contains($webRenderer, 'world-object-link--external')
+        && str_contains($runtimeCss, '.world-object-link--external')
         && !str_contains($webRenderer, "target = '_blank'")
-        && strpos($webRuntime, 'if (runtimeUrl && state)') < strpos($webRuntime, 'if (panelTitle && state)')
-        && strpos($webRuntime, 'if (runtimeUrl && state)') < strpos($webRuntime, 'if (hostedSurface && state)'),
+        // In-document links stay the reference implementation: a real <a> whose click
+        // dispatches the Service-authored operation_invocation (find.open), never a URL parse.
+        && str_contains($webRenderer, 'function documentAnchor(link, label)')
+        && str_contains($webRenderer, 'anchor.dataset.operationInvocation = JSON.stringify(invocation)'),
     'Runtime does not treat carry panel content as an object selection button' => str_contains($webRuntime, "closest('button[data-object-id]')")
         && !str_contains($webRuntime, "closest('[data-object-id]')"),
     'Runtime renders website JSON resources inside Web' => str_contains($webRenderer, 'websiteDocument')
@@ -338,7 +342,6 @@ $checks = [
         && str_contains($scripts, 'carryStorageKey')
         && str_contains($scripts, 'uiStorageKey')
         && str_contains($scripts, 'localStorage')
-        && str_contains($scripts, 'carryObject(')
         && str_contains($scripts, "root.addEventListener('pointerdown'")
         && str_contains($scripts, "window.addEventListener('pointermove'")
         && str_contains($scripts, "window.addEventListener('pointerup'")
