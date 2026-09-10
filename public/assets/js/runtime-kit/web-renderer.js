@@ -1380,11 +1380,6 @@
             });
         }
 
-        // Fixed row order for grouped Dashboard actions (a Service's entry points can carry a
-        // `group` layout hint -- e.g. Social's view / circle / create). Anything else falls
-        // through to a trailing catch-all row.
-        var ACTION_GROUP_ORDER = ['view', 'circle', 'create'];
-
         function actionNode(action, object) {
             if (action.operationInvocation && typeof action.operationInvocation === 'object') {
                 if (hasModelArguments(action.operationInvocation)) {
@@ -1455,17 +1450,21 @@
                 });
             }
 
-            // Lay grouped Dashboard actions out as one row per group. A row's actions become
-            // compact one-tap buttons when they need no input (the `view` / `circle` browses);
-            // an action that still needs a value keeps its full form (the `create` entrances).
+            // Lay grouped Dashboard actions out as one row per group, in the order the groups
+            // first appear in the Dataset -- that order is the Service's own (its Contract
+            // entrypoints, carried through Conductor). The runtime imposes no group vocabulary
+            // or sequence of its own. A row's actions become compact one-tap buttons when they
+            // need no input; one that still needs a value keeps its full form.
             var buckets = {};
+            var order = [];
             actions.forEach(function (action) {
                 var key = common.text(action.group, '') || 'other';
-                (buckets[key] = buckets[key] || []).push(action);
+                if (!buckets[key]) {
+                    buckets[key] = [];
+                    order.push(key);
+                }
+                buckets[key].push(action);
             });
-            var order = ACTION_GROUP_ORDER.concat(Object.keys(buckets).filter(function (key) {
-                return ACTION_GROUP_ORDER.indexOf(key) === -1;
-            }));
             var nodes = [];
             order.forEach(function (key) {
                 var bucket = buckets[key];

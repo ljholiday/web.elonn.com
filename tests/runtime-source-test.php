@@ -296,9 +296,11 @@ $checks = [
         && str_contains($scripts, "operationLine('Action'")
         && str_contains($scripts, 'dispatchOperationAction')
         && !str_contains($scripts, 'dispatchWorldAction'),
-    'Grouped Dashboard actions lay out as one row per entry-point group, in fixed order' =>
-        str_contains($webRenderer, "ACTION_GROUP_ORDER = ['view', 'circle', 'create']")
+    'Grouped Dashboard actions lay out one row per group, in the Dataset order -- no runtime group vocabulary' =>
+        !str_contains($webRenderer, "ACTION_GROUP_ORDER")
+        && !str_contains($webRenderer, "['view', 'circle', 'create']")
         && str_contains($webRenderer, "common.text(action.group, '') !== ''")
+        && str_contains($webRenderer, 'order.push(key)')
         && str_contains($webRenderer, "row.className = 'dashboard-action-row'")
         && str_contains($webRenderer, "row.dataset.actionGroup = key")
         && str_contains($runtimeCss, '.dashboard-action-row')
