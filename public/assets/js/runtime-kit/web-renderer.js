@@ -1130,14 +1130,6 @@
             return wrap;
         }
 
-        function objectSurface(object) {
-            if (object.surface && object.surface.mode === 'hosted') {
-                return hostedSurface(object);
-            }
-
-            return genericPreview(object);
-        }
-
         /*
          * The body of a Finding pulled onto Carry (a result with no open operation). Its
          * content and one place to act on it -- no field dump, no counts, no Visibility /
@@ -1191,40 +1183,6 @@
             }
             frame.appendChild(preview);
             return frame;
-        }
-
-        function genericPreview(object) {
-            var fragment = document.createDocumentFragment();
-            var segment = segmentNode(object);
-            var website = segment ? null : websiteDocument(object);
-            var editableKeys = editableFieldKeys(object);
-            if (segment) {
-                fragment.appendChild(segment);
-            } else if (website) {
-                fragment.appendChild(websiteNode(website, object));
-            }
-            containedObjectNodes(object).forEach(function (node) {
-                fragment.appendChild(node);
-            });
-            detailRows(object).forEach(function (row) {
-                fragment.appendChild(metaLine(row.label, row.value));
-            });
-            remainingContentRows(object, editableKeys).forEach(function (row) {
-                fragment.appendChild(metaLine(row.label, row.value));
-            });
-            resourceLinks(object).forEach(function (link) {
-                fragment.appendChild(link);
-            });
-            if (!website) {
-                actionLinks(object).forEach(function (link) {
-                    fragment.appendChild(link);
-                });
-            }
-            if (object.visibility !== '') {
-                fragment.appendChild(metaLine('Visibility', object.visibility));
-            }
-            fragment.appendChild(metaLine('Permissions', permissionsText(object.permissions)));
-            return fragment;
         }
 
         function websiteDocument(object) {
@@ -1426,116 +1384,10 @@
             return [list];
         }
 
-        function detailRows(object) {
-            var content = object.content && typeof object.content === 'object' ? object.content : {};
-            var rows = [];
-            addRow(rows, 'Source', content.source_domain || domainFromUrl(content.source_url || content.canonical_url));
-            addRow(rows, 'Rank', content.rank);
-            addRow(rows, 'Category', content.category || content.component_type);
-            addRow(rows, 'When', content.starts_at || content.due_at || content.last_message_at || content.published_at);
-            addRow(rows, 'Location', locationText(content));
-            addRow(rows, 'Distance', distanceText(content.distance_meters));
-            addRow(rows, 'Messages', content.message_count);
-            addRow(rows, 'Participants', content.participant_count);
-            if (content.search && typeof content.search === 'object') {
-                addRow(rows, 'Match', content.search.why);
-            }
-            return rows;
-        }
-
-        function addRow(rows, label, value) {
-            var text = '';
-            if (typeof value === 'number' && isFinite(value)) {
-                text = String(value);
-            } else {
-                text = common.text(value, '');
-            }
-            if (text !== '') {
-                rows.push({label: label, value: text});
-            }
-        }
-
-        var KNOWN_CONTENT_KEYS = [
-            'name', 'description',
-            'source_domain', 'source_url', 'canonical_url', 'url',
-            'rank', 'category', 'component_type',
-            'starts_at', 'due_at', 'last_message_at', 'published_at',
-            'location', 'address', 'distance_meters',
-            'message_count', 'participant_count', 'search', 'parts',
-            'parent_resource_object_id', 'parent_object_id',
-            'width', 'height', 'source_resource', 'preview_resource'
-        ];
-
-        function editableFieldKeys(object) {
-            var keys = {};
-            (Array.isArray(object.actions) ? object.actions : []).forEach(function (action) {
-                var operationInvocation = action.operationInvocation;
-                var args = operationInvocation && typeof operationInvocation === 'object' ? operationInvocation.arguments : null;
-                if (args && typeof args === 'object' && !Array.isArray(args)) {
-                    Object.keys(args).forEach(function (key) {
-                        keys[key] = true;
-                    });
-                }
-            });
-            return keys;
-        }
-
-        function remainingContentRows(object, skipKeys) {
-            var content = object.content && typeof object.content === 'object' ? object.content : {};
-            var skip = skipKeys && typeof skipKeys === 'object' ? skipKeys : {};
-            var rows = [];
-            Object.keys(content).forEach(function (key) {
-                var value = content[key];
-                var text = '';
-                if (KNOWN_CONTENT_KEYS.indexOf(key) !== -1 || skip[key]) {
-                    return;
-                }
-                if (typeof value === 'string') {
-                    text = value.trim();
-                } else if (typeof value === 'number' && isFinite(value)) {
-                    text = String(value);
-                } else if (typeof value === 'boolean') {
-                    text = value ? 'Yes' : 'No';
-                } else {
-                    return;
-                }
-                if (text === '' || text === object.title || text === object.summary) {
-                    return;
-                }
-                rows.push({label: humanizeKey(key), value: text});
-            });
-            return rows;
-        }
-
         function humanizeKey(key) {
             return String(key || '').split('_').filter(Boolean).map(function (word) {
                 return word.charAt(0).toUpperCase() + word.slice(1);
             }).join(' ');
-        }
-
-        function locationText(content) {
-            if (typeof content.location === 'string') {
-                return content.location;
-            }
-            if (content.address && typeof content.address === 'object') {
-                return Object.keys(content.address).map(function (key) {
-                    return common.text(content.address[key], '');
-                }).filter(Boolean).join(', ');
-            }
-            if (content.location && typeof content.location === 'object') {
-                var latitude = common.text(content.location.latitude, '');
-                var longitude = common.text(content.location.longitude, '');
-                return latitude !== '' && longitude !== '' ? latitude + ', ' + longitude : '';
-            }
-            return '';
-        }
-
-        function distanceText(value) {
-            var meters = Number(value || 0);
-            if (!isFinite(meters) || meters <= 0) {
-                return '';
-            }
-            return meters >= 1000 ? (meters / 1000).toFixed(1) + ' km' : Math.round(meters) + ' m';
         }
 
         function resourceLinks(object) {
@@ -1804,23 +1656,6 @@
             node.className = 'object-badge';
             node.textContent = text;
             return node;
-        }
-
-        function permissionsText(permissions) {
-            return 'view ' + String(permissions && permissions.canView === true)
-                + ' / act ' + String(permissions && permissions.canAct === true)
-                + ' / share ' + String(permissions && permissions.canShare === true);
-        }
-
-        function availabilityText(availability) {
-            var text = availability.state;
-            if (availability.reason !== '') {
-                text += ' / ' + availability.reason;
-            }
-            if (availability.requiredCapability !== '') {
-                text += ' / requires ' + availability.requiredCapability;
-            }
-            return text;
         }
 
         return {
