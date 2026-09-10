@@ -133,7 +133,7 @@
     function collectionView(state, collection) {
         return {
             id: String(collection.id || ''),
-            title: common.text(collection.title, 'Collection'),
+            title: common.text(collection.title, ''),
             summary: common.text(collection.summary, ''),
             type: common.text(collection.type, 'collection'),
             selected: String(collection.id || '') === state.selectedCollectionId,
@@ -152,7 +152,7 @@
         var permissions = object.permissions && typeof object.permissions === 'object' ? object.permissions : {};
         return {
             id: String(object.id || ''),
-            title: common.text(object.title, 'Object'),
+            title: common.text(object.title, ''),
             summary: common.text(object.summary, ''),
             type: common.text(object.type, 'object'),
             layer: common.text(metadata.anchor, objectLayer(state, object.id)),

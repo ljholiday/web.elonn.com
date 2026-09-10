@@ -87,8 +87,9 @@
                 return {
                     id: String(object.id || ''),
                     type: String(object.type || 'object'),
-                    title: common.text(content.name || object.name || object.title, 'Object'),
-                    summary: common.text(content.description || object.description || object.summary, ''),
+                    // Canonical, set by World (Composer::withCanonicalFields). One field, no chain.
+                    title: common.text(object.title, ''),
+                    summary: common.text(object.summary, ''),
                     content: content,
                     visibility: object.visibility && typeof object.visibility === 'object' ? object.visibility : {},
                     permissions: permissions,
@@ -102,13 +103,13 @@
         actions: function (dataset) {
             return dataset.actions.filter(isObject).map(function (action) {
                 var content = action.content && typeof action.content === 'object' ? action.content : {};
-                var target = action.target || content.target || content.object || content.collection || content.resource || '';
                 return {
                     id: String(action.id || ''),
                     type: String(action.type || 'action'),
                     label: common.text(content.label || content.name || action.label || action.name, 'Action'),
                     group: common.text(content.group || action.group, ''),
-                    target_id: String(target || ''),
+                    // Canonical, set by World (Composer::withCanonicalFields).
+                    target_id: String(action.target || ''),
                     href: String(content.href || content.url || action.href || ''),
                     operation_invocation: content.operation_invocation && typeof content.operation_invocation === 'object' && !Array.isArray(content.operation_invocation)
                         ? content.operation_invocation
@@ -141,8 +142,9 @@
                 return {
                     id: String(collection.id || ''),
                     type: String(collection.type || 'collection'),
-                    title: common.text(content.name || collection.name || collection.title, 'Collection'),
-                    summary: common.text(content.description || collection.description || collection.summary, ''),
+                    // Canonical, set by World (Composer::withCanonicalFields).
+                    title: common.text(collection.title, ''),
+                    summary: common.text(collection.summary, ''),
                     availability: availability(collection.availability || content.availability),
                     items: idsFrom(collection.items || content.items || [])
                 };
