@@ -201,18 +201,10 @@ $checks = [
     'Collections and resources are first-class scene inputs' => str_contains($scripts, 'state.indexes.collections[collectionId]')
         && str_contains($scripts, 'resourcesForObject')
         && str_contains($scripts, 'resourceIds'),
-    'Runtime expands selected resources through contained objects' => str_contains($scripts, 'containedObjects')
+    'Runtime expands contained objects through the canonical contains Relationship' => str_contains($scripts, 'containedObjects')
         && str_contains($webRenderer, 'containedObjectNodes')
         && str_contains($webRenderer, 'object-decomposition')
-        && str_contains($runtimeCss, '.object-decomposition')
-        && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'segmented resource children were rendered as first-level result cards'),
-    'Runtime renders decomposed object parts instead of parent website documents' => str_contains($webRenderer, 'segmentNode')
-        && str_contains($webRenderer, 'segmentPartNode')
-        && str_contains($webRenderer, 'isDecomposedObject')
-        && str_contains($webRenderer, "var website = segment ? null : websiteDocument(object)")
-        && str_contains($webRenderer, "resource.kind !== 'website.document'")
-        && str_contains($runtimeCss, '.object-segment')
-        && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'segmented resource child parts were not projected'),
+        && str_contains($runtimeCss, '.object-decomposition'),
     'Runtime renders empty collection notices where results appear' => str_contains($scripts, 'emptyCollectionNotice')
         && str_contains($scripts, "collection.summary || 'No results.'"),
     'Runtime keeps notification areas at the bottom of the viewport' => str_contains($template, 'runtime-notifications')
@@ -310,7 +302,7 @@ $checks = [
         && str_contains($scripts, 'world-object-link')
         && str_contains($runtimeCss, '.world-object-link')
         && str_contains($scripts, "wrapper.appendChild(button)")
-        && strpos($webRenderer, "firstHref(object.resources, 'Source'") < strpos($webRenderer, 'if (websiteDocument(object))'),
+        && str_contains($webRenderer, "firstHref(object.resources, 'Source'"),
     'Runtime never fabricates an Object from a URL string or navigates out of the app' =>
         // The whole URL-fabrication machinery is gone (runtime-edict record 268, #4).
         !str_contains($webRuntime, 'openRuntimeUrl')
@@ -334,13 +326,6 @@ $checks = [
         && str_contains($webRenderer, 'anchor.dataset.operationInvocation = JSON.stringify(invocation)'),
     'Runtime does not treat carry panel content as an object selection button' => str_contains($webRuntime, "closest('button[data-object-id]')")
         && !str_contains($webRuntime, "closest('[data-object-id]')"),
-    'Runtime renders website JSON resources inside Web' => str_contains($webRenderer, 'websiteDocument')
-        && str_contains($webRenderer, 'websiteNode')
-        && str_contains($webRenderer, 'website-document__sections')
-        && str_contains($webRenderer, 'website-document__links')
-        && str_contains($webRenderer, "linkLine('Resource'")
-        && str_contains($runtimeCss, '.website-document')
-        && str_contains(read_file($root . '/tests/canonical-runtime-kit-test.php'), 'website JSON Resource was not projected'),
     'Carry panels are runtime-local floating objects controlled by title text' => str_contains($template, 'data-runtime-carry-panels')
         && str_contains($scripts, 'carryStorageKey')
         && str_contains($scripts, 'uiStorageKey')
