@@ -1123,35 +1123,16 @@
     }
 
     /*
-     * Per-window floating-panel geometry, persisted by window id the same way carry panels
-     * persist by object id. A window World reports gets a saved position or a fresh staggered
-     * one; geometry for a window that no longer exists is dropped.
-     */
-    /*
-     * The id of the opened Object a node sits inside, if any: an explicit [data-origin-object]
-     * host, else the enclosing carry panel when that panel is an opened Object. A click in the
-     * Results pane or a client-only Finding panel returns ''.
-     */
-    /*
-     * The id of the opened Object a node sits inside, for in-place navigation -- or '' when
-     * the node is in the Results pane, a client-only Finding box, OR a Dashboard. A Dashboard
-     * is a stable launcher (layout.md, Dashboard): activating one of its entry points always
-     * opens a NEW Object (or a new Dashboard) on Carry, never navigates the Dashboard itself.
+     * The id of the opened Object a node sits inside -- the [data-origin-object] the renderer
+     * stamped on that Object's panel content from its Placement -- or '' when the node is not
+     * inside an opened Object (the Results pane, a client-only Finding box). Sent verbatim on
+     * the Call: World decides whether it means navigate-in-place, and never does for a
+     * Dashboard (world.elonn Composer::isDashboardObject). The runtime reads the one stamped
+     * attribute; it does not walk the panel tree or branch on Object type.
      */
     function originObjectFor(node) {
         var host = node && node.closest ? node.closest('[data-origin-object]') : null;
-        if (host && host.dataset.originObject) {
-            return isDashboard(String(host.dataset.originObject)) ? '' : String(host.dataset.originObject);
-        }
-        var panel = node && node.closest ? node.closest('[data-carry-panel-id]') : null;
-        var id = panel ? String(panel.dataset.carryPanelId || '') : '';
-        var objectId = id.indexOf('carry-panel:') === 0 ? id.slice('carry-panel:'.length) : id;
-        return (isOpenedObjectPanel(objectId) && !isDashboard(objectId)) ? objectId : '';
-    }
-
-    function isDashboard(objectId) {
-        var object = state && state.indexes ? state.indexes.objects[String(objectId || '')] : null;
-        return !!object && String(object.type || '') === 'service.dashboard';
+        return host && host.dataset.originObject ? String(host.dataset.originObject) : '';
     }
 
     function openActionForObject(objectId) {
