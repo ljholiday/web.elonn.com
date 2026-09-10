@@ -96,6 +96,7 @@
                 id: String(opened.id || ''),
                 title: common.text(opened.title, view.title),
                 depth: Math.max(0, parseInt(opened.depth, 10) || 0),
+                subject: String(opened.subject || ''),
                 object: view,
                 collections: (opened.collectionIds || []).map(function (collectionId) {
                     return collectionView(state, state.indexes.collections[collectionId] || {});
@@ -272,6 +273,8 @@
                 opened: !!opened,
                 title: opened ? common.text(opened.title, view.title) : view.title,
                 depth: opened ? Math.max(0, parseInt(opened.depth, 10) || 0) : 0,
+                // The member this container has navigated into (World-owned), or ''.
+                subject: opened ? String(opened.subject || '') : '',
                 collections: opened ? openedCollections(state, opened) : [],
                 memberObjects: opened ? openedMemberObjects(state, opened) : [],
                 x: Number(panel.x || 0),

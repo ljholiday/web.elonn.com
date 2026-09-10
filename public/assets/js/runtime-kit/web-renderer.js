@@ -871,12 +871,10 @@
             // The Object's own Collections flow first (a conversation's replies, a browse's
             // grouped lists). Its member Objects appear as cards inside those Collections --
             // their actions are not dumped in the footer (a browse list would fill with every
-            // row's reply/mute/leave). The exception: a container navigated INTO one member
-            // Object (a conversation opened from a list) shows that Object's messages
-            // Collection inside it, so its own actions -- its reply form -- belong here too.
-            // "Navigated into" is data-visible: a member Collection's id contains the member
-            // Object's id (e.g. collection:social.conversation:12:messages:... for
-            // social.conversation:12). A plain list has no such per-member Collection.
+            // row's reply/mute/leave). The exception: a container World marks as navigated
+            // INTO one member Object (a conversation opened from a list) -- panel.subject --
+            // shows that Object's messages Collection inside it, so its own actions (its reply
+            // form) belong here too. The runtime reads panel.subject; it does not match ids.
             // An interpreted web document (Find's find.open result) renders as the document:
             // its structured content tree, with in-document links navigating in place. When a
             // document member is present it IS the body; a standalone video member renders
@@ -894,23 +892,16 @@
 
             var contentNodes = collections(panel.collections || [], 'object');
             var actionNodes = actionLinks(panel.object);
-            var collectionIds = (panel.collections || []).map(function (collection) {
-                return String(collection.id || '');
-            });
-            members.forEach(function (member) {
-                var memberId = String(member.id || '');
-                if (memberId === '') {
-                    return;
-                }
-                var ownsShownCollection = collectionIds.some(function (collectionId) {
-                    return collectionId.indexOf(memberId) !== -1;
+            var subject = String(panel.subject || '');
+            if (subject !== '') {
+                members.forEach(function (member) {
+                    if (String(member.id || '') === subject) {
+                        actionLinks(member).forEach(function (node) {
+                            actionNodes.push(node);
+                        });
+                    }
                 });
-                if (ownsShownCollection) {
-                    actionLinks(member).forEach(function (node) {
-                        actionNodes.push(node);
-                    });
-                }
-            });
+            }
             return mediaNodes.concat(contentNodes, actionNodes);
         }
 

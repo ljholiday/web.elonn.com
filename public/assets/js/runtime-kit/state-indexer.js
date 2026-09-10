@@ -161,12 +161,14 @@
         return order.map(function (id) {
             var entry = nav[id] && typeof nav[id] === 'object' ? nav[id] : {};
             var members = Array.isArray(entry.members) ? entry.members.map(String) : [];
+            var subject = String(entry.subject || '');
             return {
                 id: id,
                 title: common.text(entry.title, common.text((indexes.objects[id] || {}).title, '')),
                 depth: Math.max(0, parseInt(entry.depth, 10) || 0),
                 collectionIds: unique(members.filter(function (m) { return !!indexes.collections[m]; })),
-                objectIds: unique(members.filter(function (m) { return !!indexes.objects[m] && m !== id; }))
+                objectIds: unique(members.filter(function (m) { return !!indexes.objects[m] && m !== id; })),
+                subject: indexes.objects[subject] ? subject : ''
             };
         });
     }
