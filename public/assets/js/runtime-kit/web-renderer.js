@@ -899,14 +899,13 @@
         }
 
         /*
-         * An interpreted web document -- a `document` Object whose content.content is the
-         * ordered structured-content tree Find's HTML interpreter produced (see
-         * dev.elonn canonical/html.md). The runtime does not parse HTML; it walks that tree.
+         * An interpreted web document -- a `document` Object (Find's HTML interpreter; see
+         * dev.elonn canonical/html.md). Dispatch on the declared type only; the runtime does
+         * not probe content shape to decide what an Object is. documentNode tolerates a
+         * missing content tree.
          */
         function isInterpretedDocument(object) {
-            return !!object
-                && String(object.type || '') === 'document'
-                && Array.isArray((object.content || {}).content);
+            return !!object && String(object.type || '') === 'document';
         }
 
         function documentNode(object) {
