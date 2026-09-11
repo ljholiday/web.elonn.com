@@ -100,6 +100,8 @@
         var objectButton = event.target.closest('button[data-object-id]');
         var worldBack = event.target.closest('[data-world-back]');
         var worldClose = event.target.closest('[data-world-close]');
+        var regionFocus = event.target.closest('[data-focus-region]');
+        var regionBack = event.target.closest('[data-region-back]');
 
         if (closeButton && state) {
             event.preventDefault();
@@ -122,6 +124,23 @@
         if (worldClose && state) {
             event.preventDefault();
             dispatchWorldNavigation('world.close', String(worldClose.dataset.worldClose || ''));
+            return;
+        }
+
+        // Focusing a region, or returning to the region list, displays content the document
+        // Object already carries -- Runtime presentation only, no World Call (dev.elonn
+        // canonical/html.md, Region navigation).
+        if (regionFocus && state) {
+            event.preventDefault();
+            renderer.setDocumentRegion(regionFocus.dataset.focusRegion, regionFocus.dataset.regionKey);
+            renderState();
+            return;
+        }
+
+        if (regionBack && state) {
+            event.preventDefault();
+            renderer.setDocumentRegion(regionBack.dataset.regionBack, '');
+            renderState();
             return;
         }
 

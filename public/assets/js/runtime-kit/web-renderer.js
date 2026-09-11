@@ -19,6 +19,25 @@
         var workspacePanelEl = null;
         var workspaceToggleButton = null;
         var objectLabels = {};
+        // Which region (canonical/html.md, Semantic regions) is currently displayed for a
+        // given interpreted document Object -- Runtime presentation state only (dev.elonn
+        // canonical/html.md, Region navigation: switching regions requires no World Call).
+        // Keyed by document Object id; absent or '' means the region list itself is shown.
+        // Deliberately not part of World Dataset state or SceneModel -- World never needs to
+        // know which region a member is looking at.
+        var documentRegionView = {};
+
+        function setDocumentRegion(objectId, regionKey) {
+            objectId = String(objectId || '');
+            if (objectId === '') {
+                return;
+            }
+            if (regionKey) {
+                documentRegionView[objectId] = String(regionKey);
+            } else {
+                delete documentRegionView[objectId];
+            }
+        }
 
         function status(message, state) {
             if (!nodes.status) {
@@ -875,18 +894,95 @@
             return !!object && String(object.type || '') === 'document';
         }
 
+        /*
+         * A freshly opened or freshly followed-to document always presents its region list
+         * first (canonical/html.md, Region navigation) -- never straight to a region's content,
+         * regardless of how the member got here. Focusing a region displays it within this same
+         * article; back returns to the list. Neither is a World Call: the region's content
+         * already exists in the composed document Object.
+         */
         function documentNode(object) {
             var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var objectId = String(object.id || '');
+            var regions = Array.isArray(content.regions) ? content.regions : [];
             var article = document.createElement('article');
             article.className = 'web-document';
-            contentTreeNodes(Array.isArray(content.content) ? content.content : []).forEach(function (node) {
-                article.appendChild(node);
+
+            var selected = String(documentRegionView[objectId] || '');
+            var selectedRegion = null;
+            regions.forEach(function (region) {
+                if (region && String(region.key || '') === selected) {
+                    selectedRegion = region;
+                }
             });
+
+            if (regions.length > 1 && selectedRegion) {
+                article.appendChild(regionBackButton(objectId));
+                contentTreeNodes(Array.isArray(selectedRegion.content) ? selectedRegion.content : []).forEach(function (node) {
+                    article.appendChild(node);
+                });
+            } else if (regions.length > 1) {
+                article.appendChild(regionListNode(objectId, regions));
+            } else {
+                // No landmark structure at all: one main region, shown directly -- a region
+                // list of one entry has nothing to choose between.
+                contentTreeNodes(regionContentByKey(regions, 'main')).forEach(function (node) {
+                    article.appendChild(node);
+                });
+            }
+
             var source = common.text(content.source, '');
             if (source !== '') {
                 article.appendChild(documentSourceLink(source));
             }
             return article;
+        }
+
+        function regionContentByKey(regions, key) {
+            var match = regions.filter(function (region) {
+                return region && String(region.key || '') === key;
+            })[0];
+            return match && Array.isArray(match.content) ? match.content : [];
+        }
+
+        var REGION_LABELS = {
+            header: 'Header',
+            navigation: 'Navigation',
+            main: 'Main content',
+            sidebar: 'Sidebar',
+            secondary_sidebar: 'Secondary sidebar',
+            footer: 'Footer'
+        };
+
+        function regionLabel(key) {
+            return REGION_LABELS[key] || key;
+        }
+
+        function regionListNode(objectId, regions) {
+            var list = document.createElement('ul');
+            list.className = 'web-document__regions';
+            regions.forEach(function (region) {
+                var key = String(region.key || '');
+                var item = document.createElement('li');
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'web-document__region-item';
+                button.dataset.focusRegion = objectId;
+                button.dataset.regionKey = key;
+                button.appendChild(document.createTextNode(regionLabel(key)));
+                item.appendChild(button);
+                list.appendChild(item);
+            });
+            return list;
+        }
+
+        function regionBackButton(objectId) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'web-document__region-back';
+            button.dataset.regionBack = objectId;
+            button.appendChild(document.createTextNode('‹ Regions'));
+            return button;
         }
 
         /*
@@ -1486,7 +1582,8 @@
 
         return {
             status: status,
-            render: render
+            render: render,
+            setDocumentRegion: setDocumentRegion
         };
     };
 }());

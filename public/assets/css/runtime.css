@@ -1128,6 +1128,52 @@ figure {
     display: block;
 }
 
+.web-document__regions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.web-document__region-item {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(184, 255, 243, 0.06);
+    border: 1px solid rgba(184, 255, 243, 0.18);
+    border-radius: 4px;
+    color: #eefaf8;
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.web-document__region-item:hover,
+.web-document__region-item:focus-visible {
+    background: rgba(184, 255, 243, 0.14);
+    border-color: rgba(184, 255, 243, 0.32);
+}
+
+.web-document__region-back {
+    align-self: flex-start;
+    padding: 4px 8px;
+    margin-bottom: 2px;
+    background: transparent;
+    border: 1px solid rgba(184, 255, 243, 0.18);
+    border-radius: 4px;
+    color: #b8fff3;
+    font-size: 0.76rem;
+    cursor: pointer;
+}
+
+.web-document__region-back:hover,
+.web-document__region-back:focus-visible {
+    color: #eefaf8;
+    border-color: rgba(184, 255, 243, 0.32);
+}
+
 .web-document__source {
     margin-top: 4px;
     color: #8fb0a8;
