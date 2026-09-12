@@ -121,15 +121,29 @@
 
     /*
      * Findings: the Results-pane results, as World composed them into dataset.findings
-     * (dev.elonn canonical/finding.md). Split by the entity kind each entry references. The
-     * runtime does not decide what is a Finding -- it reads the list World wrote.
+     * (dev.elonn canonical/finding.md), in the exact order World wrote them -- newest first,
+     * collections and objects interleaved as World ordered them. The runtime does not decide
+     * what is a Finding, and it does not re-group or re-order this list by entity kind: doing
+     * so would silently reorder results (e.g. burying a fresh object-type Finding under a
+     * block of collection-type ones), which is exactly the ordering World's own composer
+     * guarantees callers do not have to re-derive.
      */
     function findings(dataset) {
         var list = Array.isArray(dataset.findings) ? dataset.findings : [];
-        return {
-            collectionIds: unique(list.map(function (finding) { return String(finding.collection_id || ''); })),
-            objectIds: unique(list.map(function (finding) { return String(finding.object_id || ''); }))
-        };
+        var seen = {};
+        var ordered = [];
+        list.forEach(function (finding) {
+            var collectionId = String(finding.collection_id || '');
+            var objectId = String(finding.object_id || '');
+            if (collectionId !== '' && !seen['c:' + collectionId]) {
+                seen['c:' + collectionId] = true;
+                ordered.push({kind: 'collection', id: collectionId});
+            } else if (objectId !== '' && !seen['o:' + objectId]) {
+                seen['o:' + objectId] = true;
+                ordered.push({kind: 'object', id: objectId});
+            }
+        });
+        return ordered;
     }
 
     function collectionIdContaining(dataset, objectId) {

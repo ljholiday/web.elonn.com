@@ -118,10 +118,12 @@
         /*
          * The Results pane: the Findings returned for the current Call (see dev.elonn
          * canonical/layout.md). Only Findings render here -- placed Objects are their own
-         * panels. Hidden while collapsed or freshly cleared.
+         * panels. Hidden while collapsed or freshly cleared. Rendered in the exact order
+         * scene.findings lists them -- newest first, collections and objects interleaved as
+         * World ordered them -- never bucketed into a collections-block then an objects-block,
+         * which would silently bury a fresh result under older ones of a different kind.
          */
         function renderWorkspace(node, findings, options) {
-            var content = [];
             if (!node) {
                 return;
             }
@@ -130,9 +132,20 @@
                 return;
             }
 
-            content = collections((findings && findings.collections) || [], 'overlay')
-                .concat(objectList((findings && findings.objects) || [], 'overlay'));
+            var content = (Array.isArray(findings) ? findings : []).map(function (finding) {
+                return finding.kind === 'collection' ? collectionNodeFor(finding.collection, 'overlay') : objectButton(finding.object, 'overlay');
+            });
             common.replaceChildren(node, content);
+        }
+
+        function collectionNodeFor(collection, mode) {
+            if (collection.type === 'sequence') {
+                return sequenceNode(collection, mode);
+            }
+            if (collection.type === 'roster') {
+                return rosterNode(collection, mode);
+            }
+            return collectionNode(collection, mode);
         }
 
         function panelHeader(config) {
@@ -402,30 +415,9 @@
         }
 
         function collections(items, mode) {
-            if (items.length === 0) {
-                return [];
-            }
             return items.map(function (collection) {
-                if (collection.type === 'sequence') {
-                    return sequenceNode(collection, mode);
-                }
-                if (collection.type === 'roster') {
-                    return rosterNode(collection, mode);
-                }
-                return collectionNode(collection, mode);
+                return collectionNodeFor(collection, mode);
             });
-        }
-
-        function objectList(items, mode) {
-            if (items.length === 0) {
-                return [];
-            }
-            var list = document.createElement('div');
-            list.className = 'world-object-list';
-            items.forEach(function (object) {
-                list.appendChild(objectButton(object, mode));
-            });
-            return [list];
         }
 
         function collectionNode(collection, mode) {
@@ -870,7 +862,21 @@
                     }
                 });
             }
-            return mediaNodes.concat(contentNodes, actionNodes);
+            var bodyNodes = mediaNodes.concat(contentNodes, actionNodes);
+            // A plain payload Object -- no document, no member Collections, no member
+            // Objects, no actions (e.g. Mind's mind.reasoning result) -- has no other body
+            // content to show. Its summary IS the content in that case, not indexing
+            // metadata to suppress; without this the panel renders empty.
+            if (bodyNodes.length === 0) {
+                var summaryText = common.text(panel.object.summary, '');
+                if (summaryText !== '') {
+                    var summaryNode = document.createElement('p');
+                    summaryNode.className = 'carry-object-panel__summary';
+                    summaryNode.textContent = summaryText;
+                    bodyNodes.push(summaryNode);
+                }
+            }
+            return bodyNodes;
         }
 
         /*

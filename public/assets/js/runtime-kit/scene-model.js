@@ -113,21 +113,21 @@
 
     /*
      * The Findings returned for the current Call, for the Results pane. Unplaced content that
-     * belongs to no opened Object (see StateIndexer.findings).
+     * belongs to no opened Object (see StateIndexer.findings). One ordered list, exactly as
+     * World wrote dataset.findings -- collections and objects interleaved, newest first. Not
+     * split or re-grouped by kind; each entry just carries which kind it resolved to so the
+     * renderer knows how to build it.
      */
     function findingsView(state) {
-        var f = state.findings || {collectionIds: [], objectIds: []};
-        return {
-            collections: (f.collectionIds || []).map(function (collectionId) {
-                return collectionView(state, state.indexes.collections[collectionId] || {});
-            }).filter(function (collection) {
-                return collection.id !== '';
-            }),
-            objects: (f.objectIds || []).map(function (objectId) {
-                var object = state.indexes.objects[String(objectId || '')] || null;
-                return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId, true) : null;
-            }).filter(Boolean)
-        };
+        var list = Array.isArray(state.findings) ? state.findings : [];
+        return list.map(function (finding) {
+            if (finding.kind === 'collection') {
+                var collection = collectionView(state, state.indexes.collections[finding.id] || {});
+                return collection.id !== '' ? {kind: 'collection', collection: collection} : null;
+            }
+            var object = state.indexes.objects[String(finding.id || '')] || null;
+            return object ? {kind: 'object', object: objectView(state, object, String(object.id || '') === state.selectedObjectId, true)} : null;
+        }).filter(Boolean);
     }
 
     function collectionView(state, collection) {

@@ -495,6 +495,12 @@ input {
     user-select: none;
 }
 
+.carry-object-panel__summary {
+    margin: 0;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
 .hosted-object-surface {
     display: grid;
     gap: 8px;
@@ -681,6 +687,14 @@ figure {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
     gap: 4px 6px;
+}
+
+/* Results-pane Findings render as flat siblings (collections and object entries
+   interleaved in World's own order, not bucketed) -- .world-object-list's grid gap only
+   covers objects grouped inside one collection card, so a top-level entry needs its own
+   spacing here instead. */
+.workspace-results-panel__list > .world-object-entry {
+    margin-bottom: 8px;
 }
 
 .world-object-entry > .world-object {

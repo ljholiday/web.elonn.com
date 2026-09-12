@@ -188,12 +188,32 @@ const findingsDataset = Object.assign({}, dataset, {
 });
 const findingsState = runtime.StateIndexer.build(runtime.DatasetParser.parse(findingsDataset));
 if (findingsState.layers.map((layer) => layer.id).join(',') !== 'carry,field') throw new Error('layers are exactly carry and field');
-if (findingsState.findings.collectionIds[0] !== 'collection:findings') throw new Error('unplaced collection was not projected as a Finding');
+if (findingsState.findings[0].kind !== 'collection' || findingsState.findings[0].id !== 'collection:findings') throw new Error('unplaced collection was not projected as a Finding');
 if (findingsState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('an unplaced collection leaked onto the carry layer');
 if (findingsState.selectedObjectId !== '') throw new Error('a Findings-only Dataset focuses nothing until the member focuses a Finding');
 const findingsScene = runtime.SceneModel.fromState(findingsState);
-if (findingsScene.findings.collections[0].id !== 'collection:findings') throw new Error('Findings were not projected into the scene');
+if (findingsScene.findings[0].kind !== 'collection' || findingsScene.findings[0].collection.id !== 'collection:findings') throw new Error('Findings were not projected into the scene');
 if (findingsScene.focus.kind !== 'empty') throw new Error('nothing is focused in a Findings-only scene');
+
+// Findings render in exactly the order World wrote dataset.findings -- collections and
+// objects interleaved, never bucketed by kind (a runtime regrouping them would silently
+// bury a fresh result under older ones of a different kind; see decision recorded against
+// state-indexer.js findings() and web-renderer.js renderWorkspace()).
+const mixedFindingsDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:findings-mixed',
+  objects: dataset.objects.concat([{id: 'object:mixed-finding', type: 'note', title: 'Mixed', content: {}, actions: [], resources: [], relationships: []}]),
+  collections: [{id: 'collection:findings', type: 'collection', content: {items: ['object:one']}}],
+  placements: [],
+  findings: [
+    {id: 'finding:object:mixed-finding', content: {object: 'object:mixed-finding'}},
+    {id: 'finding:collection:findings', content: {collection: 'collection:findings'}}
+  ],
+  context: {focus: {object_id: ''}}
+});
+const mixedFindingsScene = runtime.SceneModel.fromState(runtime.StateIndexer.build(runtime.DatasetParser.parse(mixedFindingsDataset)));
+if (mixedFindingsScene.findings.length !== 2) throw new Error('both interleaved Findings should be present');
+if (mixedFindingsScene.findings[0].kind !== 'object' || mixedFindingsScene.findings[0].object.id !== 'object:mixed-finding') throw new Error('the newer object-type Finding must render first, not be bucketed after collections');
+if (mixedFindingsScene.findings[1].kind !== 'collection' || mixedFindingsScene.findings[1].collection.id !== 'collection:findings') throw new Error('the older collection-type Finding must render second, in Dataset order');
 
 // An Object with a carry Placement is opened on Carry: it gets a context.objects entry and
 // world.back/close act on its id.
