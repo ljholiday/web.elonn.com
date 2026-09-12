@@ -652,10 +652,12 @@
             return !!invocation && String(invocation.object_id || '') === String(object.id || '');
         }
 
+        // A Resource may carry a source URI (dev.elonn canonical/resource.md); an Action never
+        // does (there is no URL on an Action -- canonical/action.md), so only Resources are
+        // a candidate here.
         function cardLinks(object) {
             var links = [];
             firstHref(object.resources, 'Source', links, object.id);
-            firstHref(object.actions, 'Action', links, object.id);
             return links;
         }
 
@@ -1271,14 +1273,15 @@
             });
         }
 
+        // Only reachable for an action actionLinks already filtered to carry a real
+        // operation_invocation -- there is no URL on an Action to fall back to (dev.elonn
+        // canonical/action.md, "Invocation and availability"; World's ServiceDatasetValidator
+        // rejects any Action without one).
         function actionNode(action, object) {
-            if (action.operationInvocation && typeof action.operationInvocation === 'object') {
-                if (hasModelArguments(action.operationInvocation)) {
-                    return operationForm(action, object);
-                }
-                return operationLine('Action', action.label, action.operationInvocation);
+            if (hasModelArguments(action.operationInvocation)) {
+                return operationForm(action, object);
             }
-            return linkLine('Action', action.label, action.href, object.id);
+            return operationLine('Action', action.label, action.operationInvocation);
         }
 
         function actionButton(action) {
@@ -1298,7 +1301,7 @@
             var enabled = candidates.filter(function (action) {
                 return action.availability
                     && action.availability.state === 'enabled'
-                    && (common.text(action.href, '') !== '' || (action.operationInvocation && typeof action.operationInvocation === 'object'));
+                    && action.operationInvocation && typeof action.operationInvocation === 'object';
             });
             // A non-enabled action is World's call (Composer::withNormalisedAvailability), not
             // the runtime's to re-derive or silently drop: render it disabled, with World's reason.

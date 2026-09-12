@@ -7,7 +7,7 @@
     var common = window.ElonnWorldRuntime.Common;
 
     window.ElonnWorldRuntime.StateIndexer = {
-        build: function (dataset, previous) {
+        build: function (dataset) {
             var indexes = {
                 objects: common.indexBy(dataset.objects, 'id'),
                 actions: common.indexBy(dataset.actions, 'id'),
@@ -16,8 +16,9 @@
             };
             // Focus is World's: context.focus.object_id names the one focused Object, or '' for
             // none. The runtime does not fall back to the first Object -- nothing is focused
-            // until the member focuses a Finding or navigates an Object. The selected
-            // Collection follows the focused Object (the Collection that contains it), if any.
+            // until the member focuses a Finding or navigates an Object, and a prior response's
+            // selection is never carried forward into this one. The selected Collection follows
+            // the focused Object (the Collection that contains it), if any.
             var focusedId = String((dataset.focus && dataset.focus.object_id) || '');
             var selectedObjectId = indexes.objects[focusedId] ? focusedId : '';
             var selectedCollectionId = selectedObjectId ? collectionIdContaining(dataset, selectedObjectId) : '';
@@ -33,9 +34,7 @@
                 findings: findings(dataset),
                 runtimeSessionId: String(dataset.id || ''),
                 selectedObjectId: selectedObjectId,
-                selectedCollectionId: selectedCollectionId,
-                actionResult: previous && previous.actionResult ? previous.actionResult : null,
-                actionInFlight: false
+                selectedCollectionId: selectedCollectionId
             };
         }
     };

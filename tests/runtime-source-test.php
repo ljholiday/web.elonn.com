@@ -175,7 +175,6 @@ $checks = [
     'Shared runtime kit has the required ABI boundaries' => str_contains($scripts, 'WorldClient')
         && str_contains($scripts, 'DatasetParser')
         && str_contains($scripts, 'StateIndexer')
-        && str_contains($scripts, 'ContinuityReconciler')
         && str_contains($scripts, 'SceneModel'),
     'Runtime validates the canonical Dataset fields directly' => str_contains($scripts, "datasetFields")
         && str_contains($scripts, "'context'")
@@ -284,11 +283,14 @@ $checks = [
         && !str_contains($scripts, 'world-action')
         && !str_contains($scripts, 'button.disabled = true')
         && !str_contains($scripts, "button.setAttribute('aria-disabled', 'true')"),
-    'Runtime renders safe action links and operation invocation actions' => str_contains($scripts, 'actionLinks')
-        && str_contains($scripts, "linkLine('Action'")
+    'Runtime renders operation invocation actions only -- there is no href on an Action (dev.elonn canonical/action.md)' =>
+        str_contains($scripts, 'actionLinks')
         && str_contains($scripts, "operationLine('Action'")
         && str_contains($scripts, 'dispatchOperationAction')
-        && !str_contains($scripts, 'dispatchWorldAction'),
+        && !str_contains($scripts, 'dispatchWorldAction')
+        && !str_contains($webRenderer, "linkLine('Action'")
+        && !str_contains($webRenderer, 'action.href')
+        && !str_contains($scripts, 'action.href'),
     'Grouped Dashboard actions lay out one row per group, in the Dataset order -- no runtime group vocabulary' =>
         !str_contains($webRenderer, "ACTION_GROUP_ORDER")
         && !str_contains($webRenderer, "['view', 'circle', 'create']")

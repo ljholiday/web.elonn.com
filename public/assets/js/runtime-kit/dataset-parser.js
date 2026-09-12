@@ -112,7 +112,10 @@
                     group: common.text(content.group || action.group, ''),
                     // Canonical, set by World (Composer::withCanonicalFields).
                     target_id: String(action.target || ''),
-                    href: String(content.href || content.url || action.href || ''),
+                    // There is no href on an Action (dev.elonn canonical/action.md, "Invocation and availability"; glossary.xml,
+                    // "link, action, resource, href"). World's ServiceDatasetValidator rejects any
+                    // Action with no operation_invocation, so this is the only field an Action ever
+                    // carries for a Runtime to dispatch.
                     operation_invocation: content.operation_invocation && typeof content.operation_invocation === 'object' && !Array.isArray(content.operation_invocation)
                         ? content.operation_invocation
                         : null,

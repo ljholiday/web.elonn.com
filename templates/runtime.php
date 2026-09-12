@@ -23,7 +23,6 @@ $scripts = [
     'auth-client.js',
     'dataset-parser.js',
     'state-indexer.js',
-    'continuity-reconciler.js',
     'scene-model.js',
     'adapter-registry.js',
     'adapters/paint-editor.js',

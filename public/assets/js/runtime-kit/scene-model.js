@@ -44,7 +44,6 @@
                 actions: selectedObject ? actionsForObject(state, selectedObject.id) : [],
                 resources: selectedObject ? resourcesForObject(state, selectedObject) : [],
                 related: selectedObject ? relatedObjects(state, selectedObject.id) : [],
-                actionResult: state.actionResult || null,
                 status: statusRows(state),
                 content: worldContent(state)
             };
@@ -196,7 +195,8 @@
                 type: common.text(action.type, 'action'),
                 group: common.text(action.group, ''),
                 endpoint: String(action.endpoint || ''),
-                href: common.text(action.href || (action.source && action.source.href), ''),
+                // There is no URL on an Action (dev.elonn canonical/action.md, "Invocation and availability") -- dispatch is
+                // always through operation_invocation.
                 operationInvocation: action.operation_invocation && typeof action.operation_invocation === 'object' ? action.operation_invocation : null,
                 // World owns availability (Composer::withNormalisedAvailability): {state, reason},
                 // rendered verbatim. The runtime never derives it from the action's shape.

@@ -462,8 +462,7 @@
     // re-merges a Dataset -- a stale client merge would revive an Object World just dropped.
     function replaceDataset(payload, runtimeState) {
         var parsed = runtime.DatasetParser.parse(payload);
-        var next = runtime.StateIndexer.build(parsed, state);
-        state = runtime.ContinuityReconciler.reconcile(state, next);
+        state = runtime.StateIndexer.build(parsed);
         state.carryPanels = reconcileCarryPanels(carryPanelSeed());
         state.workspacePanel = reconcileWorkspacePanel(loadWorkspacePanel());
         persistCarryPanels();

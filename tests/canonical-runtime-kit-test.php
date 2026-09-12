@@ -113,7 +113,7 @@ if (parsed.errors.length !== 0) throw new Error('errors array was not preserved'
 if (parsed.collections[0].items[0] !== 'object:one') throw new Error('canonical collection item ids were not preserved');
 if (parsed.actions[0].target_id !== 'object:one') throw new Error('canonical action target was not parsed');
 
-const state = runtime.StateIndexer.build(parsed, null);
+const state = runtime.StateIndexer.build(parsed);
 if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Error('carry placement was not projected');
 const scene = runtime.SceneModel.fromState(state);
 // World owns availability (Composer::withNormalisedAvailability); the runtime renders {state, reason} verbatim.
@@ -145,12 +145,12 @@ const operationDataset = Object.assign({}, dataset, {
   placements: [],
   context: {focus: {object_id: 'paint.workspace'}}
 });
-const operationState = runtime.StateIndexer.build(runtime.DatasetParser.parse(operationDataset), null);
+const operationState = runtime.StateIndexer.build(runtime.DatasetParser.parse(operationDataset));
 const operationScene = runtime.SceneModel.fromState(operationState);
 if (operationScene.actions[0].availability.state !== 'enabled') throw new Error('operation action was not enabled');
 if (operationScene.actions[0].operationInvocation.operation !== 'paint.create') throw new Error('operation invocation was not projected');
 
-const paintState = runtime.StateIndexer.build(runtime.DatasetParser.parse(paintDataset), null);
+const paintState = runtime.StateIndexer.build(runtime.DatasetParser.parse(paintDataset));
 const paintScene = runtime.SceneModel.fromState(paintState);
 if (paintScene.focus.surface.mode !== 'hosted') throw new Error('hosted Object surface was not projected');
 if (paintScene.focus.surface.service !== 'paint') throw new Error('hosted Object surface service was not projected');
@@ -186,7 +186,7 @@ const findingsDataset = Object.assign({}, dataset, {
   // A bare search focuses nothing (World sends context.focus.object_id "").
   context: {focus: {object_id: ''}}
 });
-const findingsState = runtime.StateIndexer.build(runtime.DatasetParser.parse(findingsDataset), null);
+const findingsState = runtime.StateIndexer.build(runtime.DatasetParser.parse(findingsDataset));
 if (findingsState.layers.map((layer) => layer.id).join(',') !== 'carry,field') throw new Error('layers are exactly carry and field');
 if (findingsState.findings.collectionIds[0] !== 'collection:findings') throw new Error('unplaced collection was not projected as a Finding');
 if (findingsState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('an unplaced collection leaked onto the carry layer');
@@ -205,7 +205,7 @@ const openedDataset = Object.assign({}, dataset, {
     focus: {object_id: 'object:one'}
   }
 });
-const openedState = runtime.StateIndexer.build(runtime.DatasetParser.parse(openedDataset), null);
+const openedState = runtime.StateIndexer.build(runtime.DatasetParser.parse(openedDataset));
 if (openedState.openedObjects.length !== 1 || openedState.openedObjects[0].id !== 'object:one') throw new Error('carry-placed Object was not registered as opened');
 if (openedState.openedObjects[0].depth !== 1) throw new Error('per-Object navigation depth was not projected');
 openedState.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 10, y: 10, width: 320, height: 200, z: 21, collapsed: false}];
