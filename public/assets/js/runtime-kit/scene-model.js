@@ -97,6 +97,7 @@
                 title: common.text(opened.title, view.title),
                 depth: Math.max(0, parseInt(opened.depth, 10) || 0),
                 subject: String(opened.subject || ''),
+                region: String(opened.region || ''),
                 object: view,
                 collections: (opened.collectionIds || []).map(function (collectionId) {
                     return collectionView(state, state.indexes.collections[collectionId] || {});
@@ -271,6 +272,9 @@
                 depth: opened ? Math.max(0, parseInt(opened.depth, 10) || 0) : 0,
                 // The member this container has navigated into (World-owned), or ''.
                 subject: opened ? String(opened.subject || '') : '',
+                // The semantic region focused within this container's document content
+                // (World-owned, canonical/context.md), or '' for its region list.
+                region: opened ? String(opened.region || '') : '',
                 collections: opened ? openedCollections(state, opened) : [],
                 memberObjects: opened ? openedMemberObjects(state, opened) : [],
                 x: Number(panel.x || 0),

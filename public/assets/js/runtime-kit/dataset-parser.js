@@ -206,7 +206,10 @@
          * context.objects: per-Object navigation state World owns for each Object opened on
          * Carry (see dev.elonn canonical/layout.md). title + depth drive the panel title bar;
          * members lists the ids of the content currently shown inside that Object's container;
-         * subject is the one member the container has navigated into (or '').
+         * subject is the one member the container has navigated into (or ''); region is the
+         * semantic region (canonical/html.md) currently focused within an interpreted document
+         * member, or '' for its region list (canonical/context.md, Recognized detail: region
+         * focus). Both subject and region are World's own state -- the runtime reads them.
          */
         navigation: function (dataset) {
             var context = dataset.context && typeof dataset.context === 'object' ? dataset.context : {};
@@ -218,7 +221,8 @@
                     title: common.text(entry.title, ''),
                     depth: Math.max(0, parseInt(entry.depth, 10) || 0),
                     members: (Array.isArray(entry.members) ? entry.members : []).map(String).filter(Boolean),
-                    subject: common.text(entry.subject, '')
+                    subject: common.text(entry.subject, ''),
+                    region: common.text(entry.region, '')
                 };
             });
             return parsed;

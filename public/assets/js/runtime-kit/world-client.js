@@ -78,6 +78,11 @@
             if (state.operationInvocation && typeof state.operationInvocation === 'object' && !Array.isArray(state.operationInvocation)) {
                 call.content.operation_invocation = state.operationInvocation;
             }
+            // world.focus_region names which region to focus (dev.elonn canonical/context.md,
+            // Recognized detail: region focus) -- a World operation, not a Service invocation.
+            if (String(state.region || '') !== '') {
+                call.content.region = String(state.region);
+            }
             // Following a link inside an Object opened on Carry: World navigates that Object in
             // place (see dev.elonn canonical/layout.md, Object navigation).
             if (String(state.originObject || '') !== '') {

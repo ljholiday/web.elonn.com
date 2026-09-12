@@ -112,7 +112,10 @@
                 depth: Math.max(0, parseInt(entry.depth, 10) || 0),
                 collectionIds: unique(members.filter(function (m) { return !!indexes.collections[m]; })),
                 objectIds: unique(members.filter(function (m) { return !!indexes.objects[m] && m !== id; })),
-                subject: indexes.objects[subject] ? subject : ''
+                subject: indexes.objects[subject] ? subject : '',
+                // The semantic region focused within this container's document content, or ''
+                // for its region list -- World's own state (dataset.navigation[id].region).
+                region: String(entry.region || '')
             };
         });
     }

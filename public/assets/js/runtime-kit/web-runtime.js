@@ -101,7 +101,6 @@
         var worldBack = event.target.closest('[data-world-back]');
         var worldClose = event.target.closest('[data-world-close]');
         var regionFocus = event.target.closest('[data-focus-region]');
-        var regionBack = event.target.closest('[data-region-back]');
 
         if (closeButton && state) {
             event.preventDefault();
@@ -127,20 +126,18 @@
             return;
         }
 
-        // Focusing a region, or returning to the region list, displays content the document
-        // Object already carries -- Runtime presentation only, no World Call (dev.elonn
-        // canonical/html.md, Region navigation).
+        // Focusing a region displays content the document Object already carries, but it is
+        // still a World operation -- world.focus_region pushes it onto the container's own
+        // navigation history, the same one a document swap pushes onto (dev.elonn
+        // canonical/context.md, Recognized detail: region focus). Returning to the region list
+        // is an ordinary world.back -- the panel's own back control (present once depth > 0)
+        // pops it exactly like any other navigation step; regions do not need a second one.
         if (regionFocus && state) {
             event.preventDefault();
-            renderer.setDocumentRegion(regionFocus.dataset.focusRegion, regionFocus.dataset.regionKey);
-            renderState();
-            return;
-        }
-
-        if (regionBack && state) {
-            event.preventDefault();
-            renderer.setDocumentRegion(regionBack.dataset.regionBack, '');
-            renderState();
+            var regionOrigin = originObjectFor(regionFocus);
+            if (regionOrigin !== '') {
+                dispatchWorldNavigation('world.focus_region', regionOrigin, {region: String(regionFocus.dataset.focusRegion || '')});
+            }
             return;
         }
 
@@ -983,18 +980,19 @@
         dispatchOperationInvocation(open.invocation, originObject !== '' ? {originObject: originObject} : {});
     }
 
-    function dispatchWorldNavigation(operation, objectId) {
+    function dispatchWorldNavigation(operation, objectId, extra) {
         if (String(objectId || '') === '') {
             return;
         }
+        extra = extra && typeof extra === 'object' ? extra : {};
         renderer.status('Requesting World Dataset.', 'loading');
-        loadDataset({
+        loadDataset(Object.assign({
             operation: operation,
             originObject: String(objectId),
             runtimeSessionId: state ? state.runtimeSessionId : '',
             selectedObjectId: state ? state.selectedObjectId : '',
             inputText: operation
-        });
+        }, extra));
     }
 
     function restoreLocalUiState() {
