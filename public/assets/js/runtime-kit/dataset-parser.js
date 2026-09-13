@@ -161,14 +161,17 @@
                 var content = resource.content && typeof resource.content === 'object' ? resource.content : {};
                 // dev.elonn canonical/resource.md's own field is content.source (a URI); a
                 // Resource this Runtime's own dispatch layer authored may still use href/url.
-                // Not every Resource's content.source is a URI string (e.g. Paint's carries a
-                // nested operations structure there), so only a string source counts.
+                // Named `source`, not `href`: unlike an Action (canonical/action.md: "there is
+                // no href on an Action"), a Resource legitimately carries one -- but not every
+                // Resource's content.source IS one (Paint's carries a nested operations
+                // structure there). Calling this field `source` costs nothing when it isn't a
+                // URI; calling it `href` would assert something false.
                 var uriSource = typeof content.source === 'string' ? content.source : '';
                 return {
                     id: String(resource.id || content.id || ''),
                     kind: String(content.kind || resource.type || 'resource'),
                     media_type: String(content.media_type || content.mediaType || ''),
-                    href: String(content.href || content.url || uriSource || ''),
+                    source: String(content.href || content.url || uriSource || ''),
                     label: common.text(content.label || content.name || resource.label || resource.id, 'Resource'),
                     content: content,
                     availability: availability(resource.availability || content.availability)

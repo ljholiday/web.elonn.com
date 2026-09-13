@@ -217,7 +217,7 @@
                 label: common.text(resource.label, 'Resource'),
                 kind: common.text(resource.kind, 'resource'),
                 mediaType: common.text(resource.media_type, ''),
-                href: common.text(resource.href, ''),
+                source: common.text(resource.source, ''),
                 content: resource.content && typeof resource.content === 'object' ? resource.content : {},
                 availability: availability(resource.availability)
             };

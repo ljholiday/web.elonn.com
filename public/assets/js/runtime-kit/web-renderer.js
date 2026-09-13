@@ -655,7 +655,7 @@
 
         function firstHref(items, label, output, objectId) {
             (Array.isArray(items) ? items : []).some(function (item) {
-                var href = common.text(item && item.href, '');
+                var href = common.text(item && item.source, '');
                 if (href === '') {
                     return false;
                 }
@@ -684,7 +684,7 @@
             resources.some(function (resource) {
                 var content = resource && typeof resource.content === 'object' ? resource.content : {};
                 var dataUrl = String(content.data_url || '');
-                var externalUrl = (content.kind === 'image') ? String(content.href || content.url || '') : '';
+                var externalUrl = resource && String(resource.kind || '') === 'image' ? common.text(resource.source, '') : '';
                 var src = dataUrl.indexOf('data:image/') === 0 ? dataUrl : externalUrl;
                 if (src === '') {
                     return false;
@@ -1176,7 +1176,7 @@
                 }
             });
             var resource = named || firstEmbed;
-            var href = resource ? common.text(resource.href, '') : '';
+            var href = resource ? common.text(resource.source, '') : '';
             return href !== '' ? href : common.text(content.source, '');
         }
 
@@ -1293,9 +1293,9 @@
 
         function resourceLinks(object) {
             return (Array.isArray(object.resources) ? object.resources : []).filter(function (resource) {
-                return common.text(resource.href, '') !== '';
+                return common.text(resource.source, '') !== '';
             }).map(function (resource) {
-                return linkLine('Resource', resource.label, resource.href, object.id);
+                return linkLine('Resource', resource.label, resource.source, object.id);
             });
         }
 

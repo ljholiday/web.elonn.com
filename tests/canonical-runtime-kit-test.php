@@ -178,7 +178,7 @@ const embedDataset = Object.assign({}, dataset, {
 const embedScene = runtime.SceneModel.fromState(runtime.StateIndexer.build(runtime.DatasetParser.parse(embedDataset)));
 if (embedScene.focus.resources.length !== 1) throw new Error('embed Resource was not projected onto its Object');
 if (embedScene.focus.resources[0].kind !== 'embed') throw new Error('embed Resource kind was not preserved');
-if (embedScene.focus.resources[0].href !== 'https://www.youtube-nocookie.com/embed/abc123') throw new Error('Resource content.source was not projected as href -- the generic embed/image href mapping regressed');
+if (embedScene.focus.resources[0].source !== 'https://www.youtube-nocookie.com/embed/abc123') throw new Error('Resource content.source was not projected onto the view -- the generic embed/image source mapping regressed');
 
 state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, width: 280, height: 160, z: 23, collapsed: true}];
 const carryScene = runtime.SceneModel.fromState(state);
