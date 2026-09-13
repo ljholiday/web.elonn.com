@@ -814,9 +814,25 @@ figure {
     outline: none;
 }
 
+.world-sequence-entry__main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
 .world-sequence-entry__body {
     font-size: 0.82rem;
     white-space: pre-wrap;
+}
+
+.world-sequence-entry__chip {
+    align-self: flex-start;
+    font-size: 0.7rem;
+    color: #b8fff3;
+    border: 1px solid rgba(184, 255, 243, 0.35);
+    border-radius: 999px;
+    padding: 2px 8px;
 }
 
 .world-sequence-entry__time {
@@ -1195,4 +1211,10 @@ figure {
 .web-video__native {
     width: 100%;
     max-width: 480px;
+}
+
+.web-video__thumbnail {
+    width: 100%;
+    max-width: 480px;
+    border-radius: 6px;
 }

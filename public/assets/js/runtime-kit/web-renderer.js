@@ -494,6 +494,7 @@
         function sequenceEntryNode(object, mode) {
             var content = object.content && typeof object.content === 'object' ? object.content : {};
             var entry = document.createElement('button');
+            var main = document.createElement('span');
             var body = document.createElement('span');
             var time = document.createElement('span');
             entry.type = 'button';
@@ -501,9 +502,14 @@
             entry.dataset.objectId = object.id;
             entry.dataset.objectType = object.type;
             entry.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
+            main.className = 'world-sequence-entry__main';
             body.className = 'world-sequence-entry__body';
             body.textContent = common.text(content.body, object.summary);
-            entry.appendChild(body);
+            main.appendChild(body);
+            sequenceEntryChips(object).forEach(function (chip) {
+                main.appendChild(chip);
+            });
+            entry.appendChild(main);
             if (mode !== 'compact') {
                 time.className = 'world-sequence-entry__time';
                 time.textContent = sequenceTimeLabel(content.created_at);
@@ -513,6 +519,28 @@
                 entry.appendChild(badge(object.availability.state));
             }
             return entry;
+        }
+
+        /*
+         * A visual marker for each of this sequence entry's own Actions (e.g. a
+         * pasted link's Open action) -- the row itself already dispatches the
+         * matching Action when clicked (the generic [data-object-id] handler,
+         * via World's hoisted dataset.actions), this only makes that
+         * discoverable. Label text is the Action's own canonical label
+         * (World/Messages content, per dev.elonn canonical/action.md) --
+         * never authored here.
+         */
+        function sequenceEntryChips(object) {
+            return (Array.isArray(object.actions) ? object.actions : [])
+                .filter(function (action) {
+                    return common.text(action.label, '') !== '';
+                })
+                .map(function (action) {
+                    var chip = document.createElement('span');
+                    chip.className = 'world-sequence-entry__chip';
+                    chip.textContent = common.text(action.label, '');
+                    return chip;
+                });
         }
 
         function sequenceTimeLabel(createdAt) {
@@ -1147,10 +1175,51 @@
                 element.controls = true;
                 element.preload = 'none';
                 frame.appendChild(element);
-            } else if (source !== '') {
-                frame.appendChild(documentSourceLink(source));
+            } else {
+                // No playable surface here (dev.elonn canonical/html.md, Compatibility) --
+                // show what this Runtime can: the thumbnail Find already resolved, plus a
+                // plain link to the source (decision.embed_is_a_resource_capability_not_a_
+                // video_capability_20260913 -- playback is a capability, not guaranteed).
+                var thumbnail = thumbnailPreview(object, content);
+                if (thumbnail) {
+                    frame.appendChild(thumbnail);
+                }
+                if (source !== '') {
+                    frame.appendChild(documentSourceLink(source));
+                }
             }
             return frame;
+        }
+
+        /*
+         * The Object's own named thumbnail Resource (content.thumbnail) -- realized the
+         * same way any other external image Resource is, with no special trust because it
+         * arrived via oEmbed (decision.oembed_provider_table_execution_boundary_20260912).
+         */
+        function thumbnailPreview(object, content) {
+            var thumbnailId = String(content.thumbnail || '');
+            if (thumbnailId === '') {
+                return null;
+            }
+            var resources = Array.isArray(object.resources) ? object.resources : [];
+            var match = null;
+            resources.some(function (resource) {
+                if (String(resource.id || '') === thumbnailId) {
+                    match = resource;
+                    return true;
+                }
+                return false;
+            });
+            var src = match ? common.text(match.source, '') : '';
+            if (src === '') {
+                return null;
+            }
+            var image = document.createElement('img');
+            image.className = 'web-video__thumbnail';
+            image.src = src;
+            image.alt = '';
+            image.loading = 'lazy';
+            return image;
         }
 
         /*
