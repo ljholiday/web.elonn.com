@@ -1115,10 +1115,14 @@
         }
 
         /*
-         * A promoted media Object (a `video` or `audio` from the interpreted document). An
-         * external provider (YouTube) renders as its embed; native playback renders as a
-         * real <video>/<audio> element from the source; anything else falls back to opening
-         * the source URL as a runtime Object.
+         * A promoted media Object (a `video` or `audio` from an interpreted document or an
+         * oEmbed provider match -- dev.elonn canonical/oembed.md). The runtime never knows
+         * which provider this is or constructs a provider URL itself: an executable embed
+         * URL exists only because Elonn's own provider policy vetted it and Find placed it
+         * on an `embed`-kind Resource (decision.oembed_provider_table_execution_boundary_
+         * 20260912 -- "the entire executable URL is constructed by Elonn", not a Runtime).
+         * This realizes that Resource as an iframe; native playback renders as a real
+         * <video>/<audio> element from the source; anything else falls back to a plain link.
          */
         function mediaObjectNode(object) {
             var content = object.content && typeof object.content === 'object' ? object.content : {};
@@ -1131,7 +1135,7 @@
                 heading.appendChild(document.createTextNode(title));
                 frame.appendChild(heading);
             }
-            var embedSource = videoEmbedSource(content);
+            var embedSource = embedResourceHref(object, content);
             var source = common.text(content.source, '');
             if (embedSource !== '') {
                 frame.appendChild(embedFrame(embedSource, content.aspect));
@@ -1149,15 +1153,31 @@
             return frame;
         }
 
-        function videoEmbedSource(content) {
-            if (String(content.provider || '') === 'YouTube' && common.text(content.provider_id, '') !== '') {
-                return 'https://www.youtube.com/embed/' + encodeURIComponent(content.provider_id);
-            }
-            var source = common.text(content.source, '');
-            if (source.indexOf('youtube.com/embed/') !== -1 || source.indexOf('youtube-nocookie.com/embed/') !== -1) {
-                return source;
-            }
-            return '';
+        /*
+         * The Object's own `embed`-kind Resource -- the canonical, Elonn-constructed
+         * executable URL (dev.elonn canonical/oembed.md), found by content.resource when the
+         * Object names one, else the first embed-kind Resource it carries. Never derived from
+         * content.provider/provider_id: that would make this Runtime re-implement provider
+         * policy that belongs solely to Find. Falls back to content.source (already an
+         * Elonn-constructed URL when present, per the same policy) only if no Resource
+         * carries it -- never to anything reconstructed here.
+         */
+        function embedResourceHref(object, content) {
+            var resources = Array.isArray(object.resources) ? object.resources : [];
+            var namedId = String(content.resource || '');
+            var named = null;
+            var firstEmbed = null;
+            resources.forEach(function (resource) {
+                if (namedId !== '' && String(resource.id || '') === namedId) {
+                    named = resource;
+                }
+                if (!firstEmbed && String(resource.kind || '') === 'embed') {
+                    firstEmbed = resource;
+                }
+            });
+            var resource = named || firstEmbed;
+            var href = resource ? common.text(resource.href, '') : '';
+            return href !== '' ? href : common.text(content.source, '');
         }
 
         function embedFrame(source, aspect) {

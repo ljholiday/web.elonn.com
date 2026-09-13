@@ -162,6 +162,24 @@ paintState.carryPanels = [{id: 'carry-panel:paint.document:test', objectId: 'pai
 const paintCarryScene = runtime.SceneModel.fromState(paintState);
 if (paintCarryScene.carryPanels[0].object.surface.kind !== 'editor') throw new Error('hosted Object surface was not available in carry panel');
 
+// dev.elonn canonical/resource.md: a Resource's URI lives at content.source (not content.href/
+// url) -- every Resource find.elonn produces (embed/image/source_document) uses this field.
+// The Runtime must read it generically so an embed Resource (decision.oembed_provider_table_
+// execution_boundary_20260912's Elonn-constructed URL) reaches an iframe without any
+// provider-specific code -- and so it never collides with a Resource like Paint's above, whose
+// own content.source is a nested object, not a URI.
+const embedDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:embed',
+  objects: [{id: 'video:youtube:abc123', type: 'video', content: {title: 'A Video', resource: 'resource:embed:1', provider: 'YouTube', provider_id: 'abc123'}, resources: ['resource:embed:1']}],
+  collections: [{id: 'collection:embed', type: 'collection', content: {items: ['video:youtube:abc123']}}],
+  resources: [{id: 'resource:embed:1', type: 'resource', content: {kind: 'embed', media_type: 'text/html', source: 'https://www.youtube-nocookie.com/embed/abc123'}}],
+  context: {focus: {object_id: 'video:youtube:abc123'}}
+});
+const embedScene = runtime.SceneModel.fromState(runtime.StateIndexer.build(runtime.DatasetParser.parse(embedDataset)));
+if (embedScene.focus.resources.length !== 1) throw new Error('embed Resource was not projected onto its Object');
+if (embedScene.focus.resources[0].kind !== 'embed') throw new Error('embed Resource kind was not preserved');
+if (embedScene.focus.resources[0].href !== 'https://www.youtube-nocookie.com/embed/abc123') throw new Error('Resource content.source was not projected as href -- the generic embed/image href mapping regressed');
+
 state.carryPanels = [{id: 'carry-panel:object:one', objectId: 'object:one', x: 42, y: 84, width: 280, height: 160, z: 23, collapsed: true}];
 const carryScene = runtime.SceneModel.fromState(state);
 if (carryScene.carryPanels[0].object.id !== 'object:one') throw new Error('carry panel object was not projected');
