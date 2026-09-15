@@ -506,6 +506,10 @@
             body.className = 'world-sequence-entry__body';
             body.textContent = common.text(content.body, object.summary);
             main.appendChild(body);
+            var preview = sequenceEntryLinkPreview(object, content);
+            if (preview) {
+                main.appendChild(preview);
+            }
             sequenceEntryChips(object).forEach(function (chip) {
                 main.appendChild(chip);
             });
@@ -541,6 +545,38 @@
                     chip.textContent = common.text(action.label, '');
                     return chip;
                 });
+        }
+
+        /*
+         * A pasted link's own preview card (thumbnail + title), shown inline in a
+         * message/reply row before the member taps it -- content.link_preview_title
+         * and the thumbnail Resource content.thumbnail points to are set upstream,
+         * server-side, when the owning Service resolves the link eagerly (once,
+         * ahead of the member ever opening it). Reuses imagePreview()'s own
+         * image-Resource lookup -- the exact same "no special trust for an
+         * externally-sourced image" treatment objectButton() already gives one.
+         * Absent for a message with no link, or one not yet (or never) resolved --
+         * degrades to nothing, never a broken/empty card.
+         */
+        function sequenceEntryLinkPreview(object, content) {
+            var title = common.text(content.link_preview_title, '');
+            var image = imagePreview(object);
+            if (title === '' && !image) {
+                return null;
+            }
+            var card = document.createElement('span');
+            card.className = 'world-sequence-entry__preview';
+            if (image) {
+                image.className = 'world-sequence-entry__preview-image';
+                card.appendChild(image);
+            }
+            if (title !== '') {
+                var titleEl = document.createElement('strong');
+                titleEl.className = 'world-sequence-entry__preview-title';
+                titleEl.textContent = title;
+                card.appendChild(titleEl);
+            }
+            return card;
         }
 
         function sequenceTimeLabel(createdAt) {
