@@ -1588,6 +1588,16 @@
             return wrapper;
         }
 
+        // A Contract's datetime values are naive wall-clock strings ("2026-09-20 10:00:00" or
+        // "2026-09-20T10:00:00", no zone) -- <input type="datetime-local"> requires exactly
+        // "YYYY-MM-DDTHH:mm". This re-shapes the same digits rather than round-tripping through
+        // Date, which would silently shift the clock time by the browser's own timezone offset.
+        function datetimeLocalValue(value) {
+            var text = common.text(value, '');
+            var match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/.exec(text);
+            return match ? match[1] + 'T' + match[2] : '';
+        }
+
         function operationFormInput(key, spec, currentValue) {
             var type = common.text(spec.type, 'string');
             var enumValues = Array.isArray(spec.enum) ? spec.enum : null;
@@ -1622,6 +1632,10 @@
                 input = document.createElement('input');
                 input.type = 'password';
                 input.autocomplete = key === 'password' ? 'current-password' : 'new-password';
+            } else if (type === 'datetime') {
+                input = document.createElement('input');
+                input.type = 'datetime-local';
+                input.value = datetimeLocalValue(value);
             } else {
                 input = document.createElement('input');
                 input.type = 'text';
