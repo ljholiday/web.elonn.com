@@ -834,10 +834,10 @@
             if (!object) {
                 return null;
             }
-            width = clamp(Number(panel.width || 320), 220, Math.max(220, rootBounds.width - 16));
-            height = clamp(Number(panel.height || 180), 120, Math.max(120, rootBounds.height - 122));
-            x = clamp(Number(panel.x || 72), 8, Math.max(8, rootBounds.width - width - 8));
-            y = clamp(Number(panel.y || 116), 64, Math.max(64, rootBounds.height - height - 58));
+            width = clamp(Number(panel.width || 320), 220, Math.max(220, rootBounds.width));
+            height = clamp(Number(panel.height || 180), 120, Math.max(120, rootBounds.height));
+            x = clamp(Number(panel.x != null ? panel.x : 72), 0, Math.max(0, rootBounds.width - width));
+            y = clamp(Number(panel.y != null ? panel.y : 116), 0, Math.max(0, rootBounds.height - height));
             return {
                 id: String(panel.id || 'carry-panel:' + String(panel.objectId || '')),
                 objectId: String(panel.objectId || object.id || ''),
@@ -912,19 +912,23 @@
     }
 
     /*
-     * Same shape as reconcileCarryPanels() -- clamp persisted geometry to the current viewport,
-     * with defaults matching the panel's original fixed CSS position (centered, near the top) so
-     * a member who has never dragged or resized it sees the same layout as before this changed.
+     * Same shape as reconcileCarryPanels() -- clamp persisted geometry to the current viewport.
+     * Width defaults to a readable column, capped so lines of text don't stretch edge-to-edge on
+     * a wide desktop viewport. Height has no such reason to be capped short: it defaults to
+     * nearly the full available viewport height (matching width's own top/bottom margin), so the
+     * working space actually uses the vertical room it has instead of leaving most of it empty.
+     * A member who has already dragged or resized the panel keeps their own saved geometry either
+     * way -- this only changes the default for one who hasn't.
      */
     function reconcileWorkspacePanel(saved) {
         var rootBounds = root.getBoundingClientRect();
-        var defaultWidth = Math.min(620, Math.max(320, rootBounds.width - 24));
-        var width = clamp(Number(saved.width || defaultWidth), 320, Math.max(320, rootBounds.width - 16));
-        var defaultHeight = Math.min(rootBounds.height * 0.58, rootBounds.height - 16);
-        var height = clamp(Number(saved.height || defaultHeight), 160, Math.max(160, rootBounds.height - 16));
+        var defaultWidth = Math.min(620, Math.max(320, rootBounds.width));
+        var width = clamp(Number(saved.width || defaultWidth), 320, Math.max(320, rootBounds.width));
+        var defaultHeight = rootBounds.height;
+        var height = clamp(Number(saved.height || defaultHeight), 160, Math.max(160, rootBounds.height));
         var defaultX = (rootBounds.width - width) / 2;
-        var x = clamp(saved.x != null ? Number(saved.x) : defaultX, 8, Math.max(8, rootBounds.width - width - 8));
-        var y = clamp(Number(saved.y != null ? saved.y : 8), 8, Math.max(8, rootBounds.height - height - 8));
+        var x = clamp(saved.x != null ? Number(saved.x) : defaultX, 0, Math.max(0, rootBounds.width - width));
+        var y = clamp(Number(saved.y != null ? saved.y : 0), 0, Math.max(0, rootBounds.height - height));
         return {
             id: 'workspace-results',
             x: x,
@@ -1071,10 +1075,10 @@
         var height = panel ? panel.offsetHeight : 160;
         var rootBounds = root.getBoundingClientRect();
         return {
-            minX: 8,
-            minY: 64,
-            maxX: Math.max(8, rootBounds.width - width - 8),
-            maxY: Math.max(64, rootBounds.height - height - 58)
+            minX: 0,
+            minY: 0,
+            maxX: Math.max(0, rootBounds.width - width),
+            maxY: Math.max(0, rootBounds.height - height)
         };
     }
 
@@ -1085,8 +1089,8 @@
         return {
             minWidth: 220,
             minHeight: 120,
-            maxWidth: Math.max(220, rootBounds.width - x - 8),
-            maxHeight: Math.max(120, rootBounds.height - y - 58)
+            maxWidth: Math.max(220, rootBounds.width - x),
+            maxHeight: Math.max(120, rootBounds.height - y)
         };
     }
 
