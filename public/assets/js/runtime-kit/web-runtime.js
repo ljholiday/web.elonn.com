@@ -231,6 +231,10 @@
             return;
         }
 
+        if (base.payload && typeof base.payload === 'object' && !Array.isArray(base.payload)) {
+            payload = Object.assign({}, base.payload);
+        }
+
         new FormData(form).forEach(function (value, key) {
             payload[key] = value;
         });

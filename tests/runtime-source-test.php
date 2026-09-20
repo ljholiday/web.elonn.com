@@ -113,6 +113,16 @@ $checks = [
         && str_contains($scripts, 'pointer: true')
         && str_contains($scripts, 'touch: false')
         && str_contains($scripts, 'action_dispatch: true'),
+    'Contract-formatted Markdown arguments render as multiline editors without Docs-specific logic' =>
+        str_contains($webRenderer, "format === 'markdown'")
+        && str_contains($webRenderer, "document.createElement('textarea')")
+        && str_contains($webRenderer, "input.rows = 18")
+        && str_contains($runtimeCss, '.operation-form__field textarea')
+        && !str_contains($webRenderer, 'docs.elonn')
+        && !str_contains($webRenderer, 'docs.document'),
+    'Operation forms preserve Contract action payload values such as optimistic versions' =>
+        str_contains($webRuntime, 'payload = Object.assign({}, base.payload)')
+        && strpos($webRuntime, 'payload = Object.assign({}, base.payload)') < strpos($webRuntime, 'new FormData(form)'),
     'Runtime does not dispatch unsupported remote actions as World Calls' => str_contains($scripts, "postJson('/world/call'")
         && !str_contains($scripts, 'dispatchWorldAction')
         && !str_contains($scripts, 'ActionDispatcher')

@@ -1041,7 +1041,8 @@ figure {
 }
 
 .operation-form__field input,
-.operation-form__field select {
+.operation-form__field select,
+.operation-form__field textarea {
     width: 100%;
     border: 1px solid rgba(184, 255, 243, 0.32);
     border-radius: 6px;
@@ -1052,8 +1053,16 @@ figure {
     outline: none;
 }
 
+.operation-form__field textarea {
+    min-height: 18rem;
+    resize: vertical;
+    line-height: 1.45;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+
 .operation-form__field input:focus,
-.operation-form__field select:focus {
+.operation-form__field select:focus,
+.operation-form__field textarea:focus {
     border-color: rgba(184, 255, 243, 0.78);
 }
 

@@ -1601,6 +1601,8 @@
         function operationFormInput(key, spec, currentValue) {
             var type = common.text(spec.type, 'string');
             var enumValues = Array.isArray(spec.enum) ? spec.enum : null;
+            var constraints = spec && spec.constraints && typeof spec.constraints === 'object' ? spec.constraints : {};
+            var format = common.text(constraints.format, '');
             var hasDefault = Object.prototype.hasOwnProperty.call(spec, 'default');
             var value = (currentValue !== undefined && currentValue !== null) ? currentValue : (hasDefault ? spec.default : '');
             var input;
@@ -1636,6 +1638,12 @@
                 input = document.createElement('input');
                 input.type = 'datetime-local';
                 input.value = datetimeLocalValue(value);
+            } else if (type === 'string' && format === 'markdown') {
+                input = document.createElement('textarea');
+                input.rows = 18;
+                input.value = common.text(value, '');
+                input.wrap = 'soft';
+                input.spellcheck = true;
             } else {
                 input = document.createElement('input');
                 input.type = 'text';
@@ -1645,6 +1653,9 @@
             input.name = key;
             if (spec.required === true) {
                 input.required = true;
+            }
+            if (Number.isInteger(constraints.max_length) && constraints.max_length > 0) {
+                input.maxLength = constraints.max_length;
             }
             return input;
         }
