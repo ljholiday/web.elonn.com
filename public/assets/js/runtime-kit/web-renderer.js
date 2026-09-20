@@ -1557,7 +1557,7 @@
 
             submit.type = 'submit';
             submit.className = 'operation-form__submit';
-            submit.textContent = common.text(action.label, 'Save');
+            submit.textContent = common.text(action.submitLabel, action.label);
 
             status.className = 'operation-form__status';
             status.dataset.operationFormStatus = 'true';

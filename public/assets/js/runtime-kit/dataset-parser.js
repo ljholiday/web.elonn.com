@@ -109,6 +109,7 @@
                     id: String(action.id || ''),
                     type: String(action.type || 'action'),
                     label: common.text(content.label || content.name || action.label || action.name, 'Action'),
+                    submit_label: common.text(content.submit_label || action.submit_label, ''),
                     group: common.text(content.group || action.group, ''),
                     // Canonical, set by World (Composer::withCanonicalFields).
                     target_id: String(action.target || ''),

@@ -1055,7 +1055,9 @@ figure {
 
 .operation-form__field textarea {
     min-height: 18rem;
-    resize: vertical;
+    /* The floating panel already owns resizing through the standard 22px Runtime
+       handle. A browser-native textarea grip adds a second, much smaller control. */
+    resize: none;
     line-height: 1.45;
     font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
 }

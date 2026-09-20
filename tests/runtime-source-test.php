@@ -118,6 +118,10 @@ $checks = [
         && str_contains($webRenderer, "document.createElement('textarea')")
         && str_contains($webRenderer, "input.rows = 18")
         && str_contains($runtimeCss, '.operation-form__field textarea')
+        && str_contains($runtimeCss, 'resize: none')
+        && str_contains($scripts, "submit_label: common.text(content.submit_label || action.submit_label, '')")
+        && str_contains($scripts, "submitLabel: common.text(action.submit_label, '')")
+        && str_contains($scripts, 'common.text(action.submitLabel, action.label)')
         && !str_contains($webRenderer, 'docs.elonn')
         && !str_contains($webRenderer, 'docs.document'),
     'Operation forms preserve Contract action payload values such as optimistic versions' =>

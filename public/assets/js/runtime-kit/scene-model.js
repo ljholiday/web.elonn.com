@@ -192,6 +192,7 @@
             return {
                 id: String(action.id || ''),
                 label: common.text(action.label, 'Action'),
+                submitLabel: common.text(action.submit_label, ''),
                 type: common.text(action.type, 'action'),
                 group: common.text(action.group, ''),
                 endpoint: String(action.endpoint || ''),
