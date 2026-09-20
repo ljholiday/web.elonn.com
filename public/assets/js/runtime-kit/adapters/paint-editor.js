@@ -32,7 +32,7 @@
         var toolbar = document.createElement('form');
         var tools = document.createElement('div');
         var color = document.createElement('input');
-        var width = document.createElement('input');
+        var widthInput = document.createElement('input');
         var title = document.createElement('input');
         var saveState = document.createElement('span');
         var canvas = document.createElement('canvas');
@@ -52,16 +52,16 @@
         color.setAttribute('aria-label', 'Pencil color');
         color.dataset.paintColor = 'true';
 
-        width.className = 'paint-editor__width';
-        width.type = 'range';
-        width.name = 'width';
-        width.min = '1';
-        width.max = '48';
-        width.step = '1';
-        width.value = String(settings.width);
-        width.title = 'Pencil width';
-        width.setAttribute('aria-label', 'Pencil width');
-        width.dataset.paintWidth = 'true';
+        widthInput.className = 'paint-editor__width';
+        widthInput.type = 'range';
+        widthInput.name = 'width';
+        widthInput.min = '1';
+        widthInput.max = '48';
+        widthInput.step = '1';
+        widthInput.value = String(settings.width);
+        widthInput.title = 'Pencil width';
+        widthInput.setAttribute('aria-label', 'Pencil width');
+        widthInput.dataset.paintWidth = 'true';
 
         title.className = 'paint-editor__title';
         title.type = 'text';
@@ -87,7 +87,7 @@
         }
 
         tools.appendChild(color);
-        tools.appendChild(width);
+        tools.appendChild(widthInput);
         toolbar.appendChild(tools);
         toolbar.appendChild(title);
         toolbar.appendChild(saveState);
@@ -110,13 +110,13 @@
             }
         });
         color.addEventListener('input', function () {
-            updateSettings(object, color, width);
+            updateSettings(object, color, widthInput);
         });
-        width.addEventListener('input', function () {
-            updateSettings(object, color, width);
+        widthInput.addEventListener('input', function () {
+            updateSettings(object, color, widthInput);
         });
         canvas.addEventListener('pointerdown', function (event) {
-            beginStroke(event, canvas, object, color, width, saveState, context);
+            beginStroke(event, canvas, object, color, widthInput, saveState, context);
         });
         canvas.addEventListener('pointermove', function (event) {
             appendStrokePoint(event);

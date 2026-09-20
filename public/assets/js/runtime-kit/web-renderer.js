@@ -886,6 +886,15 @@
          * bottom, the way a conversation reads everywhere else.
          */
         function openedObjectBody(panel) {
+            // A hosted Object (content.surface.mode === 'hosted', e.g. a Paint document) keeps
+            // its own editor surface -- same rule carryFindingBody already follows for a
+            // pulled-but-not-opened Finding. This was the one path that never checked it:
+            // Paint documents used to fall through to a generic action link instead (before
+            // paint.elonn.local dropped its invocation-less "open" action), which is why this
+            // went unnoticed until that action's removal turned it into a genuinely blank panel.
+            if (panel.object.surface && panel.object.surface.mode === 'hosted') {
+                return [hostedSurface(panel.object)];
+            }
             // The Object's own Collections flow first (a conversation's replies, a browse's
             // grouped lists). Its member Objects appear as cards inside those Collections --
             // their actions are not dumped in the footer (a browse list would fill with every

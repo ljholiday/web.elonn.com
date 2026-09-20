@@ -176,10 +176,10 @@ $checks = [
         && !str_contains($webRenderer, 'paint.source')
         && !str_contains($webRenderer, 'paint-surface'),
     'Paint toolbar settings stay inside the runtime adapter command payload' => str_contains($paintAdapter, "color.type = 'color'")
-        && str_contains($paintAdapter, "width.type = 'range'")
+        && str_contains($paintAdapter, "widthInput.type = 'range'")
         && str_contains($paintAdapter, 'documentSettings')
         && str_contains($paintAdapter, 'settingsFor(object)')
-        && str_contains($paintAdapter, 'updateSettings(object, color, width)')
+        && str_contains($paintAdapter, 'updateSettings(object, color, widthInput)')
         && str_contains($paintAdapter, 'style: {')
         && str_contains($paintAdapter, 'color: activeStroke.color')
         && str_contains($paintAdapter, 'width: activeStroke.width')
