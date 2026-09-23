@@ -215,7 +215,7 @@
         var base = null;
         var submitButton = form.querySelector('.operation-form__submit');
         var statusNode = form.querySelector('[data-operation-form-status]');
-        var label = submitButton ? submitButton.textContent : 'Save';
+        var label = String(form.dataset.operationLabel || '') || (submitButton ? submitButton.textContent : 'Save');
         var payload = {};
         try {
             base = JSON.parse(String(form.dataset.operationBase || '{}'));

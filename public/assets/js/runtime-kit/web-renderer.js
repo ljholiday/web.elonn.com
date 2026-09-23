@@ -1576,14 +1576,29 @@
             form.className = 'operation-form';
             form.dataset.operationInvocationForm = 'true';
             form.dataset.operationBase = JSON.stringify(baseInvocation);
+            // Read by submitOperationForm for its status message ("Draw saved.", etc). Carried
+            // here rather than read off the submit button's own text, since a self-submitting
+            // field (drawing_operation) renders no button at all.
+            form.dataset.operationLabel = common.text(action.submitLabel, action.label);
 
             fields.className = 'operation-form__fields';
+            var renderedTypes = [];
             Object.keys(args).forEach(function (key) {
                 var spec = args[key];
                 if (!spec || UNSUPPORTED_ARGUMENT_TYPES.indexOf(spec.type) !== -1) {
                     return;
                 }
+                renderedTypes.push(common.text(spec.type, 'string'));
                 fields.appendChild(operationFormField(key, spec, content[key], object));
+            });
+
+            // A drawing_operation field submits itself the instant a stroke completes (see
+            // drawingOperationInput) -- when every rendered field is one, a separate submit
+            // control has nothing left to do: clicking it either resubmits the same stroke
+            // again or, with nothing drawn yet, submits empty and the Service rejects it. Any
+            // other field (or a mix) keeps the ordinary submit button.
+            var allSelfSubmitting = renderedTypes.length > 0 && renderedTypes.every(function (type) {
+                return type === 'drawing_operation';
             });
 
             submit.type = 'submit';
@@ -1594,7 +1609,9 @@
             status.dataset.operationFormStatus = 'true';
 
             form.appendChild(fields);
-            form.appendChild(submit);
+            if (!allSelfSubmitting) {
+                form.appendChild(submit);
+            }
             form.appendChild(status);
             return form;
         }
