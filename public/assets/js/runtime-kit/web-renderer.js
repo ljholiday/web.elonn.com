@@ -1729,11 +1729,10 @@
             var content = (object && object.content) || {};
             var width = Number(content.width || 1024) || 1024;
             var height = Number(content.height || 768) || 768;
-            var marksResource = drawingResource(object || {}, 'drawing.marks');
-            var source = marksResource && marksResource.content && typeof marksResource.content.source === 'object'
-                ? marksResource.content.source
-                : {};
-            var operations = Array.isArray(source.operations) ? source.operations : [];
+            var graphicsResource = drawingResource(object || {}, 'graphics.svg');
+            var svgMarkup = graphicsResource && graphicsResource.content && typeof graphicsResource.content.svg === 'string'
+                ? graphicsResource.content.svg
+                : '';
             var wrapper = document.createElement('div');
             var toolbar = document.createElement('div');
             var color = document.createElement('input');
@@ -1780,11 +1779,22 @@
             wrapper.appendChild(canvas);
             wrapper.appendChild(hidden);
 
+            // The surface's already-committed marks are rendered from graphics_resource -- a
+            // graphics.svg Resource conforming to the platform SVG Profile (dev.elonn
+            // canonical/svg-profile.md) -- not replayed point-by-point from drawing.marks. This
+            // Runtime renders that markup; it does not reconstruct graphics semantics from
+            // Paint's (or any Service's) own operations data (svg-profile.md, Ownership). Only
+            // the stroke currently being drawn (not yet submitted, and so not yet reflected in
+            // graphics_resource) is rendered locally below, as transient interaction feedback.
             drawingContext = canvas.getContext ? canvas.getContext('2d') : null;
-            if (drawingContext) {
-                operations.forEach(function (operation) {
-                    drawStrokeOperation(drawingContext, operation);
-                });
+            if (drawingContext && svgMarkup !== '') {
+                var graphicsImage = new Image();
+                graphicsImage.onload = function () {
+                    if (drawingContext) {
+                        drawingContext.drawImage(graphicsImage, 0, 0, canvas.width, canvas.height);
+                    }
+                };
+                graphicsImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgMarkup);
             }
 
             canvas.addEventListener('pointerdown', function (event) {
@@ -1869,8 +1879,9 @@
         }
 
         // Draws one Drawing Operation (dev.elonn canonical/drawing-operation.md) onto a 2D
-        // context. Used both to replay a drawing_surface's existing marks and to render the
-        // in-progress segment while the member is actively drawing.
+        // context -- the member's own stroke while it is still in progress and has no
+        // graphics_resource projection yet (see drawingOperationInput). Already-committed marks
+        // are never drawn this way; they render from graphics_resource's SVG markup instead.
         function drawStrokeOperation(context, operation) {
             var style = (operation && operation.style) || {};
             var geometry = (operation && operation.geometry) || {};
