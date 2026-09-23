@@ -24,8 +24,6 @@ $scripts = [
     'dataset-parser.js',
     'state-indexer.js',
     'scene-model.js',
-    'adapter-registry.js',
-    'adapters/paint-editor.js',
     'web-renderer.js',
     'web-runtime.js',
 ];

@@ -61,15 +61,7 @@ const paintDataset = Object.assign({}, dataset, {
       source_resource: 'resource:11111111111111111111111111111111',
       preview_resource: 'resource:22222222222222222222222222222222',
       storage_state: 'ready',
-      surface: {
-        mode: 'hosted',
-        service: 'paint',
-        kind: 'editor',
-        resources: {
-          source: 'resource:11111111111111111111111111111111',
-          preview: 'resource:22222222222222222222222222222222'
-        }
-      }
+      format: 'drawing_surface'
     },
     resources: [
       'resource:11111111111111111111111111111111',
@@ -80,12 +72,12 @@ const paintDataset = Object.assign({}, dataset, {
   context: {focus: {object_id: 'paint.document:test'}},
   resources: [{
     id: 'resource:11111111111111111111111111111111',
-    type: 'application/vnd.elonn.paint+json',
+    type: 'application/vnd.elonn.drawing+json',
     content: {
-      kind: 'paint.source',
-      label: 'Paint source',
+      kind: 'drawing.marks',
+      label: 'Drawing marks',
       source: {
-        type: 'paint.source',
+        type: 'drawing.marks',
         width: 1024,
         height: 768,
         operations: [{
@@ -100,8 +92,8 @@ const paintDataset = Object.assign({}, dataset, {
     id: 'resource:22222222222222222222222222222222',
     type: 'image/png',
     content: {
-      kind: 'paint.preview',
-      label: 'Paint preview',
+      kind: 'drawing.preview',
+      label: 'Drawing preview',
       data_url: 'data:image/png;base64,iVBORw0KGgo='
     }
   }],
@@ -152,15 +144,14 @@ if (operationScene.actions[0].operationInvocation.operation !== 'paint.create') 
 
 const paintState = runtime.StateIndexer.build(runtime.DatasetParser.parse(paintDataset));
 const paintScene = runtime.SceneModel.fromState(paintState);
-if (paintScene.focus.surface.mode !== 'hosted') throw new Error('hosted Object surface was not projected');
-if (paintScene.focus.surface.service !== 'paint') throw new Error('hosted Object surface service was not projected');
-if (paintScene.focus.content.width !== 1024 || paintScene.focus.content.height !== 768) throw new Error('hosted Object dimensions were not preserved');
-if (paintScene.focus.resources.length !== 2) throw new Error('hosted Object Resources were not projected');
-if (paintScene.focus.resources[0].content.source.operations.length !== 1) throw new Error('Paint source Resource content was not projected');
-if (paintScene.focus.resources[1].content.data_url.indexOf('data:image/png;base64,') !== 0) throw new Error('Paint preview Resource data URL was not projected');
+if (paintScene.focus.format !== 'drawing_surface') throw new Error('drawing_surface content format was not projected');
+if (paintScene.focus.content.width !== 1024 || paintScene.focus.content.height !== 768) throw new Error('drawing_surface dimensions were not preserved');
+if (paintScene.focus.resources.length !== 2) throw new Error('drawing_surface Resources were not projected');
+if (paintScene.focus.resources[0].content.source.operations.length !== 1) throw new Error('drawing.marks Resource content was not projected');
+if (paintScene.focus.resources[1].content.data_url.indexOf('data:image/png;base64,') !== 0) throw new Error('drawing.preview Resource data URL was not projected');
 paintState.carryPanels = [{id: 'carry-panel:paint.document:test', objectId: 'paint.document:test', x: 10, y: 10, width: 360, height: 240, z: 24, collapsed: false}];
 const paintCarryScene = runtime.SceneModel.fromState(paintState);
-if (paintCarryScene.carryPanels[0].object.surface.kind !== 'editor') throw new Error('hosted Object surface was not available in carry panel');
+if (paintCarryScene.carryPanels[0].object.format !== 'drawing_surface') throw new Error('drawing_surface format was not available in carry panel');
 
 // dev.elonn canonical/resource.md: a Resource's URI lives at content.source (not content.href/
 // url) -- every Resource find.elonn produces (embed/image/source_document) uses this field.

@@ -16,8 +16,7 @@ foreach (runtime_scripts($template) as $script) {
 $webRuntime = read_file($root . '/public/assets/js/runtime-kit/web-runtime.js');
 $webRenderer = read_file($root . '/public/assets/js/runtime-kit/web-renderer.js');
 $runtimeCss = read_file($root . '/public/assets/css/runtime.css');
-$adapterRegistry = read_file($root . '/public/assets/js/runtime-kit/adapter-registry.js');
-$paintAdapter = read_file($root . '/public/assets/js/runtime-kit/adapters/paint-editor.js');
+$sceneModel = read_file($root . '/public/assets/js/runtime-kit/scene-model.js');
 $oldWorkspaceTerms = [
     'Find' . 'ings Layer',
     'find' . 'ing-overlay',
@@ -137,54 +136,43 @@ $checks = [
         && !str_contains($scripts, 'find.elonn')
         && !str_contains($scripts, 'time.elonn')
         && !str_contains($scripts, 'maps.elonn'),
-    'Runtime publishes a hosted surface adapter registry' => str_contains($template, 'adapter-registry.js')
-        && str_contains($adapterRegistry, 'AdapterRegistry')
-        && str_contains($adapterRegistry, 'register')
-        && str_contains($adapterRegistry, 'mountAll')
-        && str_contains($adapterRegistry, 'handleResponse')
-        && str_contains($webRuntime, 'dispatchOperationInvocation')
-        && !str_contains($webRuntime . $paintAdapter, 'dispatchSurfaceCommand')
-        && str_contains($webRuntime, 'operationInvocation')
-        && str_contains($adapterRegistry, 'runtimeState.operationInvocation')
-        && str_contains(read_file($root . '/public/assets/js/runtime-kit/world-client.js'), 'operation_invocation')
-        && str_contains($webRuntime, 'removeObjectSurface')
-        && str_contains($webRenderer, 'dataset.hostedSurface'),
-    'Runtime leaves hosted surface interaction events to adapters' => str_contains($webRuntime, "event.target.closest('[data-hosted-surface]')")
-        && strpos($webRuntime, 'if (hostedSurface && state)') !== false
-        && strpos($webRuntime, 'if (hostedSurface && state)') < strpos($webRuntime, 'if (objectButton && state)'),
-    'Paint interaction lives in a runtime adapter instead of Web core' => str_contains($template, 'adapters/paint-editor.js')
-        && str_contains($paintAdapter, "register('paint', 'editor'")
-        && str_contains($paintAdapter, "operation: 'paint.draw'")
-        && str_contains($paintAdapter, "operation: 'paint.rename'")
-        && str_contains($paintAdapter, 'dataset.paintSurface')
-        && str_contains($paintAdapter, 'dataset.paintRenameForm')
-        && str_contains($paintAdapter, 'dataset.paintSaveState')
-        && str_contains($paintAdapter, 'dataset.paintColor')
-        && str_contains($paintAdapter, 'dataset.paintWidth')
-        && str_contains($paintAdapter, 'setSaveStateForObject')
-        && str_contains($paintAdapter, "setSaveStateForObject(objectId, 'Saved')")
-        && str_contains($paintAdapter, "setSaveStateForObject(objectId, 'Error')")
-        && str_contains($paintAdapter, 'normalizeColor')
-        && str_contains($paintAdapter, 'normalizeWidth')
-        && str_contains($paintAdapter, 'mind.paint_document_not_found')
+    // Runtime adapters are retired (dev.elonn canonical/README.md dropped its "Service-owned
+    // canonical extensions" category; canonical/object.md, Recognized content format:
+    // drawing_surface). No Service-matched adapter file, registry, or mount step exists --
+    // a drawing_surface Object and a drawing_operation argument render the same way for any
+    // Service, never dispatched to code selected by Service name.
+    'No runtime adapter registry or per-Service adapter files exist' =>
+        !str_contains($template, 'adapter-registry.js')
+        && !str_contains($template, 'adapters/paint-editor.js')
+        && !file_exists($root . '/public/assets/js/runtime-kit/adapter-registry.js')
+        && !file_exists($root . '/public/assets/js/runtime-kit/adapters/paint-editor.js')
+        && !str_contains($scripts, 'AdapterRegistry')
+        && !str_contains($scripts, 'adapterContext')
+        && !str_contains($scripts, 'mountAll')
+        && !str_contains($scripts, 'data-hosted-surface'),
+    'Contract-typed drawing_operation arguments render as a live drawing surface without Service-specific logic' =>
+        str_contains($webRenderer, "type === 'drawing_operation'")
+        && str_contains($webRenderer, 'function drawingOperationInput')
+        && str_contains($webRenderer, "canvas.getContext('2d')")
+        && str_contains($webRuntime, 'data-json-field')
+        && str_contains($sceneModel, "format: common.text(content.format, '')")
+        && str_contains($webRenderer, "object.format === 'drawing_surface'")
+        && str_contains($webRenderer, "panel.object.format === 'drawing_surface'")
+        && !str_contains($webRenderer, "'paint'")
+        && !str_contains($webRenderer, 'paint.document')
+        && !str_contains($webRenderer, 'paint.draw')
+        && !str_contains($webRenderer, 'paint.rename')
+        && !str_contains($webRuntime, "'paint'")
         && !str_contains($webRuntime, 'paint.draw')
         && !str_contains($webRuntime, 'paint.rename')
-        && !str_contains($webRuntime, 'paintColor')
-        && !str_contains($webRuntime, 'paintWidth')
-        && !str_contains($webRuntime, 'Paint endpoint returned HTTP 404.')
-        && !str_contains($webRuntime, 'paintLocalOperations')
-        && !str_contains($webRenderer, 'paint.source')
-        && !str_contains($webRenderer, 'paint-surface'),
-    'Paint toolbar settings stay inside the runtime adapter command payload' => str_contains($paintAdapter, "color.type = 'color'")
-        && str_contains($paintAdapter, "widthInput.type = 'range'")
-        && str_contains($paintAdapter, 'documentSettings')
-        && str_contains($paintAdapter, 'settingsFor(object)')
-        && str_contains($paintAdapter, 'updateSettings(object, color, widthInput)')
-        && str_contains($paintAdapter, 'style: {')
-        && str_contains($paintAdapter, 'color: activeStroke.color')
-        && str_contains($paintAdapter, 'width: activeStroke.width')
-        && !str_contains($webRenderer, 'paint-editor__color')
-        && !str_contains($webRenderer, 'paint-editor__width'),
+        && !str_contains($sceneModel, "'paint'")
+        && !str_contains($scripts, 'object.surface')
+        && !str_contains($scripts, 'content.surface'),
+    'A generically-detected not_found error closes the stale panel, not a Paint-specific error code' =>
+        str_contains($webRuntime, "item.class === 'not_found'")
+        && str_contains($webRuntime, 'removeObjectSurface(String(base.object_id))')
+        && !str_contains($webRuntime, 'paint_document_not_found')
+        && !str_contains($webRuntime, 'document_not_found'),
     'Shared runtime kit has the required ABI boundaries' => str_contains($scripts, 'WorldClient')
         && str_contains($scripts, 'DatasetParser')
         && str_contains($scripts, 'StateIndexer')
@@ -397,13 +385,14 @@ $checks = [
         && str_contains($scripts, 'selected_collection_id')
         && str_contains($scripts, 'selectedObjectId')
         && str_contains($scripts, 'focus.object_id'),
-    'Runtime hosts service-provided Object surfaces generically' => str_contains($scripts, 'object.surface && object.surface.mode')
+    'Runtime hosts service-provided drawing surfaces generically' => str_contains($scripts, "object.format === 'drawing_surface'")
         && str_contains($scripts, 'hostedSurface(object)')
-        && str_contains($scripts, 'surfaceService')
-        && str_contains($scripts, 'surface.resources')
+        && str_contains($scripts, 'drawingResource(object')
         && str_contains($scripts, 'content.width')
         && str_contains(read_file($root . '/public/assets/css/runtime.css'), 'hosted-object-surface__preview')
-        && !str_contains($scripts, "object.type === 'paint.document'"),
+        && !str_contains($scripts, "object.type === 'paint.document'")
+        && !str_contains($scripts, 'surfaceService')
+        && !str_contains($scripts, 'surface.resources'),
     'Runtime renders Resource image previews generically' => str_contains($webRenderer, 'imagePreview(object)')
         && str_contains($webRenderer, 'data:image/')
         && str_contains($webRenderer, 'object-preview')

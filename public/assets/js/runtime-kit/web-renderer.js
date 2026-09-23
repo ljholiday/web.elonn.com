@@ -886,14 +886,13 @@
          * bottom, the way a conversation reads everywhere else.
          */
         function openedObjectBody(panel) {
-            // A hosted Object (content.surface.mode === 'hosted', e.g. a Paint document) keeps
-            // its own editor surface -- same rule carryFindingBody already follows for a
-            // pulled-but-not-opened Finding. This was the one path that never checked it:
-            // Paint documents used to fall through to a generic action link instead (before
-            // paint.elonn.local dropped its invocation-less "open" action), which is why this
-            // went unnoticed until that action's removal turned it into a genuinely blank panel.
-            if (panel.object.surface && panel.object.surface.mode === 'hosted') {
-                return [hostedSurface(panel.object)];
+            // An Object whose content.format is drawing_surface (dev.elonn canonical/object.md,
+            // Recognized content format: drawing_surface) keeps its current marks preview plus
+            // its own Actions -- same rule carryFindingBody already follows for a
+            // pulled-but-not-opened Finding. Service-neutral: this renders identically for any
+            // Service's drawing surface, not just Paint's.
+            if (panel.object.format === 'drawing_surface') {
+                return [hostedSurface(panel.object)].concat(actionLinks(panel.object));
             }
             // The Object's own Collections flow first (a conversation's replies, a browse's
             // grouped lists). Its member Objects appear as cards inside those Collections --
@@ -1316,8 +1315,8 @@
          * Object presentation). A hosted Object keeps its editor surface.
          */
         function carryFindingBody(object) {
-            if (object.surface && object.surface.mode === 'hosted') {
-                return [hostedSurface(object)];
+            if (object.format === 'drawing_surface') {
+                return [hostedSurface(object)].concat(actionLinks(object));
             }
             var nodes = [];
             if (common.text(object.summary, '') !== '') {
@@ -1332,28 +1331,51 @@
             return nodes;
         }
 
+        // Renders a drawing_surface Object's current marks generically -- from its
+        // preview_resource image alone (dev.elonn canonical/resource.md, Preview presentation).
+        // It does not know or care which Service produced the Object. Capturing a *new* mark is
+        // a separate concern, handled entirely by the drawing_operation argument input (see
+        // drawingOperationInput) on whichever Action the owning Service declares for editing.
         function hostedSurface(object) {
-            var surface = object.surface || {};
             var content = object.content || {};
             var frame = document.createElement('section');
             var preview = document.createElement('div');
             var width = Number(content.width || 0);
             var height = Number(content.height || 0);
+            var previewResource = drawingResource(object, 'drawing.preview');
+            var dataUrl = previewResource ? String((previewResource.content && previewResource.content.data_url) || '') : '';
             frame.className = 'hosted-object-surface';
-            frame.dataset.hostedSurface = 'true';
-            frame.dataset.surfaceMode = surface.mode || '';
-            frame.dataset.surfaceService = surface.service || '';
-            frame.dataset.surfaceKind = surface.kind || '';
             frame.dataset.objectId = object.id || '';
-            frame.dataset.sourceResource = String((surface.resources && surface.resources.source) || content.source_resource || '');
-            frame.dataset.previewResource = String((surface.resources && surface.resources.preview) || content.preview_resource || '');
-            frame.dataset.hostedObject = JSON.stringify(object);
             preview.className = 'hosted-object-surface__preview';
             if (width > 0 && height > 0) {
                 preview.style.aspectRatio = String(width) + ' / ' + String(height);
             }
+            if (dataUrl !== '') {
+                var image = document.createElement('img');
+                image.className = 'hosted-object-surface__image';
+                image.src = dataUrl;
+                image.alt = common.text(object.title, 'Drawing');
+                preview.appendChild(image);
+            }
             frame.appendChild(preview);
             return frame;
+        }
+
+        // Finds an Object's Resource of the given content.kind (dev.elonn canonical/resource.md
+        // and drawing-operation.md) -- e.g. 'drawing.marks' for the current operations, or
+        // 'drawing.preview' for a static preview image. Service-neutral: any Service's Resource
+        // carrying this kind is found the same way.
+        function drawingResource(object, kind) {
+            var resources = Array.isArray(object.resources) ? object.resources : [];
+            var match = null;
+            resources.some(function (resource) {
+                if (String(resource.kind || '') === kind) {
+                    match = resource;
+                    return true;
+                }
+                return false;
+            });
+            return match;
         }
 
         function containedObjectNodes(object) {
@@ -1561,7 +1583,7 @@
                 if (!spec || UNSUPPORTED_ARGUMENT_TYPES.indexOf(spec.type) !== -1) {
                     return;
                 }
-                fields.appendChild(operationFormField(key, spec, content[key]));
+                fields.appendChild(operationFormField(key, spec, content[key], object));
             });
 
             submit.type = 'submit';
@@ -1577,7 +1599,7 @@
             return form;
         }
 
-        function operationFormField(key, spec, currentValue) {
+        function operationFormField(key, spec, currentValue, object) {
             var wrapper = document.createElement('label');
             var labelText = document.createElement('span');
             var helpText = common.text(spec && spec.help, '');
@@ -1593,7 +1615,7 @@
                 help.textContent = helpText;
                 wrapper.appendChild(help);
             }
-            wrapper.appendChild(operationFormInput(key, spec, currentValue));
+            wrapper.appendChild(operationFormInput(key, spec, currentValue, object));
             return wrapper;
         }
 
@@ -1607,7 +1629,7 @@
             return match ? match[1] + 'T' + match[2] : '';
         }
 
-        function operationFormInput(key, spec, currentValue) {
+        function operationFormInput(key, spec, currentValue, object) {
             var type = common.text(spec.type, 'string');
             var enumValues = Array.isArray(spec.enum) ? spec.enum : null;
             var constraints = spec && spec.constraints && typeof spec.constraints === 'object' ? spec.constraints : {};
@@ -1615,6 +1637,12 @@
             var hasDefault = Object.prototype.hasOwnProperty.call(spec, 'default');
             var value = (currentValue !== undefined && currentValue !== null) ? currentValue : (hasDefault ? spec.default : '');
             var input;
+
+            if (type === 'drawing_operation') {
+                // A structured record, not a form-native value -- built and returned whole
+                // (see drawingOperationInput), bypassing the plain <input> trailer below.
+                return drawingOperationInput(key, spec, object);
+            }
 
             if (enumValues && type === 'string') {
                 var optionLabels = spec && spec.labels && typeof spec.labels === 'object' ? spec.labels : null;
@@ -1667,6 +1695,166 @@
                 input.maxLength = constraints.max_length;
             }
             return input;
+        }
+
+        // Renders a drawing_operation argument as a live freehand drawing surface (dev.elonn
+        // canonical guides/contract-authoring-guide.md, Operation Argument Schemas) -- pre-filled
+        // with the target Object's existing marks, capturing pointer input as the member draws.
+        // The Object's own owning Service is never consulted here: this works identically for
+        // any Service's operation that declares a drawing_operation argument.
+        function drawingOperationInput(key, spec, object) {
+            var content = (object && object.content) || {};
+            var width = Number(content.width || 1024) || 1024;
+            var height = Number(content.height || 768) || 768;
+            var marksResource = drawingResource(object || {}, 'drawing.marks');
+            var source = marksResource && marksResource.content && typeof marksResource.content.source === 'object'
+                ? marksResource.content.source
+                : {};
+            var operations = Array.isArray(source.operations) ? source.operations : [];
+            var wrapper = document.createElement('div');
+            var toolbar = document.createElement('div');
+            var color = document.createElement('input');
+            var strokeWidth = document.createElement('input');
+            var canvas = document.createElement('canvas');
+            var hidden = document.createElement('input');
+            var drawingContext = null;
+            var activePointerId = null;
+            var points = [];
+
+            wrapper.className = 'drawing-surface-input';
+            toolbar.className = 'drawing-surface-input__tools';
+
+            color.type = 'color';
+            color.value = '#000000';
+            color.className = 'drawing-surface-input__color';
+            color.setAttribute('aria-label', 'Pencil color');
+
+            strokeWidth.type = 'range';
+            strokeWidth.min = '1';
+            strokeWidth.max = '48';
+            strokeWidth.step = '1';
+            strokeWidth.value = '4';
+            strokeWidth.className = 'drawing-surface-input__width';
+            strokeWidth.setAttribute('aria-label', 'Pencil width');
+
+            canvas.className = 'drawing-surface-input__canvas';
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.aspectRatio = String(width) + ' / ' + String(height);
+            canvas.setAttribute('aria-label', 'Draw here');
+            canvas.tabIndex = 0;
+
+            hidden.type = 'hidden';
+            hidden.name = key;
+            hidden.dataset.jsonField = 'true';
+            if (spec && spec.required === true) {
+                hidden.required = true;
+            }
+
+            toolbar.appendChild(color);
+            toolbar.appendChild(strokeWidth);
+            wrapper.appendChild(toolbar);
+            wrapper.appendChild(canvas);
+            wrapper.appendChild(hidden);
+
+            drawingContext = canvas.getContext ? canvas.getContext('2d') : null;
+            if (drawingContext) {
+                operations.forEach(function (operation) {
+                    drawStrokeOperation(drawingContext, operation);
+                });
+            }
+
+            canvas.addEventListener('pointerdown', function (event) {
+                if (!drawingContext || event.button !== 0) {
+                    return;
+                }
+                activePointerId = event.pointerId;
+                points = [canvasPoint(event, canvas)];
+                canvas.setPointerCapture(event.pointerId);
+                event.preventDefault();
+            });
+            canvas.addEventListener('pointermove', function (event) {
+                if (activePointerId !== event.pointerId) {
+                    return;
+                }
+                var next = canvasPoint(event, canvas);
+                points.push(next);
+                drawStrokeOperation(drawingContext, {
+                    style: {color: color.value, width: Number(strokeWidth.value || 4)},
+                    geometry: {points: points.slice(-2)}
+                });
+                event.preventDefault();
+            });
+            canvas.addEventListener('pointerup', function (event) {
+                if (activePointerId !== event.pointerId) {
+                    return;
+                }
+                activePointerId = null;
+                var simplified = simplifyPoints(points);
+                if (simplified.length >= 2) {
+                    hidden.value = JSON.stringify({
+                        tool: 'pencil',
+                        style: {color: color.value, width: Number(strokeWidth.value || 4)},
+                        geometry: {points: simplified}
+                    });
+                }
+                points = [];
+                event.preventDefault();
+            });
+            canvas.addEventListener('pointercancel', function () {
+                activePointerId = null;
+                points = [];
+            });
+
+            return wrapper;
+        }
+
+        function canvasPoint(event, canvas) {
+            var rect = canvas.getBoundingClientRect();
+            var x = rect.width > 0 ? ((event.clientX - rect.left) / rect.width) * canvas.width : 0;
+            var y = rect.height > 0 ? ((event.clientY - rect.top) / rect.height) * canvas.height : 0;
+            return {
+                x: Math.min(Math.max(x, 0), canvas.width),
+                y: Math.min(Math.max(y, 0), canvas.height)
+            };
+        }
+
+        function simplifyPoints(points) {
+            var output = [];
+            points.forEach(function (item) {
+                var previous = output[output.length - 1] || null;
+                if (!previous || Math.abs(previous.x - item.x) >= 0.5 || Math.abs(previous.y - item.y) >= 0.5) {
+                    output.push({
+                        x: Math.round(item.x * 100) / 100,
+                        y: Math.round(item.y * 100) / 100
+                    });
+                }
+            });
+            return output;
+        }
+
+        // Draws one Drawing Operation (dev.elonn canonical/drawing-operation.md) onto a 2D
+        // context. Used both to replay a drawing_surface's existing marks and to render the
+        // in-progress segment while the member is actively drawing.
+        function drawStrokeOperation(context, operation) {
+            var style = (operation && operation.style) || {};
+            var geometry = (operation && operation.geometry) || {};
+            var points = Array.isArray(geometry.points) ? geometry.points : [];
+            if (points.length < 2) {
+                return;
+            }
+            context.save();
+            context.strokeStyle = String(style.color || '#000000');
+            context.lineWidth = Number(style.width || 4);
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            context.beginPath();
+            context.moveTo(Number(points[0].x || 0), Number(points[0].y || 0));
+            points.slice(1).forEach(function (item) {
+                context.lineTo(Number(item.x || 0), Number(item.y || 0));
+            });
+            context.stroke();
+            context.restore();
         }
 
         function linkLine(label, text, href, objectId) {

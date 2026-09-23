@@ -91,7 +91,6 @@
         var collapseButton = event.target.closest('[data-carry-panel-collapse]');
         var resizeHandle = event.target.closest('[data-carry-panel-resize]');
         var panelTitle = event.target.closest('[data-carry-panel-title]');
-        var hostedSurface = event.target.closest('[data-hosted-surface]');
         var operationAction = event.target.closest('[data-operation-invocation]');
         var workspaceToggle = event.target.closest('[data-workspace-results-toggle]');
         var workspaceClear = event.target.closest('[data-workspace-results-clear]');
@@ -176,10 +175,6 @@
             return;
         }
 
-        if (hostedSurface && state) {
-            return;
-        }
-
         if (objectButton && state) {
             var focusedId = String(objectButton.dataset.objectId || '');
             var originObject = originObjectFor(objectButton);
@@ -241,6 +236,18 @@
         form.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
             payload[checkbox.name] = checkbox.checked;
         });
+        // A field whose value is a structured record rather than form-native text (e.g. a
+        // drawing_operation argument -- see drawingOperationInput) marks itself with
+        // data-json-field so its string value is parsed back into a real object here, instead
+        // of being sent as JSON-encoded text. Generic: any future structured argument type
+        // reuses this same marker, not something specific to drawing.
+        form.querySelectorAll('[data-json-field="true"]').forEach(function (field) {
+            try {
+                payload[field.name] = JSON.parse(field.value || 'null');
+            } catch (error) {
+                payload[field.name] = null;
+            }
+        });
         base.payload = payload;
 
         if (submitButton) {
@@ -255,6 +262,17 @@
             renderer.status(label + ' saved.', 'ready');
         }).catch(function (error) {
             var message = error && error.message ? error.message : label + ' failed.';
+            var payloadErrors = error && error.payload && Array.isArray(error.payload.errors) ? error.payload.errors : [];
+            // The target Object is generically gone -- Service Contracts already classify this
+            // error (contract-authoring-guide.md, `class: not_found`), so the runtime detects
+            // it from that class alone, never a Paint-specific error code or message string.
+            var objectGone = String(base.object_id || '') !== '' && payloadErrors.some(function (item) {
+                return item && item.class === 'not_found';
+            });
+            if (objectGone) {
+                removeObjectSurface(String(base.object_id));
+                return;
+            }
             if (statusNode) {
                 statusNode.textContent = message;
                 statusNode.dataset.state = 'error';
@@ -385,7 +403,6 @@
     function loadDataset(runtimeState) {
         return client.loadDataset(runtimeState).then(function (payload) {
             replaceDataset(payload, runtimeState);
-            runtime.AdapterRegistry.handleResponse(payload, runtimeState, adapterContext());
             var status = datasetStatus(payload);
             renderer.status(status.message, status.state);
             return payload;
@@ -553,7 +570,6 @@
                 findScope: findScope
             }
         });
-        runtime.AdapterRegistry.mountAll(root, adapterContext());
     }
 
     /*
@@ -594,17 +610,6 @@
 
     function toggleWorkspaceResults() {
         toggleCarryPanel('workspace-results');
-    }
-
-    function adapterContext() {
-        return {
-            status: renderer.status,
-            dispatchOperationInvocation: dispatchOperationInvocation,
-            removeObjectSurface: removeObjectSurface,
-            selectObject: function (objectId) {
-                selectObject(objectId);
-            }
-        };
     }
 
     // Fetch api.elonn's login / register screen and render it through the ordinary Dataset
@@ -818,7 +823,7 @@
             title: String(object.title || 'Object'),
             summary: String(object.summary || ''),
             content: object.content || {},
-            surface: object.surface || null,
+            format: String(object.format || ''),
             metadata: object.metadata || {},
             visibility: object.visibility || {},
             permissions: object.permissions || {},

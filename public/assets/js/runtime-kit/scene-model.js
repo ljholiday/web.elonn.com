@@ -155,7 +155,10 @@
             summary: common.text(object.summary, ''),
             type: common.text(object.type, 'object'),
             content: content,
-            surface: surface(content.surface),
+            // Service-neutral presentation hint (dev.elonn canonical/object.md, Recognized
+            // content format: drawing_surface) -- the runtime renders any Object carrying this
+            // the same way, regardless of which Service produced it.
+            format: common.text(content.format, ''),
             selected: selected,
             availability: availability(object.availability),
             visibility: Array.isArray(visibility.scopes) ? visibility.scopes.join(', ') : '',
@@ -168,19 +171,6 @@
             resources: resourcesForObject(state, object),
             actions: actionsForObject(state, object.id),
             containedObjects: includeContained === true ? containedObjects(state, object.id) : []
-        };
-    }
-
-    function surface(candidate) {
-        if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
-            return null;
-        }
-
-        return {
-            mode: common.text(candidate.mode, ''),
-            service: common.text(candidate.service, ''),
-            kind: common.text(candidate.kind, ''),
-            resources: candidate.resources && typeof candidate.resources === 'object' ? candidate.resources : {}
         };
     }
 
