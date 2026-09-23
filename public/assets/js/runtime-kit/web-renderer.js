@@ -1600,7 +1600,13 @@
         }
 
         function operationFormField(key, spec, currentValue, object) {
-            var wrapper = document.createElement('label');
+            // A <label> with no `for` implicitly activates its first labelable descendant on
+            // any click inside it -- correct when it wraps exactly one control, wrong once it
+            // wraps several. A drawing_operation field wraps a color input, a width input, AND
+            // a canvas, so a <label> here would pop the color picker on every canvas click; use
+            // a plain <div> instead. Every other field still wraps a single real control.
+            var isMultiControl = common.text(spec && spec.type, 'string') === 'drawing_operation';
+            var wrapper = document.createElement(isMultiControl ? 'div' : 'label');
             var labelText = document.createElement('span');
             var helpText = common.text(spec && spec.help, '');
             wrapper.className = 'operation-form__field';
@@ -1791,14 +1797,26 @@
                 }
                 activePointerId = null;
                 var simplified = simplifyPoints(points);
-                if (simplified.length >= 2) {
-                    hidden.value = JSON.stringify({
-                        tool: 'pencil',
-                        style: {color: color.value, width: Number(strokeWidth.value || 4)},
-                        geometry: {points: simplified}
-                    });
-                }
                 points = [];
+                if (simplified.length < 2) {
+                    event.preventDefault();
+                    return;
+                }
+                hidden.value = JSON.stringify({
+                    tool: 'pencil',
+                    style: {color: color.value, width: Number(strokeWidth.value || 4)},
+                    geometry: {points: simplified}
+                });
+                // A completed stroke submits itself immediately, the same way this surface
+                // saved before the generic form pipeline existed -- a drawing_operation field
+                // captures one discrete mark per gesture, not a value a member reviews and
+                // submits later alongside other fields. Without this, drawing a second stroke
+                // before pressing the form's own submit button would silently discard the
+                // first one (the hidden field only ever holds the latest stroke).
+                var form = wrapper.closest ? wrapper.closest('form') : null;
+                if (form && typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                }
                 event.preventDefault();
             });
             canvas.addEventListener('pointercancel', function () {
