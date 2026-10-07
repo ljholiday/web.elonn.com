@@ -47,6 +47,62 @@ if ($path === '/ready') {
     return;
 }
 
+if ($path === '/administrative-interface') {
+    // canonical/administrative-interface.json: the web runtime's own administrative status and
+    // capability baseline, for Admin's observation only. configuration.mutable, diagnostics,
+    // and control.{restart,drain} are honestly reported as unavailable -- the web runtime
+    // implements none of them yet, and being stateless it has no component_version or
+    // deployment_id of its own to report.
+    if (!web_runtime_service_authenticated($config, 'admin.elonn')) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'errors' => [[
+                'code' => 'web.service_auth_failed',
+                'class' => 'auth',
+                'message' => 'Authenticated admin service request is required.',
+            ]],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return;
+    }
+
+    $apiConfigured = (string) ($config['api']['base_url'] ?? '') !== '';
+    $worldConfigured = (string) ($config['world']['base_url'] ?? '') !== '';
+    $healthy = $apiConfigured && $worldConfigured;
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'component' => 'web.elonn',
+        'component_version' => '',
+        'deployment_id' => '',
+        'status' => $healthy ? 'running' : 'degraded',
+        'health' => [
+            'state' => $healthy ? 'healthy' : 'unhealthy',
+            'checks' => [
+                ['name' => 'api_configured', 'state' => $apiConfigured ? 'healthy' : 'unhealthy', 'detail' => $apiConfigured ? 'API base URL is configured.' : 'API base URL is not configured.'],
+                ['name' => 'world_configured', 'state' => $worldConfigured ? 'healthy' : 'unhealthy', 'detail' => $worldConfigured ? 'World base URL is configured.' : 'World base URL is not configured.'],
+            ],
+        ],
+        'configuration' => [
+            'inspectable' => [
+                'api.base_url' => (string) ($config['api']['base_url'] ?? ''),
+                'world.base_url' => (string) ($config['world']['base_url'] ?? ''),
+                'auth.cookie_domain' => (string) ($config['auth']['cookie_domain'] ?? ''),
+            ],
+            'mutable' => [],
+        ],
+        'maintenance' => ['state' => 'normal', 'reason' => ''],
+        'diagnostics' => ['available' => []],
+        'control' => [
+            'restart' => ['state' => 'unavailable', 'reason' => 'The web runtime does not implement an administrative restart operation.'],
+            'drain' => ['state' => 'unavailable', 'reason' => 'The web runtime does not implement an administrative drain operation.'],
+        ],
+        'observed_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        'metadata' => (object) [],
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    return;
+}
+
 if ($path === '/metrics') {
     $startedAt = microtime(true);
     if (!web_runtime_service_authenticated($config, 'admin.elonn')) {
