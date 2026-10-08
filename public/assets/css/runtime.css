@@ -798,6 +798,10 @@ figure {
     min-width: 0;
 }
 
+.world-sequence-entry__title {
+    font-size: 0.82rem;
+}
+
 .world-sequence-entry__body {
     font-size: 0.82rem;
     white-space: pre-wrap;

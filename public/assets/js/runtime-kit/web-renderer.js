@@ -497,12 +497,23 @@
             var main = document.createElement('span');
             var body = document.createElement('span');
             var time = document.createElement('span');
+            var hasOwnBody = common.text(content.body, '') !== '';
             entry.type = 'button';
             entry.className = 'world-sequence-entry';
             entry.dataset.objectId = object.id;
             entry.dataset.objectType = object.type;
             entry.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
             main.className = 'world-sequence-entry__main';
+            // An entry with no own content.body (a generic result-object sequence, e.g. Find's
+            // web results, falling back to object.summary below) shows its title first -- a
+            // conversation message (content.body present) already carries everything in its own
+            // body, so no separate title line is added for it.
+            if (!hasOwnBody && common.text(object.title, '') !== '') {
+                var title = document.createElement('strong');
+                title.className = 'world-sequence-entry__title';
+                title.textContent = object.title;
+                main.appendChild(title);
+            }
             body.className = 'world-sequence-entry__body';
             body.textContent = common.text(content.body, object.summary);
             main.appendChild(body);
@@ -1319,6 +1330,11 @@
                 return [hostedSurface(object)].concat(actionLinks(object));
             }
             var nodes = [];
+            if (common.text(object.title, '') !== '') {
+                var title = document.createElement('strong');
+                title.textContent = object.title;
+                nodes.push(title);
+            }
             if (common.text(object.summary, '') !== '') {
                 var summary = document.createElement('p');
                 summary.className = 'object-summary';
