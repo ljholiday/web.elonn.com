@@ -305,7 +305,12 @@ $checks = [
         && str_contains($scripts, 'world-object-link')
         && str_contains($runtimeCss, '.world-object-link')
         && str_contains($scripts, "wrapper.appendChild(button)")
-        && str_contains($webRenderer, "firstHref(object.resources, 'Source'"),
+        && str_contains($webRenderer, "firstHref(object.resources, links, object.id)")
+        && !str_contains($webRenderer, "label + ': '"),
+    'Results-pane and Carry finding cards show source link and thumbnail, not just title and summary' =>
+        str_contains($webRenderer, 'main.appendChild(link)')
+        && str_contains($webRenderer, 'nodes.push(preview)')
+        && str_contains($webRenderer, "resource.kind || '') !== 'image'"),
     'Runtime never fabricates an Object from a URL string or navigates out of the app' =>
         // The whole URL-fabrication machinery is gone (runtime-edict record 268, #4).
         !str_contains($webRuntime, 'openRuntimeUrl')

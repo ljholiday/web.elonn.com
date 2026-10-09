@@ -659,23 +659,12 @@ figure {
     gap: 8px;
 }
 
-.world-object-entry {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 4px 6px;
-}
-
 /* Results-pane Findings render as flat siblings (collections and object entries
    interleaved in World's own order, not bucketed) -- .world-object-list's grid gap only
    covers objects grouped inside one collection card, so a top-level entry needs its own
    spacing here instead. */
 .workspace-results-panel__list > .world-object-entry {
     margin-bottom: 8px;
-}
-
-.world-object-entry > .world-object {
-    grid-column: 1;
 }
 
 /* An Object opened on Carry is the same floating panel as any carry object, with an accent

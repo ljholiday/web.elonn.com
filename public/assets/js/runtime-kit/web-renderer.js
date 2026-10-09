@@ -524,6 +524,9 @@
             sequenceEntryChips(object).forEach(function (chip) {
                 main.appendChild(chip);
             });
+            cardLinks(object).forEach(function (link) {
+                main.appendChild(link);
+            });
             entry.appendChild(main);
             if (mode !== 'compact') {
                 time.className = 'world-sequence-entry__time';
@@ -696,15 +699,15 @@
             if (object.summary !== '' && mode !== 'compact') {
                 button.appendChild(summary);
             }
+            if (mode !== 'compact') {
+                cardLinks(object).forEach(function (link) {
+                    button.appendChild(link);
+                });
+            }
             if (object.availability.state !== 'enabled') {
                 button.appendChild(badge(object.availability.state));
             }
             wrapper.appendChild(button);
-            if (mode !== 'compact') {
-                cardLinks(object).forEach(function (link) {
-                    wrapper.appendChild(link);
-                });
-            }
             return wrapper;
         }
 
@@ -721,35 +724,34 @@
 
         // A Resource may carry a source URI (dev.elonn canonical/resource.md); an Action never
         // does (there is no URL on an Action -- canonical/action.md), so only Resources are
-        // a candidate here.
+        // a candidate here. Shown as the reference's own label (or its domain when it has
+        // none) -- never prefixed ("Source: ..."); the reference reads on its own.
         function cardLinks(object) {
             var links = [];
-            firstHref(object.resources, 'Source', links, object.id);
+            firstHref(object.resources, links, object.id);
             return links;
         }
 
-        function firstHref(items, label, output, objectId) {
+        function firstHref(items, output, objectId) {
             (Array.isArray(items) ? items : []).some(function (item) {
                 var href = common.text(item && item.source, '');
                 if (href === '') {
                     return false;
                 }
-                output.push(cardLink(label, common.text(item.label, href), href, objectId));
+                output.push(cardLink(common.text(item.label, href), href, objectId));
                 return true;
             });
         }
 
-        function cardLink(label, text, href) {
+        function cardLink(text, href) {
             if (externalHref(href)) {
-                var ref = externalRef(href, text);
-                ref.textContent = label + ': ' + (common.text(text, '') !== '' ? text : domainFromUrl(href));
-                return ref;
+                return externalRef(href, text);
             }
             var link = document.createElement('a');
             link.className = 'world-object-link';
             link.href = href;
             link.rel = 'noopener noreferrer';
-            link.textContent = label + ': ' + text;
+            link.textContent = text;
             return link;
         }
 
@@ -1341,6 +1343,10 @@
                 summary.textContent = object.summary;
                 nodes.push(summary);
             }
+            var preview = imagePreview(object);
+            if (preview) {
+                nodes.push(preview);
+            }
             containedObjectNodes(object).forEach(function (node) { nodes.push(node); });
             resourceLinks(object).forEach(function (link) { nodes.push(link); });
             actionLinks(object).forEach(function (link) { nodes.push(link); });
@@ -1445,7 +1451,9 @@
 
         function resourceLinks(object) {
             return (Array.isArray(object.resources) ? object.resources : []).filter(function (resource) {
-                return common.text(resource.source, '') !== '';
+                // An image Resource already renders visually via imagePreview() above --
+                // showing it again here would be a dead text link to its own image URL.
+                return common.text(resource.source, '') !== '' && String(resource.kind || '') !== 'image';
             }).map(function (resource) {
                 return linkLine('Resource', resource.label, resource.source, object.id);
             });
