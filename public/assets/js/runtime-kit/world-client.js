@@ -97,6 +97,13 @@
             if (String(state.runtimeSessionId || '') !== '') {
                 call.context.runtime_state.dataset_id = String(state.runtimeSessionId);
             }
+            // Carries the Thread this Call continues (dev.elonn canonical/thread.md). Omitted
+            // (no key at all, not an empty string) when the runtime has none yet -- an actual
+            // search with no thread_id always starts a new, independent Thread; the runtime
+            // must never fabricate or guess one.
+            if (String(state.threadId || '') !== '') {
+                call.context.thread_id = String(state.threadId);
+            }
 
             return call;
         }

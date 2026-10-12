@@ -284,6 +284,33 @@ if (paintWorldCall.content.operation_invocation.operation !== 'paint.draw') thro
 if (paintWorldCall.content.operation_invocation.payload.stroke.geometry.points.length !== 2) throw new Error('operation invocation stroke was not preserved');
 if (paintWorldCall.context.focus.object_id !== 'paint.document:test') throw new Error('operation invocation focus Object was not preserved');
 
+// The Thread a response belongs to (dev.elonn canonical/thread.md) round-trips through the real
+// parse -> index -> call-building path, the same way runtimeSessionId/dataset_id already does --
+// this is what keeps a follow-up search in the same Results pane instead of starting over.
+const threadDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:thread',
+  context: {focus: {object_id: ''}, thread_id: 'thread:world:abc123'}
+});
+const threadState = runtime.StateIndexer.build(runtime.DatasetParser.parse(threadDataset));
+if (threadState.threadId !== 'thread:world:abc123') throw new Error('threadId was not projected from context.thread_id');
+
+const continuedWorldCall = worldClient.worldCall({inputText: 'slices nearby', threadId: threadState.threadId});
+if (continuedWorldCall.context.thread_id !== 'thread:world:abc123') throw new Error('a follow-up Call did not carry its Thread id forward');
+
+const freshWorldCall = worldClient.worldCall({inputText: 'pizza'});
+if ('thread_id' in freshWorldCall.context) throw new Error('a Call with no known Thread must omit thread_id entirely, not send an empty one -- it must always read as a genuinely new Thread, never a guess');
+
+// world.clear returns an empty thread_id (that Thread has ended) -- the next Call must also omit
+// the key, not resend the id of the Thread that was just cleared.
+const clearedDataset = Object.assign({}, dataset, {
+  id: 'dataset:world:cleared',
+  context: {focus: {object_id: ''}, thread_id: ''}
+});
+const clearedState = runtime.StateIndexer.build(runtime.DatasetParser.parse(clearedDataset));
+if (clearedState.threadId !== '') throw new Error('threadId was not cleared from a cleared response');
+const afterClearWorldCall = worldClient.worldCall({inputText: 'tacos', threadId: clearedState.threadId});
+if ('thread_id' in afterClearWorldCall.context) throw new Error('a Call built from a cleared Thread state must not resend the old thread_id');
+
 const errorDataset = Object.assign({}, dataset, {id: 'dataset:world:error', errors: [{code: 'contract_violation', class: 'contract', message: 'Bad call.'}]});
 const parsedError = runtime.DatasetParser.parse(errorDataset);
 if (parsedError.errors[0].code !== 'contract_violation') throw new Error('canonical errors were not parsed');

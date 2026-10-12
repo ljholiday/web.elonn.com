@@ -431,6 +431,7 @@
         var request = {
             inputText: text,
             runtimeSessionId: state ? state.runtimeSessionId : '',
+            threadId: state ? state.threadId : '',
             selectedObjectId: '',
             selectedCollectionId: ''
         };
@@ -595,6 +596,7 @@
         loadDataset({
             operation: 'world.clear',
             runtimeSessionId: state ? state.runtimeSessionId : '',
+            threadId: state ? state.threadId : '',
             inputText: 'world.clear'
         }).then(function () {
             workspaceResultsCleared = false;
@@ -682,6 +684,7 @@
         renderer.status('Requesting World Dataset.', 'loading');
         return loadDataset({
             runtimeSessionId: state ? state.runtimeSessionId : '',
+            threadId: state ? state.threadId : '',
             selectedObjectId: objectId,
             selectedCollectionId: state ? state.selectedCollectionId : '',
             inputText: String(command && command.input_text || 'operation invocation'),
@@ -1002,6 +1005,7 @@
             operation: operation,
             originObject: String(objectId),
             runtimeSessionId: state ? state.runtimeSessionId : '',
+            threadId: state ? state.threadId : '',
             selectedObjectId: state ? state.selectedObjectId : '',
             inputText: operation
         }, extra));

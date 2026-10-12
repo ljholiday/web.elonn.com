@@ -33,6 +33,11 @@
                 openedObjects: openedObjects(dataset, indexes),
                 findings: findings(dataset),
                 runtimeSessionId: String(dataset.id || ''),
+                // The Thread this response belongs to (dev.elonn canonical/thread.md), or ''
+                // when the last operation ended it (world.clear). Carried forward verbatim on
+                // the next Call -- the runtime never generates, inspects, or decides between
+                // Thread ids itself (dev.elonn canonical/context.md, Thread continuity).
+                threadId: String((dataset.context && dataset.context.thread_id) || ''),
                 selectedObjectId: selectedObjectId,
                 selectedCollectionId: selectedCollectionId
             };
