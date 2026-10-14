@@ -114,9 +114,10 @@
     /*
      * The Findings returned for the current Call, for the Results pane. Unplaced content that
      * belongs to no opened Object (see StateIndexer.findings). One ordered list, exactly as
-     * World wrote dataset.findings -- collections and objects interleaved, newest first. Not
-     * split or re-grouped by kind; each entry just carries which kind it resolved to so the
-     * renderer knows how to build it.
+     * World wrote dataset.findings -- collections and objects interleaved, oldest first,
+     * newest last (2026-10-14, matches Entry moving to the bottom). Not split or re-grouped by
+     * kind; each entry just carries which kind it resolved to so the renderer knows how to
+     * build it.
      */
     function findingsView(state) {
         var list = Array.isArray(state.findings) ? state.findings : [];

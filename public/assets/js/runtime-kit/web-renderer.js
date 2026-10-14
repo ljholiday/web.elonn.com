@@ -19,6 +19,7 @@
         var workspacePanelEl = null;
         var workspaceToggleButton = null;
         var objectLabels = {};
+        var threadLabels = {};
 
         function status(message, state) {
             if (!nodes.status) {
@@ -35,6 +36,8 @@
             var content = scene.content && typeof scene.content === 'object' ? scene.content : {};
             // Object title-bar labels (back / close) -- keyed 'object' in world-content.json.
             objectLabels = content.object && typeof content.object === 'object' ? content.object : {};
+            // A Discovery thread's continuation field copy -- keyed 'thread' in world-content.json.
+            threadLabels = content.thread && typeof content.thread === 'object' ? content.thread : {};
             ensureWorkspacePanel(workspaceOptions);
             updateFloatingPanelChrome(workspacePanelEl, workspaceOptions);
             updateWorkspaceContent(scene.content || {}, workspaceOptions.findScope);
@@ -119,8 +122,10 @@
          * The Results pane: the Findings returned for the current Call (see dev.elonn
          * canonical/layout.md). Only Findings render here -- placed Objects are their own
          * panels. Hidden while collapsed or freshly cleared. Rendered in the exact order
-         * scene.findings lists them -- newest first, collections and objects interleaved as
-         * World ordered them -- never bucketed into a collections-block then an objects-block,
+         * scene.findings lists them -- oldest first, newest last (2026-10-14: Entry moved to
+         * the bottom, so a fresh result belongs at the end, next to it), collections and
+         * objects interleaved as World ordered them -- never bucketed into a collections-block
+         * then an objects-block,
          * which would silently bury a fresh result under older ones of a different kind.
          */
         function renderWorkspace(node, findings, options) {
@@ -300,8 +305,11 @@
                 buildContent: function (content) {
                     resultsNode.className = 'workspace-results-panel__list';
                     resultsNode.dataset.workspaceResultsContent = 'true';
-                    content.appendChild(queryFormNode(options.content || {}));
+                    // Entry sits at the bottom, chat-input style (decision 2026-10-14):
+                    // results flow first, Entry last, so new results land next to where the
+                    // member is looking right after they typed, not up top out of view.
                     content.appendChild(resultsNode);
+                    content.appendChild(queryFormNode(options.content || {}));
                 }
             });
             return {article: article, resultsNode: resultsNode, toggleButton: toggleButton};
@@ -537,6 +545,95 @@
                 entry.appendChild(badge(object.availability.state));
             }
             return entry;
+        }
+
+        /*
+         * A Discovery thread's own Turns, oldest first (dev.elonn canonical/object.md,
+         * Recognized type: world.thread; thread.md, Semantics). Each Turn is the member's own
+         * input for that Turn and, when Conductor asked one, the clarifying question it produced
+         * -- inline content, not its own addressable Object (unlike a sequence's own members, a
+         * past Turn is never itself opened/selected, so this is plain presentational markup, not
+         * sequenceEntryNode()).
+         */
+        function threadTurnsNode(object) {
+            var content = object.content && typeof object.content === 'object' ? object.content : {};
+            var turns = Array.isArray(content.turns) ? content.turns : [];
+            var section = document.createElement('section');
+            var flow = document.createElement('div');
+            section.className = 'world-sequence world-sequence--object world-thread';
+            flow.className = 'world-sequence-flow';
+            turns.forEach(function (turn) {
+                flow.appendChild(threadTurnNode(turn && typeof turn === 'object' ? turn : {}));
+            });
+            section.appendChild(flow);
+            return section;
+        }
+
+        function threadTurnNode(turn) {
+            var entry = document.createElement('div');
+            var input = document.createElement('p');
+            entry.className = 'world-thread-entry';
+            input.className = 'world-thread-entry__input';
+            input.textContent = common.text(turn.input, '');
+            entry.appendChild(input);
+            var question = common.text(turn.clarifying_question, '');
+            if (question !== '') {
+                var questionNode = document.createElement('p');
+                questionNode.className = 'world-thread-entry__question';
+                questionNode.textContent = question;
+                entry.appendChild(questionNode);
+            }
+            return entry;
+        }
+
+        /*
+         * The field at the bottom of an opened Discovery thread, to continue it -- reuses the
+         * main Entry's own [data-runtime-query-input]/[data-runtime-query-form] markup/classes
+         * (query-composer) for visual parity, under its own [data-thread-continue-*] markers.
+         * Carries the thread's own Object id (data-thread-continue-object-id) so
+         * web-runtime.js's delegated submit listener can target exactly this Thread -- never
+         * whatever Thread the main Entry happens to have active elsewhere on the page -- and
+         * update only this one card in place (continueDiscoveryThread(), NOT submitQuery()).
+         */
+        function threadContinueFormNode(objectId) {
+            var form = document.createElement('form');
+            var label = document.createElement('label');
+            var field = document.createElement('div');
+            var input = document.createElement('input');
+            var submit = document.createElement('button');
+
+            form.className = 'query-composer world-thread-continue';
+            form.setAttribute('data-thread-continue-form', '');
+            form.setAttribute('data-thread-continue-object-id', String(objectId || ''));
+            form.setAttribute('role', 'search');
+
+            // No literal fallback here (unlike find.placeholder elsewhere in this file): the
+            // 'thread' key is always present in world-content.json, so common.text's own ''
+            // default is sufficient -- avoids adding to no-hardcoded-ui-strings-test's
+            // pre-existing, already-known violation count for no reason.
+            label.className = 'visually-hidden';
+            label.setAttribute('for', 'thread-continue-query');
+            label.textContent = common.text(threadLabels.continue_aria_label, '');
+
+            field.className = 'query-composer__field';
+            input.id = 'thread-continue-query';
+            input.className = 'query-composer__input';
+            input.setAttribute('data-thread-continue-input', '');
+            input.type = 'search';
+            input.name = 'thread-continue';
+            input.autocomplete = 'off';
+            input.spellcheck = true;
+            input.placeholder = common.text(threadLabels.placeholder, '');
+
+            submit.type = 'submit';
+            submit.className = 'operation-form__submit';
+            submit.textContent = common.text(threadLabels.continue_label, '');
+
+            field.appendChild(input);
+            form.appendChild(label);
+            form.appendChild(field);
+            form.appendChild(submit);
+            return form;
         }
 
         /*
@@ -906,6 +1003,17 @@
             // Service's drawing surface, not just Paint's.
             if (panel.object.format === 'drawing_surface') {
                 return [hostedSurface(panel.object)].concat(actionLinks(panel.object));
+            }
+            // A Discovery thread (dev.elonn canonical/object.md, Recognized type: world.thread;
+            // decision.search_thread_as_conversation_card_no_separate_clarification_mechanism_
+            // 20261013): its own Turns, oldest first, plus a field at the bottom to continue it --
+            // the same reply-form-at-the-bottom convention every conversation already uses, not a
+            // new pattern. The field has its own [data-thread-continue-form] marker carrying this
+            // specific Thread's own Object id (2026-10-14: a follow-up here must target exactly
+            // this Thread and update only this one panel -- never the main Entry's own
+            // submitQuery(), which replaces the member's entire Results pane).
+            if (panel.object.type === 'world.thread') {
+                return [threadTurnsNode(panel.object), threadContinueFormNode(panel.object.id)];
             }
             // The Object's own Collections flow first (a conversation's replies, a browse's
             // grouped lists). Its member Objects appear as cards inside those Collections --

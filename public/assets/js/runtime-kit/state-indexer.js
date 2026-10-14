@@ -126,7 +126,8 @@
 
     /*
      * Findings: the Results-pane results, as World composed them into dataset.findings
-     * (dev.elonn canonical/finding.md), in the exact order World wrote them -- newest first,
+     * (dev.elonn canonical/finding.md), in the exact order World wrote them -- oldest first,
+     * newest last (2026-10-14, matches Entry moving to the bottom of the Results pane),
      * collections and objects interleaved as World ordered them. The runtime does not decide
      * what is a Finding, and it does not re-group or re-order this list by entity kind: doing
      * so would silently reorder results (e.g. burying a fresh object-type Finding under a
