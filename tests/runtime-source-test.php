@@ -438,6 +438,14 @@ $checks = [
         && !str_contains($webRenderer, "title: 'Workspace'")
         && !str_contains($webRenderer, "input.placeholder = 'Ask or search'")
         && !str_contains($webRenderer, "label: 'Clear',"),
+    // An opened Object's Action buttons (e.g. Maps' 'Save to field') must never count as
+    // 'real content' when deciding whether to fall back to the Object's own summary text --
+    // that regression (an actionable Object with nothing else to show rendering as a bare
+    // button, its summary silently dropped) is exactly what this pins against. Summary
+    // precedes Actions in the returned body, matching carryFindingBody's own ordering.
+    'Opened Object body shows its summary even when it has an Action but no other content' => str_contains($webRenderer, 'var bodyNodes = mediaNodes.concat(contentNodes);')
+        && str_contains($webRenderer, 'return bodyNodes.concat(actionNodes);')
+        && !str_contains($webRenderer, 'var bodyNodes = mediaNodes.concat(contentNodes, actionNodes);'),
     'Legacy runtime vocabulary is quarantined outside the new app' => !contains_any($template . $scripts . $readme, [
         'surface_runtime',
         'field_runtime',

@@ -1055,11 +1055,18 @@
                     }
                 });
             }
-            var bodyNodes = mediaNodes.concat(contentNodes, actionNodes);
-            // A plain payload Object -- no document, no member Collections, no member
-            // Objects, no actions (e.g. Mind's mind.reasoning result) -- has no other body
-            // content to show. Its summary IS the content in that case, not indexing
-            // metadata to suppress; without this the panel renders empty.
+            // Whether this Object has real content to show is its own question, answered
+            // from media/Collections alone -- never from whether it also has an Action.
+            // An Action (e.g. Maps' 'Save to field') is a control, not content: folding
+            // actionNodes into this check (as a single bodyNodes list once did) meant any
+            // actionable Object with nothing else to show rendered as a bare button, its
+            // own summary silently dropped. A plain payload Object with no document, no
+            // member Collections, no member Objects -- action or not -- has no other body
+            // content to show; its summary IS the content in that case, not indexing
+            // metadata to suppress. Summary (when shown) precedes Actions, same ordering
+            // carryFindingBody already uses and the 'controls at the bottom' convention
+            // this file follows throughout (e.g. threadContinueFormNode).
+            var bodyNodes = mediaNodes.concat(contentNodes);
             if (bodyNodes.length === 0) {
                 var summaryText = common.text(panel.object.summary, '');
                 if (summaryText !== '') {
@@ -1069,7 +1076,7 @@
                     bodyNodes.push(summaryNode);
                 }
             }
-            return bodyNodes;
+            return bodyNodes.concat(actionNodes);
         }
 
         /*
