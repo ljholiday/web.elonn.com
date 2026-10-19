@@ -376,7 +376,7 @@ $checks = [
         && !str_contains($webRuntime, '|| panel.object || null')
         && !str_contains(read_file($root . '/public/assets/js/runtime-kit/scene-model.js'), '|| panel.object || null'),
     'Runtime projects canonical Placement without World layout' => str_contains($scripts, 'dataset.placements')
-        && str_contains($scripts, "['carry', 'field']")
+        && str_contains($scripts, "['carry', 'space']")
         && !str_contains($scripts, "'workspace'")
         && !str_contains($scripts, "type: 'window'")
         && str_contains($scripts, 'objectIds')

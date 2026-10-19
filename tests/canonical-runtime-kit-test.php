@@ -196,7 +196,7 @@ const findingsDataset = Object.assign({}, dataset, {
   context: {focus: {object_id: ''}}
 });
 const findingsState = runtime.StateIndexer.build(runtime.DatasetParser.parse(findingsDataset));
-if (findingsState.layers.map((layer) => layer.id).join(',') !== 'carry,field') throw new Error('layers are exactly carry and field');
+if (findingsState.layers.map((layer) => layer.id).join(',') !== 'carry,space') throw new Error('layers are exactly carry and space');
 if (findingsState.findings[0].kind !== 'collection' || findingsState.findings[0].id !== 'collection:findings') throw new Error('unplaced collection was not projected as a Finding');
 if (findingsState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('an unplaced collection leaked onto the carry layer');
 if (findingsState.selectedObjectId !== '') throw new Error('a Findings-only Dataset focuses nothing until the member focuses a Finding');

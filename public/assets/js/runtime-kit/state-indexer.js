@@ -45,16 +45,16 @@
     };
 
     /*
-     * Elonn has exactly two layers, carry and field (dev.elonn canonical/layout.md). A layer's
+     * Elonn has exactly two layers, carry and space (dev.elonn canonical/layout.md). A layer's
      * zone lists only what a Placement of that type puts there -- opened Objects on carry, Maps
-     * content on field. Unplaced content is not on a layer; it is Findings (see findings()).
+     * content on space. Unplaced content is not on a layer; it is Findings (see findings()).
      */
     function layers(dataset, indexes) {
-        return ['carry', 'field'].map(function (placementType) {
+        return ['carry', 'space'].map(function (placementType) {
             return {
                 id: placementType,
                 label: placementType,
-                frame: placementType === 'field' ? 'world_anchored' : 'user_anchored',
+                frame: placementType === 'space' ? 'world_anchored' : 'user_anchored',
                 meaning: placementType,
                 zones: [
                     zone(placementType, indexes, dataset)

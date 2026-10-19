@@ -11,7 +11,7 @@
         var nodes = {
             status: root.querySelector('[data-runtime-status]'),
             workspace: null,
-            field: root.querySelector('[data-layer-zone="field:field"]'),
+            space: root.querySelector('[data-layer-zone="space:space"]'),
             carryPanels: root.querySelector('[data-runtime-carry-panels]'),
             workspaceMount: root.querySelector('[data-workspace-panel-mount]'),
             statusRows: root.querySelector('[data-runtime-session]')
@@ -45,7 +45,7 @@
                 workspaceToggleButton.textContent = workspaceOptions.collapsed === true ? 'Show' : 'Hide';
             }
             renderWorkspace(nodes.workspace, scene.findings || {collections: [], objects: []}, workspaceOptions);
-            renderField(nodes.field, zoneMap['field:field']);
+            renderSpace(nodes.space, zoneMap['space:space']);
             common.replaceChildren(nodes.carryPanels, carryPanelNodes(scene.carryPanels || []));
             common.replaceChildren(nodes.statusRows, (scene.status || []).map(statusNode));
         }
@@ -406,7 +406,7 @@
             return output;
         }
 
-        function renderField(node, zone) {
+        function renderSpace(node, zone) {
             if (!node) {
                 return;
             }
@@ -883,13 +883,13 @@
             var title = document.createElement('strong');
             var position = fieldPosition(index);
             marker.type = 'button';
-            marker.className = 'field-marker';
+            marker.className = 'space-marker';
             marker.dataset.objectId = object.id;
             marker.style.left = position.left + '%';
             marker.style.top = position.top + '%';
-            target.className = 'field-marker__target';
-            dot.className = 'field-marker__dot';
-            label.className = 'field-marker__label';
+            target.className = 'space-marker__target';
+            dot.className = 'space-marker__dot';
+            label.className = 'space-marker__label';
             type.textContent = object.type;
             title.textContent = object.title;
             target.appendChild(dot);

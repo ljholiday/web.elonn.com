@@ -191,7 +191,7 @@
                     resource_id: String(content.resource || '')
                 };
             }).filter(function (placement) {
-                return placement.id !== '' && ['carry', 'field'].indexOf(placement.type) !== -1;
+                return placement.id !== '' && ['carry', 'space'].indexOf(placement.type) !== -1;
             });
         },
 

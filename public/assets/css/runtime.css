@@ -152,7 +152,7 @@ input {
     outline: none;
 }
 
-.field-projection {
+.space-projection {
     position: absolute;
     inset: 0;
     overflow: hidden;
@@ -160,21 +160,21 @@ input {
     outline: none;
 }
 
-.field-projection__sky,
-.field-projection__grid,
-.field-projection__horizon,
-.field-projection__objects {
+.space-projection__sky,
+.space-projection__grid,
+.space-projection__horizon,
+.space-projection__objects {
     position: absolute;
     inset: 0;
 }
 
-.field-projection__sky {
+.space-projection__sky {
     background:
         radial-gradient(circle at 50% 35%, rgba(180, 255, 240, 0.08), transparent 16%),
         linear-gradient(180deg, #0b171a 0%, #071011 48%, #0c1718 50%, #061011 100%);
 }
 
-.field-projection__grid {
+.space-projection__grid {
     opacity: 0.18;
     background-image:
         linear-gradient(rgba(184, 255, 243, 0.08) 1px, transparent 1px),
@@ -183,7 +183,7 @@ input {
     mask-image: radial-gradient(circle at center, #000 0%, transparent 72%);
 }
 
-.field-projection__horizon {
+.space-projection__horizon {
     top: 49.5%;
     bottom: auto;
     height: 2px;
@@ -191,7 +191,7 @@ input {
     box-shadow: 0 0 24px rgba(184, 255, 243, 0.16);
 }
 
-.field-projection__north {
+.space-projection__north {
     position: absolute;
     left: 50%;
     top: 40%;
@@ -201,7 +201,7 @@ input {
     border-left: 2px solid rgba(184, 255, 243, 0.62);
 }
 
-.field-projection__north span {
+.space-projection__north span {
     position: absolute;
     top: -24px;
     left: 0;
@@ -217,18 +217,18 @@ input {
     font-size: 0.72rem;
 }
 
-.field-projection__objects {
+.space-projection__objects {
     z-index: 4;
 }
 
-.field-marker {
+.space-marker {
     position: absolute;
     display: flex;
     align-items: center;
     color: #eefaf8;
 }
 
-.field-marker__target {
+.space-marker__target {
     display: grid;
     place-items: center;
     width: 42px;
@@ -238,14 +238,14 @@ input {
     background: rgba(18, 23, 24, 0.2);
 }
 
-.field-marker__dot {
+.space-marker__dot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
     background: #ffffff;
 }
 
-.field-marker__label {
+.space-marker__label {
     display: grid;
     gap: 2px;
     min-width: 138px;
@@ -256,13 +256,13 @@ input {
     background: rgba(10, 16, 17, 0.86);
 }
 
-.field-marker__label span {
+.space-marker__label span {
     color: #b8fff3;
     font-size: 0.64rem;
     text-transform: uppercase;
 }
 
-.field-marker__label strong {
+.space-marker__label strong {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -281,7 +281,7 @@ input {
     pointer-events: none;
 }
 
-.field-projection__status,
+.space-projection__status,
 .runtime-session {
     color: #d0ddd5;
     font-size: 0.82rem;
@@ -290,7 +290,7 @@ input {
     user-select: text;
 }
 
-.field-projection__status {
+.space-projection__status {
     margin: 0;
     overflow-wrap: anywhere;
 }
