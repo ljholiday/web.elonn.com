@@ -40,7 +40,7 @@ const dataset = {
   relationships: [],
   collections: [{id: 'collection:one', type: 'collection', content: {items: ['object:one']}}],
   resources: [],
-  placements: [{id: 'placement:one:carry', type: 'carry', content: {collection: 'collection:one'}}],
+  placements: [{id: 'placement:one:carry', type: 'carry', content: {object: 'object:one'}}],
   errors: [],
   // World names the focused Object; the runtime never picks one (dev.elonn canonical/dataset.md).
   context: {focus: {object_id: 'object:one'}}
@@ -106,7 +106,7 @@ if (parsed.collections[0].items[0] !== 'object:one') throw new Error('canonical 
 if (parsed.actions[0].target_id !== 'object:one') throw new Error('canonical action target was not parsed');
 
 const state = runtime.StateIndexer.build(parsed);
-if (state.layers[0].zones[0].collectionIds[0] !== 'collection:one') throw new Error('carry placement was not projected');
+if (state.layers[0].zones[0].objectIds[0] !== 'object:one') throw new Error('carry placement was not projected');
 const scene = runtime.SceneModel.fromState(state);
 // World owns availability (Composer::withNormalisedAvailability); the runtime renders {state, reason} verbatim.
 if (scene.actions[0].availability.state !== 'unavailable') throw new Error('runtime must pass through the World-set availability state, not synthesise one');
@@ -198,7 +198,7 @@ const findingsDataset = Object.assign({}, dataset, {
 const findingsState = runtime.StateIndexer.build(runtime.DatasetParser.parse(findingsDataset));
 if (findingsState.layers.map((layer) => layer.id).join(',') !== 'carry,space') throw new Error('layers are exactly carry and space');
 if (findingsState.findings[0].kind !== 'collection' || findingsState.findings[0].id !== 'collection:findings') throw new Error('unplaced collection was not projected as a Finding');
-if (findingsState.layers[0].zones[0].collectionIds.length !== 0) throw new Error('an unplaced collection leaked onto the carry layer');
+if (findingsState.layers[0].zones[0].objectIds.length !== 0) throw new Error('an unplaced collection leaked onto the carry layer');
 if (findingsState.selectedObjectId !== '') throw new Error('a Findings-only Dataset focuses nothing until the member focuses a Finding');
 const findingsScene = runtime.SceneModel.fromState(findingsState);
 if (findingsScene.findings[0].kind !== 'collection' || findingsScene.findings[0].collection.id !== 'collection:findings') throw new Error('Findings were not projected into the scene');

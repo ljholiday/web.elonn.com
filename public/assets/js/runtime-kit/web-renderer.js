@@ -414,12 +414,10 @@
                 common.replaceChildren(node, []);
                 return;
             }
-            var objects = [];
-            (zone.collections || []).forEach(function (collection) {
-                objects = objects.concat(collection.objects || []);
-            });
-            objects = objects.concat(zone.objects || []);
-            common.replaceChildren(node, objects.map(fieldMarker));
+            // A Space Placement names exactly one Object, never a Collection
+            // (dev.elonn canonical/placement.md, Placement identity) -- zone.objects is the
+            // whole list.
+            common.replaceChildren(node, (zone.objects || []).map(spaceMarker));
         }
 
         function collections(items, mode) {
@@ -874,7 +872,7 @@
             return image;
         }
 
-        function fieldMarker(object, index) {
+        function spaceMarker(object, index) {
             var marker = document.createElement('button');
             var target = document.createElement('span');
             var dot = document.createElement('span');
@@ -1102,6 +1100,7 @@
         function documentNode(object, focusedRegion) {
             var content = object.content && typeof object.content === 'object' ? object.content : {};
             var regions = Array.isArray(content.regions) ? content.regions : [];
+            var resources = Array.isArray(object.resources) ? object.resources : [];
             var article = document.createElement('article');
             article.className = 'web-document';
 
@@ -1114,7 +1113,7 @@
             });
 
             if (regions.length > 1 && selectedRegion) {
-                contentTreeNodes(Array.isArray(selectedRegion.content) ? selectedRegion.content : []).forEach(function (node) {
+                contentTreeNodes(Array.isArray(selectedRegion.content) ? selectedRegion.content : [], resources).forEach(function (node) {
                     article.appendChild(node);
                 });
             } else if (regions.length > 1) {
@@ -1122,7 +1121,7 @@
             } else {
                 // No landmark structure at all: one main region, shown directly -- a region
                 // list of one entry has nothing to choose between.
-                contentTreeNodes(regionContentByKey(regions, 'main')).forEach(function (node) {
+                contentTreeNodes(regionContentByKey(regions, 'main'), resources).forEach(function (node) {
                     article.appendChild(node);
                 });
             }
@@ -1196,7 +1195,7 @@
             return link;
         }
 
-        function contentTreeNodes(treeNodes) {
+        function contentTreeNodes(treeNodes, resources) {
             var out = [];
             (Array.isArray(treeNodes) ? treeNodes : []).forEach(function (node) {
                 if (!node || typeof node !== 'object') {
@@ -1214,18 +1213,37 @@
                 } else if (kind === 'section') {
                     var section = document.createElement('section');
                     section.className = 'web-document__section';
-                    contentTreeNodes(Array.isArray(node.content) ? node.content : []).forEach(function (child) {
+                    contentTreeNodes(Array.isArray(node.content) ? node.content : [], resources).forEach(function (child) {
                         section.appendChild(child);
                     });
                     out.push(section);
                 } else if (kind === 'media') {
-                    var media = documentMedia(node);
+                    var media = documentMedia(node, resources);
                     if (media) {
                         out.push(media);
                     }
                 }
             });
             return out;
+        }
+
+        /*
+         * Resolves a content node's `resource` reference against the Object's own promoted
+         * Resources -- the same lookup embedResourceHref already does for a promoted media
+         * Object. A node id with no match returns null; the caller never falls back to a raw
+         * URL field on the node itself (see documentMedia).
+         */
+        function resourceById(resources, id) {
+            if (id === '') {
+                return null;
+            }
+            var match = null;
+            (Array.isArray(resources) ? resources : []).forEach(function (resource) {
+                if (resource && String(resource.id || '') === id) {
+                    match = resource;
+                }
+            });
+            return match;
         }
 
         function documentParagraph(node) {
@@ -1282,25 +1300,32 @@
             return anchor;
         }
 
-        function documentMedia(node) {
+        /*
+         * A `media` content node (object.md, Content body). The node's own `resource` id is
+         * only a reference -- never a URL to trust directly. The executable/loadable URL comes
+         * exclusively from the matching promoted Resource (resourceById), the same
+         * Elonn-constructed, provider-table-vetted boundary mediaObjectNode() already enforces
+         * for a promoted media Object (decision.oembed_provider_table_execution_boundary_
+         * 20260912). A node whose `resource` does not resolve renders nothing -- it never falls
+         * back to a raw `src`/`source` field on the node itself, which would let interpreted
+         * source content (html.md) point this Runtime at an arbitrary, unvetted URL.
+         */
+        function documentMedia(node, resources) {
             var kind = String(node.kind || '');
+            var resource = resourceById(resources, String(node.resource || ''));
+            var source = resource ? common.text(resource.source, '') : '';
+            if (source === '') {
+                return null;
+            }
             if (kind === 'image') {
-                var src = common.text(node.src, '');
-                if (src === '') {
-                    return null;
-                }
                 var image = document.createElement('img');
                 image.className = 'web-document__image';
-                image.src = src;
+                image.src = source;
                 image.alt = common.text(node.alt, '');
                 image.loading = 'lazy';
                 return image;
             }
             if (kind === 'video' || kind === 'audio' || kind === 'embed') {
-                var source = common.text(node.source, '');
-                if (source === '') {
-                    return null;
-                }
                 if (String(node.playback || '') === 'native') {
                     var element = document.createElement(kind === 'audio' ? 'audio' : 'video');
                     element.className = 'web-video__native';

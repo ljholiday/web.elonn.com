@@ -180,15 +180,18 @@
             }).filter(hasId);
         },
 
+        /*
+         * dev.elonn canonical/placement.md, Placement identity: a Placement names exactly one
+         * Object, never a Collection. World never emits a placement whose content names a
+         * Collection (Contract/DatasetValidator rejects it), so this reads only `content.object`.
+         */
         placements: function (dataset) {
             return dataset.placements.filter(isObject).map(function (placement) {
                 var content = placement.content && typeof placement.content === 'object' ? placement.content : {};
                 return {
                     id: String(placement.id || ''),
                     type: String(placement.type || ''),
-                    object_id: String(content.object || ''),
-                    collection_id: String(content.collection || ''),
-                    resource_id: String(content.resource || '')
+                    object_id: String(content.object || '')
                 };
             }).filter(function (placement) {
                 return placement.id !== '' && ['carry', 'space'].indexOf(placement.type) !== -1;

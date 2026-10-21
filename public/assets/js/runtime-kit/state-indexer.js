@@ -63,15 +63,16 @@
         });
     }
 
+    /*
+     * dev.elonn canonical/placement.md, Placement identity: a Placement names exactly one
+     * Object, never a Collection -- a Collection never substitutes for one. World never emits a
+     * placement whose content names a Collection, so a zone has only objectIds.
+     */
     function zone(placementType, indexes, dataset) {
-        var collectionIds = [];
         var objectIds = [];
         dataset.placements.filter(function (placement) {
             return placement.type === placementType;
         }).forEach(function (placement) {
-            if (placement.collection_id !== '' && indexes.collections[placement.collection_id]) {
-                collectionIds.push(placement.collection_id);
-            }
             if (placement.object_id !== '' && indexes.objects[placement.object_id]) {
                 objectIds.push(placement.object_id);
             }
@@ -81,7 +82,6 @@
             id: placementType,
             label: placementType,
             role: placementType,
-            collectionIds: unique(collectionIds),
             objectIds: unique(objectIds)
         };
     }

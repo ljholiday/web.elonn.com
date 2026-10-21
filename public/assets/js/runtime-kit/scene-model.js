@@ -64,11 +64,6 @@
                         label: zone.label,
                         role: zone.role,
                         selected: zoneHasObject(state, zone, state.selectedObjectId),
-                        collections: zone.collectionIds.map(function (collectionId) {
-                            return collectionView(state, state.indexes.collections[collectionId] || {});
-                        }).filter(function (collection) {
-                            return collection.id !== '';
-                        }),
                         objects: (zone.objectIds || []).map(function (objectId) {
                             var object = state.indexes.objects[String(objectId || '')] || null;
                             return object ? objectView(state, object, String(object.id || '') === state.selectedObjectId, true) : null;
@@ -315,14 +310,10 @@
         });
     }
 
+    // A Placement names exactly one Object, never a Collection (dev.elonn canonical/placement.md,
+    // Placement identity) -- a zone's objectIds is the whole membership test.
     function zoneHasObject(state, zone, objectId) {
-        if ((zone.objectIds || []).indexOf(objectId) !== -1) {
-            return true;
-        }
-        return zone.collectionIds.some(function (collectionId) {
-            var collection = state.indexes.collections[collectionId] || {};
-            return common.itemIds(collection.items).indexOf(objectId) !== -1;
-        });
+        return (zone.objectIds || []).indexOf(objectId) !== -1;
     }
 
     function worldContent(state) {
