@@ -446,6 +446,14 @@ $checks = [
     'Opened Object body shows its summary even when it has an Action but no other content' => str_contains($webRenderer, 'var bodyNodes = mediaNodes.concat(contentNodes);')
         && str_contains($webRenderer, 'return bodyNodes.concat(actionNodes);')
         && !str_contains($webRenderer, 'var bodyNodes = mediaNodes.concat(contentNodes, actionNodes);'),
+    // World dataset refactor step 4 (Mind pilot): any Object's own canonical content.body
+    // renders generically through the same content-node vocabulary documentNode() uses for
+    // an interpreted document's region, before the runtime ever falls back to its bare
+    // summary text. Pins both that the helper exists and that it is actually consulted in
+    // the fallback path, not merely defined and unused.
+    'Opened Object body renders its own canonical content.body generically before falling back to summary' => str_contains($webRenderer, 'function canonicalBodyNodes(object)')
+        && str_contains($webRenderer, 'var ownBody = canonicalBodyNodes(panel.object);')
+        && str_contains($webRenderer, 'bodyNodes = bodyNodes.concat(ownBody);'),
     'Legacy runtime vocabulary is quarantined outside the new app' => !contains_any($template . $scripts . $readme, [
         'surface_runtime',
         'field_runtime',

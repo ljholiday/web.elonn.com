@@ -1060,18 +1060,24 @@
             // actionable Object with nothing else to show rendered as a bare button, its
             // own summary silently dropped. A plain payload Object with no document, no
             // member Collections, no member Objects -- action or not -- has no other body
-            // content to show; its summary IS the content in that case, not indexing
-            // metadata to suppress. Summary (when shown) precedes Actions, same ordering
-            // carryFindingBody already uses and the 'controls at the bottom' convention
-            // this file follows throughout (e.g. threadContinueFormNode).
+            // content to show; its own content.body (any Object, any Service -- dev.elonn
+            // canonical/object.md, Content body) or else its summary IS the content in that
+            // case, not indexing metadata to suppress. Summary (when shown) precedes Actions,
+            // same ordering carryFindingBody already uses and the 'controls at the bottom'
+            // convention this file follows throughout (e.g. threadContinueFormNode).
             var bodyNodes = mediaNodes.concat(contentNodes);
             if (bodyNodes.length === 0) {
-                var summaryText = common.text(panel.object.summary, '');
-                if (summaryText !== '') {
-                    var summaryNode = document.createElement('p');
-                    summaryNode.className = 'carry-object-panel__summary';
-                    summaryNode.textContent = summaryText;
-                    bodyNodes.push(summaryNode);
+                var ownBody = canonicalBodyNodes(panel.object);
+                if (ownBody) {
+                    bodyNodes = bodyNodes.concat(ownBody);
+                } else {
+                    var summaryText = common.text(panel.object.summary, '');
+                    if (summaryText !== '') {
+                        var summaryNode = document.createElement('p');
+                        summaryNode.className = 'carry-object-panel__summary';
+                        summaryNode.textContent = summaryText;
+                        bodyNodes.push(summaryNode);
+                    }
                 }
             }
             return bodyNodes.concat(actionNodes);
@@ -1193,6 +1199,25 @@
             link.rel = 'noopener noreferrer';
             link.appendChild(document.createTextNode(source));
             return link;
+        }
+
+        /*
+         * An Object's own content.body (dev.elonn canonical/object.md, Content body) -- the
+         * same canonical content-node vocabulary documentNode() renders for an interpreted
+         * document's region, generalized to any Object of any Service that populates `body`
+         * directly rather than through Find's regions structure (world dataset refactor step
+         * 4: Mind, the first Service pilot). Null when there is no body to show, so callers
+         * fall back to their own existing rule (e.g. the bare summary) instead of rendering
+         * an empty wrapper.
+         */
+        function canonicalBodyNodes(object) {
+            var content = object && object.content && typeof object.content === 'object' ? object.content : {};
+            var body = Array.isArray(content.body) ? content.body : [];
+            if (body.length === 0) {
+                return null;
+            }
+            var resources = Array.isArray(object.resources) ? object.resources : [];
+            return contentTreeNodes(body, resources);
         }
 
         function contentTreeNodes(treeNodes, resources) {
