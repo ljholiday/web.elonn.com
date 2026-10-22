@@ -82,7 +82,6 @@
             return dataset.objects.filter(isObject).map(function (object) {
                 var content = object.content && typeof object.content === 'object' ? object.content : {};
                 var metadata = object.metadata && typeof object.metadata === 'object' ? object.metadata : {};
-                var properties = object.properties && typeof object.properties === 'object' ? object.properties : {};
                 var permissions = object.permissions && typeof object.permissions === 'object'
                     ? object.permissions
                     : (object.domain_permissions && typeof object.domain_permissions === 'object' ? object.domain_permissions : {});
@@ -95,9 +94,9 @@
                     content: content,
                     visibility: object.visibility && typeof object.visibility === 'object' ? object.visibility : {},
                     permissions: permissions,
-                    availability: availability(object.availability || content.availability || properties.availability),
+                    availability: availability(object.availability || content.availability),
                     resourceIds: idsFrom(object.resources || content.resources || []),
-                    metadata: Object.assign({}, properties, metadata, content)
+                    metadata: Object.assign({}, metadata, content)
                 };
             }).filter(hasId);
         },
