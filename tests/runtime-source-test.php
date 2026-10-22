@@ -407,7 +407,7 @@ $checks = [
         && str_contains($webRenderer, 'query-composer')
         && str_contains($template, 'data-runtime-carry-panels')
         && str_contains($template, 'data-workspace-panel-mount')
-        && str_contains($scripts, 'fieldMarker')
+        && str_contains($scripts, 'spaceMarker')
         && str_contains($scripts, 'carryPanelNodes')
         && !str_contains($scripts, 'focusNode')
         && !str_contains($scripts, 'resourceNodes')
