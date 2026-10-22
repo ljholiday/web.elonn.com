@@ -454,6 +454,16 @@ $checks = [
     'Opened Object body renders its own canonical content.body generically before falling back to summary' => str_contains($webRenderer, 'function canonicalBodyNodes(object)')
         && str_contains($webRenderer, 'var ownBody = canonicalBodyNodes(panel.object);')
         && str_contains($webRenderer, 'bodyNodes = bodyNodes.concat(ownBody);'),
+    // World dataset refactor step 9 (Runtime completion): contentTreeNodes() covers the
+    // full canonical content-node vocabulary (object.md, Content body) -- group and list
+    // were the two kinds missing, leaving a group silently dropped and a list's items
+    // flattened to nothing. A list item recurses the same vocabulary for its own content,
+    // so a nested list stays nested rather than collapsing into its parent item.
+    'contentTreeNodes renders group and list content nodes, not just heading/paragraph/section/media' => str_contains($webRenderer, "kind === 'group'")
+        && str_contains($webRenderer, "kind === 'list'")
+        && str_contains($webRenderer, 'function documentList(node, resources)')
+        && str_contains($webRenderer, "document.createElement(node.ordered ? 'ol' : 'ul')")
+        && str_contains($webRenderer, 'contentTreeNodes(Array.isArray(item && item.content) ? item.content : [], resources)'),
     'Legacy runtime vocabulary is quarantined outside the new app' => !contains_any($template . $scripts . $readme, [
         'surface_runtime',
         'field_runtime',

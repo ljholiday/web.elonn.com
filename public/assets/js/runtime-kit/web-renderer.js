@@ -1247,9 +1247,43 @@
                     if (media) {
                         out.push(media);
                     }
+                } else if (kind === 'group') {
+                    var group = document.createElement('div');
+                    group.className = 'web-document__group';
+                    contentTreeNodes(Array.isArray(node.content) ? node.content : [], resources).forEach(function (child) {
+                        group.appendChild(child);
+                    });
+                    out.push(group);
+                } else if (kind === 'list') {
+                    var list = documentList(node, resources);
+                    if (list) {
+                        out.push(list);
+                    }
                 }
             });
             return out;
+        }
+
+        /*
+         * A `list` content node (object.md, Content body): `ordered` picks the element, and
+         * each item's own `content` is this same node vocabulary, recursed -- a nested list
+         * stays a real nested <ol>/<ul>, not a flattened run of <li>s.
+         */
+        function documentList(node, resources) {
+            var items = Array.isArray(node.items) ? node.items : [];
+            if (items.length === 0) {
+                return null;
+            }
+            var list = document.createElement(node.ordered ? 'ol' : 'ul');
+            list.className = 'web-document__list';
+            items.forEach(function (item) {
+                var li = document.createElement('li');
+                contentTreeNodes(Array.isArray(item && item.content) ? item.content : [], resources).forEach(function (child) {
+                    li.appendChild(child);
+                });
+                list.appendChild(li);
+            });
+            return list;
         }
 
         /*

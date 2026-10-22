@@ -1157,6 +1157,20 @@ figure {
     border-left: 1px solid rgba(184, 255, 243, 0.18);
 }
 
+.web-document__group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.web-document__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding-left: 1.4em;
+}
+
 .web-document__heading {
     margin: 4px 0 0;
     color: #eefaf8;
