@@ -852,35 +852,6 @@ figure {
     white-space: nowrap;
 }
 
-/* A Discovery thread's own Turns (world.thread) -- plain, non-interactive rows, unlike
-   .world-sequence-entry's clickable/selectable member cards. */
-.world-thread-entry {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    border: 1px solid rgba(184, 255, 243, 0.18);
-    border-radius: 7px;
-    background: rgba(25, 39, 42, 0.88);
-    color: #eefaf8;
-    padding: 8px 10px;
-}
-
-.world-thread-entry__input {
-    font-size: 0.82rem;
-    white-space: pre-wrap;
-}
-
-.world-thread-entry__question {
-    font-size: 0.82rem;
-    color: #b8fff3;
-    font-style: italic;
-    white-space: pre-wrap;
-}
-
-.world-thread-continue {
-    margin-top: 10px;
-}
-
 .world-roster-list {
     display: grid;
     gap: 4px;

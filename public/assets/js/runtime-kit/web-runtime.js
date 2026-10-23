@@ -211,101 +211,6 @@
         submitOperationForm(form);
     });
 
-    // An opened Discovery thread's own continuation field (web-renderer.js threadContinueFormNode()).
-    // A follow-up here is the next ordinary search in that SPECIFIC Thread (dev.elonn canonical/
-    // thread.md) -- deliberately NOT submitQuery(), which targets whatever Thread the main Entry
-    // currently has active and replaces the member's entire Results pane. continueDiscoveryThread()
-    // (below) targets this card's own Thread id and updates only this one card.
-    root.addEventListener('submit', function (event) {
-        var form = event.target.closest('[data-thread-continue-form]');
-        if (!form) {
-            return;
-        }
-        event.preventDefault();
-        var input = form.querySelector('[data-thread-continue-input]');
-        var text = input ? String(input.value || '').trim() : '';
-        if (text === '') {
-            return;
-        }
-        if (input) {
-            input.value = '';
-        }
-        continueDiscoveryThread(String(form.dataset.threadContinueObjectId || ''), text);
-    });
-
-    // A Discovery thread Object's id is 'world.thread:' + its own thread_id (Composer::
-    // withDiscoveryThread(), world.elonn.local). Continuing it must name that exact thread_id --
-    // never state.threadId, which tracks whatever Thread the main Entry last searched and may
-    // be a completely different, unrelated Thread from the one open in this card.
-    function continueDiscoveryThread(objectId, text) {
-        if (authMode) {
-            return;
-        }
-        var prefix = 'world.thread:';
-        var threadId = String(objectId || '').indexOf(prefix) === 0 ? String(objectId).slice(prefix.length) : '';
-        if (threadId === '') {
-            return;
-        }
-        client.loadDataset({
-            inputText: text,
-            threadId: threadId,
-            selectedObjectId: '',
-            selectedCollectionId: ''
-        }).then(function (payload) {
-            // World still resolves one real status for this Call (a Service rejection, e.g.
-            // 'Recipient was not found', is a real error, not silence) -- the scoped object
-            // patch below must not suppress it just because it skips the full-page replace.
-            var status = datasetStatus(payload);
-            renderer.status(status.message, status.state);
-            applyThreadObjectPatch(objectId, payload);
-        }).catch(function (error) {
-            renderer.status(error && error.message ? error.message : 'Could not continue this thread.', 'error');
-        });
-    }
-
-    // Updates ONLY this one Object's own entry, plus the shared session-durable Results pane
-    // (`findings` -- 2026-10-14, the same list regardless of which Thread produced a response,
-    // so it's always safe to take the latest copy), in the client's current state, and
-    // re-renders -- never replaceDataset()/StateIndexer.build() wholesale, which would treat
-    // the response (correctly scoped by World to just this one Thread's own conversational
-    // content) as the member's entire new page state and wipe out every OTHER open card. A
-    // deliberate, narrow exception to this file's normal "never partially merge a Dataset" rule
-    // (see replaceDataset() below) -- safe here specifically because continuing an already-open
-    // Thread never changes this Object's own placement or panel membership (only its
-    // content.turns growing), and findings are no longer Thread-specific at all. KNOWN
-    // LIMITATION: if a future Thread Turn ever carries its own new Actions/Resources (not just
-    // content.turns), this would also need to patch state.dataset.actions/state.indexes.actions
-    // (and the Resources equivalent) the same way -- not needed for what a Thread Object
-    // carries today, so not done here.
-    function applyThreadObjectPatch(objectId, payload) {
-        if (!state) {
-            return;
-        }
-        var rawObjects = payload && Array.isArray(payload.objects) ? payload.objects : [];
-        var rawMatch = rawObjects.filter(function (object) {
-            return object && String(object.id || '') === objectId;
-        })[0];
-        if (!rawMatch) {
-            return;
-        }
-        var parsed = runtime.DatasetParser.objects({objects: [rawMatch]})[0];
-        if (!parsed) {
-            return;
-        }
-        state.indexes.objects[objectId] = parsed;
-        if (state.dataset && Array.isArray(state.dataset.objects)) {
-            state.dataset.objects = state.dataset.objects.map(function (object) {
-                return object && String(object.id || '') === objectId ? parsed : object;
-            });
-        }
-        var freshFindings = runtime.StateIndexer.build(runtime.DatasetParser.parse(payload)).findings;
-        state.findings = freshFindings;
-        if (state.dataset) {
-            state.dataset.findings = runtime.DatasetParser.findings(payload);
-        }
-        renderState();
-    }
-
     function submitOperationForm(form) {
         var base = null;
         var submitButton = form.querySelector('.operation-form__submit');
@@ -527,13 +432,11 @@
         // No threadId here either (2026-10-14; was `state ? state.threadId : ''`, carried
         // over from whichever Thread the member last opened/focused -- stale and invisible,
         // since nothing resets it, and NOT the same thing as the member choosing to continue
-        // that Thread). Real, root-caused live: opening a Discovery thread card set the
-        // member's current_thread_id pointer, and every later unrelated main-Entry search
-        // kept silently continuing that old Thread, with no way to tell. The main Entry is
-        // for starting something new -- world-client.js's own contract is that omitting
-        // thread_id always starts a fresh, independent Thread. Deliberately continuing a
-        // specific Thread now has its own dedicated mechanism (the opened card's own entry
-        // field, continueDiscoveryThread()), so the main Entry no longer needs to guess.
+        // that Thread). The main Entry is for starting something new -- world-client.js's own
+        // contract is that omitting thread_id always starts a fresh, independent Thread.
+        // Continuing a specific Finding's own conversation is its own reply Action on that
+        // Finding (dev.elonn canonical/object.md, the generic Finding-and-reply model),
+        // submitted through the ordinary operation-invocation-form path, not through here.
         var request = {
             inputText: text,
             runtimeSessionId: state ? state.runtimeSessionId : '',
