@@ -118,11 +118,18 @@ $pageUrl = rtrim($app['url'], '/') . '/';
  */
 function web_runtime_fallback_collections(array $dataset): array
 {
+    // Reads the real top-level canonical text fields directly (dev.elonn canonical/object.md,
+    // Canonical text fields), the same as the JS path (dataset-parser.js) already does -- never
+    // aliasing `name` over a blank `title`, and never reading a Collection's content-nested
+    // `name`/`description` as a guess for its own top-level `title`/`summary`. A generic
+    // placeholder is shown only when the real field is itself genuinely blank, never as a
+    // substitute for reading the wrong field.
     $objects = [];
     foreach (($dataset['objects'] ?? []) as $object) {
         if (is_array($object) && is_string($object['id'] ?? null)) {
+            $title = (string) ($object['title'] ?? '');
             $objects[$object['id']] = [
-                'title' => (string) ($object['name'] ?? $object['title'] ?? 'Object'),
+                'title' => $title !== '' ? $title : 'Object',
                 'type' => (string) ($object['type'] ?? 'object'),
             ];
         }
@@ -141,9 +148,10 @@ function web_runtime_fallback_collections(array $dataset): array
                 $items[] = $objects[$objectId];
             }
         }
+        $title = (string) ($collection['title'] ?? '');
         $collections[] = [
-            'title' => (string) ($content['name'] ?? 'Collection'),
-            'summary' => (string) ($content['description'] ?? ''),
+            'title' => $title !== '' ? $title : 'Collection',
+            'summary' => (string) ($collection['summary'] ?? ''),
             'objects' => $items,
         ];
     }

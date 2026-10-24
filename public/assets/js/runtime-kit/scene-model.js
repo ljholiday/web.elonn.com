@@ -14,6 +14,7 @@
                 carryPanels: [],
                 actions: [],
                 resources: [],
+                resourcesById: {},
                 related: [],
                 status: [],
                 content: {}
@@ -27,6 +28,7 @@
                 carryPanels: [],
                 actions: [],
                 resources: [],
+                resourcesById: {},
                 related: [],
                 status: [],
                 content: {}
@@ -43,6 +45,13 @@
                 carryPanels: carryPanels(state),
                 actions: selectedObject ? actionsForObject(state, selectedObject.id) : [],
                 resources: selectedObject ? resourcesForObject(state, selectedObject) : [],
+                // Every Dataset Resource, keyed by id -- unlike `resources` above (scoped to
+                // the focused Object's own declared refs), this is the flat map a content.body
+                // media node's `resource_or_object_ref` resolves against directly (dev.elonn
+                // canonical/object.md, Content body), the same resolution Unity/AndroidXR
+                // already do against their own flat resource maps. A media reference is never
+                // required to also appear in its owning Object's own `resources[]` ref list.
+                resourcesById: allResourcesById(state),
                 related: selectedObject ? relatedObjects(state, selectedObject.id) : [],
                 status: statusRows(state),
                 content: worldContent(state)
@@ -209,6 +218,24 @@
                 availability: availability(resource.availability)
             };
         });
+    }
+
+    function allResourcesById(state) {
+        var resourcesById = state.indexes && typeof state.indexes.resources === 'object' ? state.indexes.resources : {};
+        var projected = {};
+        Object.keys(resourcesById).forEach(function (resourceId) {
+            var resource = resourcesById[resourceId] || {};
+            projected[String(resourceId || '')] = {
+                id: String(resource.id || resourceId || ''),
+                label: common.text(resource.label, 'Resource'),
+                kind: common.text(resource.kind, 'resource'),
+                mediaType: common.text(resource.media_type, ''),
+                source: common.text(resource.source, ''),
+                content: resource.content && typeof resource.content === 'object' ? resource.content : {},
+                availability: availability(resource.availability)
+            };
+        });
+        return projected;
     }
 
     function containedObjects(state, objectId) {

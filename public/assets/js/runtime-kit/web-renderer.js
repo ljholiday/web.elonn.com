@@ -19,6 +19,11 @@
         var workspacePanelEl = null;
         var workspaceToggleButton = null;
         var objectLabels = {};
+        // The flat, Dataset-level Resource map (scene.resourcesById) a content.body media
+        // node's `resource_or_object_ref` resolves against directly -- never only the
+        // focused Object's own narrower `resources[]` ref list (dev.elonn canonical/
+        // object.md, Content body; the same resolution Unity/AndroidXR already do).
+        var resourcesById = {};
 
         function status(message, state) {
             if (!nodes.status) {
@@ -29,6 +34,7 @@
         }
 
         function render(scene, options) {
+            resourcesById = scene.resourcesById && typeof scene.resourcesById === 'object' ? scene.resourcesById : {};
             options = options && typeof options === 'object' ? options : {};
             var workspaceOptions = options.workspace || {};
             var zoneMap = zonesByKey(scene.layers || []);
@@ -494,23 +500,70 @@
             return section;
         }
 
+        // The first paragraph/heading text in a content.body node array (object.md, Content
+        // body), document order -- a conversation message's own text, e.g. Also accepts a
+        // bare string directly (never produced by a canonical Service, but a cheap safety net
+        // against anything that still emits the pre-canonical flat-string shape). A media-only
+        // body (Find's web_result thumbnail node, an oEmbed video's poster image) has no text
+        // node at all and correctly returns ''.
+        function firstBodyText(body) {
+            if (typeof body === 'string') {
+                return body;
+            }
+            var node = firstMatchingBodyNode(Array.isArray(body) ? body : [], function (candidate) {
+                var kind = String(candidate.node || '');
+                return (kind === 'paragraph' || kind === 'heading') && common.text(candidate.text, '') !== '';
+            });
+            return node ? common.text(node.text, '') : '';
+        }
+
+        /*
+         * The one shared rule for what a compact Object card (grid, sequence row, roster row
+         * alike) shows as its condensed text, so the three never drift into independent
+         * partial reimplementations of the same canonical presentation contract again (the
+         * exact gap that let sequenceEntryNode()'s own ad hoc content.body handling regress
+         * unnoticed). object.summary is the canonical condensed account (object.md, Canonical
+         * text fields) and wins whenever a Service actually populated it; a Service that
+         * deliberately leaves summary blank because content.body already IS the Object's only
+         * real content (e.g. a conversation message, whose own documented reasoning is that no
+         * condensed account distinct from its body exists) has no fabricated fallback invented
+         * here, only the body's own first real text, the same
+         * text a full body render would show first. Neither exists -> blank, same as today.
+         */
+        function compactBodyText(object) {
+            var summary = common.text(object && object.summary, '');
+            if (summary !== '') {
+                return summary;
+            }
+            var content = object && object.content && typeof object.content === 'object' ? object.content : {};
+            return firstBodyText(content.body);
+        }
+
         function sequenceEntryNode(object, mode) {
             var content = object.content && typeof object.content === 'object' ? object.content : {};
             var entry = document.createElement('button');
             var main = document.createElement('span');
             var body = document.createElement('span');
             var time = document.createElement('span');
-            var hasOwnBody = common.text(content.body, '') !== '';
+            // content.body is the canonical content-node array (object.md, Content body), not
+            // a flat string -- coercing it directly (the old common.text(content.body, ...)
+            // read) stringified the array itself ("[object Object]") the moment any producer
+            // other than a flat string populated it, which is every producer now. Whether this
+            // entry carries its own body TEXT (a conversation message's real text) is judged
+            // from content.body alone, independently of compactBodyText()'s summary-first
+            // text below -- a Find result with a real summary but a media-only body (no text
+            // node at all) must still show its title normally, the same as before.
+            var hasOwnBody = firstBodyText(content.body) !== '';
             entry.type = 'button';
             entry.className = 'world-sequence-entry';
             entry.dataset.objectId = object.id;
             entry.dataset.objectType = object.type;
             entry.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
             main.className = 'world-sequence-entry__main';
-            // An entry with no own content.body (a generic result-object sequence, e.g. Find's
-            // web results, falling back to object.summary below) shows its title first -- a
-            // conversation message (content.body present) already carries everything in its own
-            // body, so no separate title line is added for it.
+            // An entry with no own content.body text (a generic result-object sequence, e.g.
+            // Find's web results, falling back to object.summary below) shows its title first
+            // -- a conversation message (its own body text present) already carries everything
+            // in its own body, so no separate title line is added for it.
             if (!hasOwnBody && common.text(object.title, '') !== '') {
                 var title = document.createElement('strong');
                 title.className = 'world-sequence-entry__title';
@@ -518,7 +571,7 @@
                 main.appendChild(title);
             }
             body.className = 'world-sequence-entry__body';
-            body.textContent = common.text(content.body, object.summary);
+            body.textContent = compactBodyText(object);
             main.appendChild(body);
             var preview = sequenceEntryLinkPreview(object, content);
             if (preview) {
@@ -566,14 +619,13 @@
 
         /*
          * A pasted link's own preview card (thumbnail + title), shown inline in a
-         * message/reply row before the member taps it -- content.link_preview_title
-         * and the thumbnail Resource content.thumbnail points to are set upstream,
-         * server-side, when the owning Service resolves the link eagerly (once,
-         * ahead of the member ever opening it). Reuses imagePreview()'s own
-         * image-Resource lookup -- the exact same "no special trust for an
-         * externally-sourced image" treatment objectButton() already gives one.
-         * Absent for a message with no link, or one not yet (or never) resolved --
-         * degrades to nothing, never a broken/empty card.
+         * message/reply row before the member taps it -- content.link_preview_title and the
+         * preview image's own media node in content.body are set upstream, server-side, when
+         * the owning Service resolves the link eagerly (once, ahead of the member ever
+         * opening it). Reuses imagePreview()'s own image-Resource lookup -- the exact same
+         * "no special trust for an externally-sourced image" treatment objectButton()
+         * already gives one. Absent for a message with no link, or one not yet (or never)
+         * resolved -- degrades to nothing, never a broken/empty card.
          */
         function sequenceEntryLinkPreview(object, content) {
             var title = common.text(content.link_preview_title, '');
@@ -648,17 +700,28 @@
             var entry = document.createElement('button');
             var name = document.createElement('span');
             var meta = document.createElement('span');
+            // Same shared preview/text contract objectButton() and sequenceEntryNode() use --
+            // a roster member (a community member, an event guest) is exactly as entitled to
+            // its own avatar/preview image and compactBodyText() fallback as any other compact
+            // card; leaving this renderer with neither, as it did before, was the same kind of
+            // drift that let sequenceEntryNode()'s own divergent content.body handling regress
+            // unnoticed.
+            var preview = object.format === 'drawing_surface' ? drawingSurfacePreviewImage(object) : imagePreview(object);
             entry.type = 'button';
             entry.className = 'world-roster-entry';
             entry.dataset.objectId = object.id;
             entry.dataset.objectType = object.type;
             entry.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
+            if (preview && mode !== 'compact') {
+                entry.appendChild(preview);
+            }
             name.className = 'world-roster-entry__name';
             name.textContent = object.title;
             entry.appendChild(name);
-            if (object.summary !== '' && mode !== 'compact') {
+            var metaText = compactBodyText(object);
+            if (metaText !== '' && mode !== 'compact') {
                 meta.className = 'world-roster-entry__meta';
-                meta.textContent = object.summary;
+                meta.textContent = metaText;
                 entry.appendChild(meta);
             }
             if (object.availability.state !== 'enabled') {
@@ -680,18 +743,25 @@
             var type = document.createElement('span');
             var title = document.createElement('strong');
             var summary = document.createElement('span');
-            var preview = imagePreview(object);
+            var preview = object.format === 'drawing_surface' ? drawingSurfacePreviewImage(object) : imagePreview(object);
             wrapper.className = 'world-object-entry';
             button.type = 'button';
             button.className = 'world-object world-object--' + common.text(mode, 'panel');
             button.dataset.objectId = object.id;
             button.dataset.objectType = object.type;
             button.setAttribute('aria-pressed', object.selected ? 'true' : 'false');
+            // compactBodyText(): object.summary when a Service populated it, else the first
+            // real text in content.body (a Service that leaves summary deliberately blank
+            // because content.body already is the Object's only real content, e.g. a
+            // message). The same shared rule sequenceEntryNode()/rosterEntryNode() use, so a
+            // blank-summary Object looks right in every compact context, not only the one that
+            // happened to need it first.
+            var summaryText = compactBodyText(object);
             type.className = 'object-type';
             type.textContent = object.type;
             title.textContent = object.title;
             summary.className = 'object-summary';
-            summary.textContent = object.summary;
+            summary.textContent = summaryText;
             if (mode !== 'compact') {
                 button.appendChild(type);
             }
@@ -699,7 +769,7 @@
                 button.appendChild(preview);
             }
             button.appendChild(title);
-            if (object.summary !== '' && mode !== 'compact') {
+            if (summaryText !== '' && mode !== 'compact') {
                 button.appendChild(summary);
             }
             if (mode !== 'compact') {
@@ -758,25 +828,107 @@
             return link;
         }
 
+        /*
+         * A compact Object card's preview image (dev.elonn canonical/object.md, Content
+         * body; decision.thumbnail_is_a_media_node_not_a_canonical_field_20261024): the
+         * Resource the first eligible image media node in content.body names, in document
+         * order. Never a Service-specific field (content.thumbnail/content.thumbnail_url),
+         * and never inferred by scanning the Object's Resources for one that merely looks
+         * like an image -- a `drawing_surface` Object's own preview_resource mechanism is a
+         * separate, already-canonical "Recognized content format" (resource.md, Preview
+         * presentation) this function does not touch; see drawingSurfacePreviewImage().
+         * No eligible media node -> no preview, same as before.
+         */
         function imagePreview(object) {
-            var resources = Array.isArray(object.resources) ? object.resources : [];
-            var image = null;
-            resources.some(function (resource) {
-                var content = resource && typeof resource.content === 'object' ? resource.content : {};
-                var dataUrl = String(content.data_url || '');
-                var externalUrl = resource && String(resource.kind || '') === 'image' ? common.text(resource.source, '') : '';
-                var src = dataUrl.indexOf('data:image/') === 0 ? dataUrl : externalUrl;
-                if (src === '') {
+            var resource = firstEligibleImageMediaResource(object);
+            if (!resource) {
+                return null;
+            }
+            var content = resource.content && typeof resource.content === 'object' ? resource.content : {};
+            var dataUrl = String(content.data_url || '');
+            var externalUrl = common.text(resource.source, '');
+            var src = dataUrl.indexOf('data:image/') === 0 ? dataUrl : externalUrl;
+            if (src === '') {
+                return null;
+            }
+            var image = document.createElement('img');
+            image.className = 'object-preview';
+            image.src = src;
+            image.alt = common.text(content.label, common.text(resource.label, ''));
+            image.loading = 'lazy';
+            return image;
+        }
+
+        function firstEligibleImageMediaResource(object) {
+            var content = object && object.content && typeof object.content === 'object' ? object.content : {};
+            var body = Array.isArray(content.body) ? content.body : [];
+            var node = firstImageMediaNode(body);
+            if (!node) {
+                return null;
+            }
+            return resourcesById[String(node.resource_or_object_ref || '')] || null;
+        }
+
+        function firstImageMediaNode(nodes) {
+            return firstMatchingBodyNode(nodes, function (node) {
+                return String(node.node || '') === 'media' && String(node.kind || '') === 'image';
+            });
+        }
+
+        /*
+         * The one traversal every "find the first X in content.body" need shares -- depth-
+         * first, document order, recursing through group/section/list exactly as
+         * contentTreeNodes() does for a full body render. A compact card never hand-rolls its
+         * own partial walk of the content-node vocabulary (object.md, Content body); it asks
+         * this for the first node matching what it needs (an image media node, a text node,
+         * anything else later) so every such need stays consistent with what a full body
+         * render would show first, and with each other -- the exact drift that let
+         * firstImageMediaNode() support `list` while an earlier, independent text-only walker
+         * here did not.
+         */
+        function firstMatchingBodyNode(nodes, predicate) {
+            var found = null;
+            (Array.isArray(nodes) ? nodes : []).some(function (node) {
+                if (!node || typeof node !== 'object') {
                     return false;
                 }
-                image = document.createElement('img');
-                image.className = 'object-preview';
-                image.src = src;
-                image.alt = common.text(content.label, '');
-                image.loading = 'lazy';
-                return true;
+                if (predicate(node)) {
+                    found = node;
+                    return true;
+                }
+                var kind = String(node.node || '');
+                if (kind === 'group' || kind === 'section') {
+                    found = firstMatchingBodyNode(Array.isArray(node.content) ? node.content : [], predicate);
+                    return found !== null;
+                }
+                if (kind === 'list') {
+                    var items = Array.isArray(node.items) ? node.items : [];
+                    return items.some(function (item) {
+                        found = firstMatchingBodyNode(item && typeof item === 'object' && Array.isArray(item.content) ? item.content : [], predicate);
+                        return found !== null;
+                    });
+                }
+                return false;
             });
+            return found;
+        }
 
+        // A `drawing_surface` Object's own preview_resource image (resource.md, Preview
+        // presentation; object.md, Recognized content format: drawing_surface) -- the exact
+        // same lookup hostedSurface() uses for the opened/carried panel, reused here so the
+        // compact grid card (objectButton()) shows the identical preview rather than falling
+        // through to content.body, which a drawing_surface Object never populates.
+        function drawingSurfacePreviewImage(object) {
+            var previewResource = drawingResource(object, 'drawing.preview');
+            var dataUrl = previewResource && previewResource.content ? String(previewResource.content.data_url || '') : '';
+            if (dataUrl === '') {
+                return null;
+            }
+            var image = document.createElement('img');
+            image.className = 'object-preview';
+            image.src = dataUrl;
+            image.alt = common.text(object.title, '');
+            image.loading = 'lazy';
             return image;
         }
 
@@ -964,19 +1116,29 @@
             // convention this file follows throughout (e.g. an Action rendered as a form by
             // actionLinks()/operationForm() -- a reply is an ordinary such Action, not a
             // special case; dev.elonn canonical/object.md, the generic Finding-and-reply model).
+            //
+            // summary and body are NOT a strict either/or (object.md, Content body: the
+            // canonical text fields "remain separate, top-level, and unaffected by body").
+            // decision.summary_is_descriptive_not_a_content_excerpt_20261024: summary is an
+            // optional descriptive field, never a derived content excerpt -- a legitimate
+            // summary and a real body may coexist, and a Runtime never suppresses either based
+            // solely on the presence of the other. summary renders first when present, then
+            // the Object's own content.body when present -- always additive, regardless of
+            // whether body also carries its own real text. (A Service whose body duplicated
+            // summary verbatim, e.g. mind.elonn.local's former bug, is a producer-side defect
+            // fixed at the source -- never a reason for a Runtime to guess and suppress.)
             var bodyNodes = mediaNodes.concat(contentNodes);
             if (bodyNodes.length === 0) {
+                var summaryText = common.text(panel.object.summary, '');
+                if (summaryText !== '') {
+                    var summaryNode = document.createElement('p');
+                    summaryNode.className = 'carry-object-panel__summary';
+                    summaryNode.textContent = summaryText;
+                    bodyNodes.push(summaryNode);
+                }
                 var ownBody = canonicalBodyNodes(panel.object);
                 if (ownBody) {
                     bodyNodes = bodyNodes.concat(ownBody);
-                } else {
-                    var summaryText = common.text(panel.object.summary, '');
-                    if (summaryText !== '') {
-                        var summaryNode = document.createElement('p');
-                        summaryNode.className = 'carry-object-panel__summary';
-                        summaryNode.textContent = summaryText;
-                        bodyNodes.push(summaryNode);
-                    }
                 }
             }
             return bodyNodes.concat(actionNodes);
@@ -1005,7 +1167,6 @@
         function documentNode(object, focusedRegion) {
             var content = object.content && typeof object.content === 'object' ? object.content : {};
             var regions = Array.isArray(content.regions) ? content.regions : [];
-            var resources = Array.isArray(object.resources) ? object.resources : [];
             var article = document.createElement('article');
             article.className = 'web-document';
 
@@ -1018,7 +1179,7 @@
             });
 
             if (regions.length > 1 && selectedRegion) {
-                contentTreeNodes(Array.isArray(selectedRegion.content) ? selectedRegion.content : [], resources).forEach(function (node) {
+                contentTreeNodes(Array.isArray(selectedRegion.content) ? selectedRegion.content : []).forEach(function (node) {
                     article.appendChild(node);
                 });
             } else if (regions.length > 1) {
@@ -1026,7 +1187,7 @@
             } else {
                 // No landmark structure at all: one main region, shown directly -- a region
                 // list of one entry has nothing to choose between.
-                contentTreeNodes(regionContentByKey(regions, 'main'), resources).forEach(function (node) {
+                contentTreeNodes(regionContentByKey(regions, 'main')).forEach(function (node) {
                     article.appendChild(node);
                 });
             }
@@ -1115,11 +1276,10 @@
             if (body.length === 0) {
                 return null;
             }
-            var resources = Array.isArray(object.resources) ? object.resources : [];
-            return contentTreeNodes(body, resources);
+            return contentTreeNodes(body);
         }
 
-        function contentTreeNodes(treeNodes, resources) {
+        function contentTreeNodes(treeNodes) {
             var out = [];
             (Array.isArray(treeNodes) ? treeNodes : []).forEach(function (node) {
                 if (!node || typeof node !== 'object') {
@@ -1137,24 +1297,24 @@
                 } else if (kind === 'section') {
                     var section = document.createElement('section');
                     section.className = 'web-document__section';
-                    contentTreeNodes(Array.isArray(node.content) ? node.content : [], resources).forEach(function (child) {
+                    contentTreeNodes(Array.isArray(node.content) ? node.content : []).forEach(function (child) {
                         section.appendChild(child);
                     });
                     out.push(section);
                 } else if (kind === 'media') {
-                    var media = documentMedia(node, resources);
+                    var media = documentMedia(node);
                     if (media) {
                         out.push(media);
                     }
                 } else if (kind === 'group') {
                     var group = document.createElement('div');
                     group.className = 'web-document__group';
-                    contentTreeNodes(Array.isArray(node.content) ? node.content : [], resources).forEach(function (child) {
+                    contentTreeNodes(Array.isArray(node.content) ? node.content : []).forEach(function (child) {
                         group.appendChild(child);
                     });
                     out.push(group);
                 } else if (kind === 'list') {
-                    var list = documentList(node, resources);
+                    var list = documentList(node);
                     if (list) {
                         out.push(list);
                     }
@@ -1168,7 +1328,7 @@
          * each item's own `content` is this same node vocabulary, recursed -- a nested list
          * stays a real nested <ol>/<ul>, not a flattened run of <li>s.
          */
-        function documentList(node, resources) {
+        function documentList(node) {
             var items = Array.isArray(node.items) ? node.items : [];
             if (items.length === 0) {
                 return null;
@@ -1177,31 +1337,12 @@
             list.className = 'web-document__list';
             items.forEach(function (item) {
                 var li = document.createElement('li');
-                contentTreeNodes(Array.isArray(item && item.content) ? item.content : [], resources).forEach(function (child) {
+                contentTreeNodes(Array.isArray(item && item.content) ? item.content : []).forEach(function (child) {
                     li.appendChild(child);
                 });
                 list.appendChild(li);
             });
             return list;
-        }
-
-        /*
-         * Resolves a content node's `resource` reference against the Object's own promoted
-         * Resources -- the same lookup embedResourceHref already does for a promoted media
-         * Object. A node id with no match returns null; the caller never falls back to a raw
-         * URL field on the node itself (see documentMedia).
-         */
-        function resourceById(resources, id) {
-            if (id === '') {
-                return null;
-            }
-            var match = null;
-            (Array.isArray(resources) ? resources : []).forEach(function (resource) {
-                if (resource && String(resource.id || '') === id) {
-                    match = resource;
-                }
-            });
-            return match;
         }
 
         function documentParagraph(node) {
@@ -1259,18 +1400,20 @@
         }
 
         /*
-         * A `media` content node (object.md, Content body). The node's own `resource` id is
-         * only a reference -- never a URL to trust directly. The executable/loadable URL comes
-         * exclusively from the matching promoted Resource (resourceById), the same
-         * Elonn-constructed, provider-table-vetted boundary mediaObjectNode() already enforces
-         * for a promoted media Object (decision.oembed_provider_table_execution_boundary_
-         * 20260912). A node whose `resource` does not resolve renders nothing -- it never falls
-         * back to a raw `src`/`source` field on the node itself, which would let interpreted
-         * source content (html.md) point this Runtime at an arbitrary, unvetted URL.
+         * A `media` content node (object.md, Content body). The node's own
+         * `resource_or_object_ref` id is only a reference -- never a URL to trust directly. It
+         * resolves against the Dataset's flat resource map (resourcesById), never only the
+         * owning Object's own narrower `resources[]` ref list -- the same resolution Unity/
+         * AndroidXR already do, and the same Elonn-constructed, provider-table-vetted boundary
+         * mediaObjectNode() already enforces for a promoted media Object (decision.oembed_
+         * provider_table_execution_boundary_20260912). A node whose reference does not resolve
+         * renders nothing -- it never falls back to a raw `src`/`source` field on the node
+         * itself, which would let interpreted source content (html.md) point this Runtime at
+         * an arbitrary, unvetted URL.
          */
-        function documentMedia(node, resources) {
+        function documentMedia(node) {
             var kind = String(node.kind || '');
-            var resource = resourceById(resources, String(node.resource || ''));
+            var resource = resourcesById[String(node.resource_or_object_ref || '')] || null;
             var source = resource ? common.text(resource.source, '') : '';
             if (source === '') {
                 return null;
@@ -1332,11 +1475,15 @@
                 frame.appendChild(element);
             } else {
                 // No playable surface here (dev.elonn canonical/html.md, Compatibility) --
-                // show what this Runtime can: the thumbnail Find already resolved, plus a
-                // plain link to the source (decision.embed_is_a_resource_capability_not_a_
-                // video_capability_20260913 -- playback is a capability, not guaranteed).
-                var thumbnail = thumbnailPreview(object, content);
+                // show what this Runtime can: the thumbnail Find already resolved (now a
+                // media node in content.body, decision.thumbnail_is_a_media_node_not_a_
+                // canonical_field_20261024 -- the same imagePreview() every other compact
+                // card uses, not a thumbnail-specific lookup), plus a plain link to the
+                // source (decision.embed_is_a_resource_capability_not_a_video_capability_
+                // 20260913 -- playback is a capability, not guaranteed).
+                var thumbnail = imagePreview(object);
                 if (thumbnail) {
+                    thumbnail.className = 'web-video__thumbnail';
                     frame.appendChild(thumbnail);
                 }
                 if (source !== '') {
@@ -1344,37 +1491,6 @@
                 }
             }
             return frame;
-        }
-
-        /*
-         * The Object's own named thumbnail Resource (content.thumbnail) -- realized the
-         * same way any other external image Resource is, with no special trust because it
-         * arrived via oEmbed (decision.oembed_provider_table_execution_boundary_20260912).
-         */
-        function thumbnailPreview(object, content) {
-            var thumbnailId = String(content.thumbnail || '');
-            if (thumbnailId === '') {
-                return null;
-            }
-            var resources = Array.isArray(object.resources) ? object.resources : [];
-            var match = null;
-            resources.some(function (resource) {
-                if (String(resource.id || '') === thumbnailId) {
-                    match = resource;
-                    return true;
-                }
-                return false;
-            });
-            var src = match ? common.text(match.source, '') : '';
-            if (src === '') {
-                return null;
-            }
-            var image = document.createElement('img');
-            image.className = 'web-video__thumbnail';
-            image.src = src;
-            image.alt = '';
-            image.loading = 'lazy';
-            return image;
         }
 
         /*
@@ -1435,10 +1551,15 @@
                 title.textContent = object.title;
                 nodes.push(title);
             }
-            if (common.text(object.summary, '') !== '') {
+            // compactBodyText(): object.summary when a Service populated it, else the first
+            // real text in content.body -- the same shared rule objectButton()/
+            // sequenceEntryNode()/rosterEntryNode() use (record 702), so a carried Finding's
+            // body reads the same way a grid/sequence card already does.
+            var summaryText = compactBodyText(object);
+            if (summaryText !== '') {
                 var summary = document.createElement('p');
                 summary.className = 'object-summary';
-                summary.textContent = object.summary;
+                summary.textContent = summaryText;
                 nodes.push(summary);
             }
             var preview = imagePreview(object);
@@ -1525,17 +1646,25 @@
             var type = document.createElement('span');
             var title = document.createElement('strong');
             var summary = document.createElement('span');
+            // compactBodyText()/imagePreview(): the same shared rule objectButton()/
+            // sequenceEntryNode()/rosterEntryNode() use (record 702), so a contained Object's
+            // own button reads and previews the same way every other compact card does.
+            var summaryText = compactBodyText(object);
+            var preview = imagePreview(object);
             button.type = 'button';
             button.className = 'object-decomposition__object';
             button.dataset.objectId = object.id;
             type.className = 'object-type';
             type.textContent = object.type;
+            if (preview) {
+                button.appendChild(preview);
+            }
             title.textContent = object.title;
             summary.className = 'object-summary';
-            summary.textContent = object.summary;
+            summary.textContent = summaryText;
             button.appendChild(type);
             button.appendChild(title);
-            if (object.summary !== '') {
+            if (summaryText !== '') {
                 button.appendChild(summary);
             }
             return button;

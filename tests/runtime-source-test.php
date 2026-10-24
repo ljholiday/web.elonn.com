@@ -311,6 +311,55 @@ $checks = [
         str_contains($webRenderer, 'main.appendChild(link)')
         && str_contains($webRenderer, 'nodes.push(preview)')
         && str_contains($webRenderer, "resource.kind || '') !== 'image'"),
+    // decision.thumbnail_is_a_media_node_not_a_canonical_field_20261024: a compact card's
+    // preview comes from the first eligible image media node in content.body, never a
+    // Service-specific content.thumbnail/content.thumbnail_url field or a blind scan of an
+    // Object's Resources for one that merely looks like an image.
+    "A compact card's preview image comes from content.body's media node, never content.thumbnail" =>
+        str_contains($webRenderer, 'function firstEligibleImageMediaResource(object)')
+        && str_contains($webRenderer, 'function firstImageMediaNode(nodes)')
+        && str_contains($webRenderer, 'firstEligibleImageMediaResource(object)')
+        && !str_contains($webRenderer, 'function thumbnailPreview(')
+        && !str_contains($webRenderer, 'content.thumbnail ||')
+        && !str_contains($webRenderer, "resource.kind || '') === 'image'"),
+    "A drawing_surface Object's compact grid-card preview reuses its own preview_resource lookup, not content.body" =>
+        str_contains($webRenderer, "object.format === 'drawing_surface' ? drawingSurfacePreviewImage(object) : imagePreview(object)")
+        && str_contains($webRenderer, 'function drawingSurfacePreviewImage(object)')
+        && str_contains($webRenderer, "drawingResource(object, 'drawing.preview')"),
+    // Regression: sequenceEntryNode() used to read content.body via common.text(content.body,
+    // ...), which coerces a canonical content-node array to the literal string
+    // "[object Object]" -- it stringified the moment ANY producer populated content.body as
+    // the canonical node array object.md requires, which broke Find's sequence-rendered web
+    // results the instant they gained a content.body thumbnail media node (suppressed the
+    // title, replaced the summary line with "[object Object]"). firstBodyText() must extract
+    // real text from the node array (or passthrough a bare string) instead of stringifying it.
+    'sequenceEntryNode never stringifies content.body directly; it reads real text through firstBodyText()' =>
+        str_contains($webRenderer, 'function firstBodyText(body)')
+        && str_contains($webRenderer, "var hasOwnBody = firstBodyText(content.body) !== '';")
+        && str_contains($webRenderer, 'body.textContent = compactBodyText(object);')
+        && !str_contains($webRenderer, "common.text(content.body, '')")
+        && !str_contains($webRenderer, 'common.text(content.body, object.summary)'),
+    // Architectural follow-up from the same regression: content.body's own node-walking logic
+    // must not be reimplemented independently per "find the first X" need (that drift -- an
+    // image walker that handled `list`, a text walker that silently didn't -- is exactly what
+    // let the symptom go unnoticed), and a compact card's text/preview contract must be one
+    // shared rule every compact-card renderer (grid, sequence, roster) uses, not three
+    // independent partial reimplementations of the same canonical presentation contract
+    // (collection.md: sequence/roster only assert order/membership, never a different
+    // interpretation of a member Object's own content).
+    "firstImageMediaNode and firstBodyText share one body-node traversal, not two independent ones" =>
+        str_contains($webRenderer, 'function firstMatchingBodyNode(nodes, predicate)')
+        && str_contains($webRenderer, 'return firstMatchingBodyNode(nodes, function (node) {')
+        && str_contains($webRenderer, 'var node = firstMatchingBodyNode(Array.isArray(body) ? body : [], function (candidate) {'),
+    'objectButton, sequenceEntryNode, rosterEntryNode, carryFindingBody, and containedObjectButton all use the one shared compactBodyText() contract' =>
+        substr_count($webRenderer, 'compactBodyText(object)') >= 5,
+    "rosterEntryNode shows the same preview image a grid/sequence card would, not a silently narrower roster-only contract" =>
+        str_contains($webRenderer, "var preview = object.format === 'drawing_surface' ? drawingSurfacePreviewImage(object) : imagePreview(object);\n            entry.type = 'button';\n            entry.className = 'world-roster-entry';"),
+    "carryFindingBody (a Finding pulled onto Carry) and containedObjectButton (a decomposed contained Object) also show the same preview image a grid/sequence card would" =>
+        str_contains($webRenderer, 'var summaryText = compactBodyText(object);')
+        && str_contains($webRenderer, 'var preview = imagePreview(object);')
+        && str_contains($webRenderer, 'var preview = object.format === \'drawing_surface\' ? drawingSurfacePreviewImage(object) : imagePreview(object);')
+        && substr_count($webRenderer, 'imagePreview(object)') >= 4,
     'Runtime never fabricates an Object from a URL string or navigates out of the app' =>
         // The whole URL-fabrication machinery is gone (runtime-edict record 268, #4).
         !str_contains($webRuntime, 'openRuntimeUrl')
@@ -424,6 +473,18 @@ $checks = [
         && str_contains($index, "array_key_exists('errors', \$payload)")
         && str_contains($template, 'web_runtime_fallback_collections')
         && str_contains($template, '<noscript>'),
+    // The noscript fallback once guessed a Collection's title/summary from content-nested
+    // name/description, and aliased an Object's blank title from name -- both read the wrong
+    // field (dev.elonn canonical/object.md, Canonical text fields: no field substitutes for
+    // another). Fixed to read each structure's own real top-level title/summary directly, the
+    // same as the JS path (dataset-parser.js) already does.
+    'web_runtime_fallback_collections reads the real top-level title/summary directly, never a Collection\'s content-nested name/description nor an Object\'s name aliased over title' =>
+        str_contains($template, "\$title = (string) (\$object['title'] ?? '');")
+        && str_contains($template, "\$title = (string) (\$collection['title'] ?? '');")
+        && str_contains($template, "'summary' => (string) (\$collection['summary'] ?? ''),")
+        && !str_contains($template, "\$object['name'] ?? \$object['title']")
+        && !str_contains($template, "\$content['name'] ?? 'Collection'")
+        && !str_contains($template, "\$content['description'] ?? ''"),
     'Query panel title, placeholder, clear label, and scope options come from World content, not literals' => str_contains($webRenderer, "common.text(find.title, 'Find')")
         && str_contains($webRenderer, "common.text(find.placeholder, 'Ask or search')")
         && str_contains($webRenderer, "common.text(find.clear_label, 'Clear')")
@@ -454,6 +515,17 @@ $checks = [
     'Opened Object body renders its own canonical content.body generically before falling back to summary' => str_contains($webRenderer, 'function canonicalBodyNodes(object)')
         && str_contains($webRenderer, 'var ownBody = canonicalBodyNodes(panel.object);')
         && str_contains($webRenderer, 'bodyNodes = bodyNodes.concat(ownBody);'),
+    // decision.summary_is_descriptive_not_a_content_excerpt_20261024: summary and body are
+    // independent canonical fields (object.md, Content body) and always both render when both
+    // are present -- a Runtime never suppresses either based solely on the presence of the
+    // other, even when body carries its own real text. (An earlier version of this code
+    // suppressed summary whenever body had real text, worked around a since-fixed producer
+    // bug in mind.elonn.local; that suppression was removed as a general rule, not kept as
+    // permanent Runtime logic.)
+    "An opened Object's summary always renders alongside its own content.body, never suppressed by body's mere presence or its own real text" =>
+        !str_contains($webRenderer, 'ownBodyHasText')
+        && str_contains($webRenderer, 'var ownBody = canonicalBodyNodes(panel.object);')
+        && str_contains($webRenderer, "if (summaryText !== '') {\n                    var summaryNode = document.createElement('p');"),
     // World dataset refactor step 9 (Runtime completion): contentTreeNodes() covers the
     // full canonical content-node vocabulary (object.md, Content body) -- group and list
     // were the two kinds missing, leaving a group silently dropped and a list's items
@@ -461,9 +533,9 @@ $checks = [
     // so a nested list stays nested rather than collapsing into its parent item.
     'contentTreeNodes renders group and list content nodes, not just heading/paragraph/section/media' => str_contains($webRenderer, "kind === 'group'")
         && str_contains($webRenderer, "kind === 'list'")
-        && str_contains($webRenderer, 'function documentList(node, resources)')
+        && str_contains($webRenderer, 'function documentList(node)')
         && str_contains($webRenderer, "document.createElement(node.ordered ? 'ol' : 'ul')")
-        && str_contains($webRenderer, 'contentTreeNodes(Array.isArray(item && item.content) ? item.content : [], resources)'),
+        && str_contains($webRenderer, 'contentTreeNodes(Array.isArray(item && item.content) ? item.content : [])'),
     'Legacy runtime vocabulary is quarantined outside the new app' => !contains_any($template . $scripts . $readme, [
         'surface_runtime',
         'field_runtime',
