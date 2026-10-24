@@ -403,6 +403,7 @@
     function loadDataset(runtimeState) {
         return client.loadDataset(runtimeState).then(function (payload) {
             replaceDataset(payload, runtimeState);
+            applyTheme(payload);
             var status = datasetStatus(payload);
             renderer.status(status.message, status.state);
             return payload;
@@ -1173,6 +1174,18 @@
         }
         var errors = payload && Array.isArray(payload.errors) ? payload.errors : [];
         return {message: '', state: errors.length > 0 ? 'error' : 'ready'};
+    }
+
+    /**
+     * Applies the member's effective theme (context.theme) as CSS custom properties on the
+     * document root, same one-per-response treatment as datasetStatus() above. Absent on an
+     * unauthenticated Dataset (the auth form never goes through World, so it has no theme to
+     * apply) -- ThemeApplier.apply() is a safe no-op when theme is missing.
+     */
+    function applyTheme(payload) {
+        var context = payload && typeof payload.context === 'object' ? payload.context : null;
+        var theme = context && typeof context.theme === 'object' ? context.theme : null;
+        runtime.ThemeApplier.apply(document.documentElement, theme);
     }
 
     function speechRecognition() {

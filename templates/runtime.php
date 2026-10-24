@@ -25,6 +25,7 @@ $scripts = [
     'state-indexer.js',
     'scene-model.js',
     'web-renderer.js',
+    'theme-applier.js',
     'web-runtime.js',
 ];
 $pageDescription = 'A web runtime projection of canonical World Datasets.';
