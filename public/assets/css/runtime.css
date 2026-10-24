@@ -98,7 +98,7 @@ input {
 
 .runtime-login__copy {
     max-width: 34ch;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
 }
 
 .runtime-login__error {
@@ -118,7 +118,7 @@ input {
 .runtime-login__form label {
     display: grid;
     gap: 6px;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     font-size: 0.86rem;
 }
 
@@ -283,7 +283,7 @@ input {
 
 .space-projection__status,
 .runtime-session {
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     font-size: 0.82rem;
     min-width: 0;
     pointer-events: auto;
@@ -485,7 +485,7 @@ input {
     border: 0;
     border-left: 1px solid rgba(184, 255, 243, 0.18);
     background: transparent;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     cursor: pointer;
 }
 
@@ -665,7 +665,7 @@ figure {
 
 .world-collection header p {
     margin-bottom: 0;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     font-size: 0.78rem;
 }
 
@@ -726,7 +726,7 @@ figure {
 }
 
 .object-summary {
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     font-size: 0.78rem;
 }
 
@@ -822,7 +822,7 @@ figure {
 
 .world-sequence-entry__time {
     flex-shrink: 0;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     font-size: 0.7rem;
 }
 
@@ -846,7 +846,7 @@ figure {
 
 .world-sequence-entry__preview-title {
     font-size: 0.76rem;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -886,7 +886,7 @@ figure {
 
 .world-roster-entry__meta {
     flex-shrink: 0;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     font-size: 0.72rem;
 }
 
@@ -966,7 +966,7 @@ figure {
 
 .meta-line,
 .empty {
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
     font-size: 0.78rem;
 }
 
@@ -1013,7 +1013,7 @@ figure {
     display: grid;
     gap: 4px;
     font-size: 0.78rem;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
 }
 
 .operation-form__label {
@@ -1076,7 +1076,7 @@ figure {
 .operation-form__status {
     margin: 0;
     font-size: 0.76rem;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
 }
 
 .operation-form__status[data-state="error"] {
@@ -1117,7 +1117,7 @@ figure {
     max-width: 68ch;
     font-size: 0.82rem;
     line-height: 1.6;
-    color: #d0ddd5;
+    color: var(--color-text-secondary, #d0ddd5);
 }
 
 .web-document__section {
