@@ -1,0 +1,8 @@
+{
+  "name": "web.elonn.local",
+  "private": true,
+  "description": "Test-only Node tooling for the web runtime kit. No build step: the runtime itself ships as plain JS under public/assets/js/runtime-kit, loaded directly by the browser.",
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}
