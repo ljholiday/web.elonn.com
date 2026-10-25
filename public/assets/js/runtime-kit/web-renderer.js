@@ -636,7 +636,9 @@
             var card = document.createElement('span');
             card.className = 'world-sequence-entry__preview';
             if (image) {
-                image.className = 'world-sequence-entry__preview-image';
+                // Keeps imagePreview()'s own 'object-preview' class -- the one generic
+                // thumbnail rule every compact card uses; this container just caps it
+                // smaller via .world-sequence-entry__preview .object-preview in CSS.
                 card.appendChild(image);
             }
             if (title !== '') {

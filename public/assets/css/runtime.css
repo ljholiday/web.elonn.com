@@ -750,10 +750,17 @@ figure {
     opacity: 0.7;
 }
 
+/* The one compact-card thumbnail rule, used by every Object presentation (roster,
+   sequence, result, contained-object) -- natural size, shrunk only if it exceeds the
+   available card width or the height cap, aspect ratio always preserved, never cropped
+   and never upscaled past its own natural size (decision: one generic thumbnail policy,
+   no per-Collection-type variant). */
 .object-preview {
     display: block;
-    width: 100%;
+    max-width: 100%;
     max-height: 120px;
+    width: auto;
+    height: auto;
     object-fit: contain;
     border: var(--border-width-thin, 1px) solid rgba(184, 255, 243, 0.18);
     border-radius: var(--radius-sm, 4px);
@@ -836,11 +843,12 @@ figure {
     max-width: 100%;
 }
 
-.world-sequence-entry__preview-image {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: var(--radius-sm, 4px);
+/* Same .object-preview rule as everywhere else -- this context just has less available
+   space (an inline row beside text), so the cap is smaller. Not a different thumbnail
+   convention, the same contain/no-crop/no-upscale behavior with a tighter max. */
+.world-sequence-entry__preview .object-preview {
+    max-width: 64px;
+    max-height: 64px;
     flex-shrink: 0;
 }
 
