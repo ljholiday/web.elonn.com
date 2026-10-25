@@ -227,6 +227,13 @@
         form.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
             payload[checkbox.name] = checkbox.checked;
         });
+        // runtime-authoring-guide.md, Serialization: a Contract-declared integer/number
+        // argument submits as a real JSON number, never the string every native <input
+        // type="number"> element's own .value always is. An empty field submits null (a
+        // deliberate "no value" per canonical/action.md's Initial values), never 0 or NaN.
+        form.querySelectorAll('input[type="number"]').forEach(function (numberInput) {
+            payload[numberInput.name] = numberInput.value === '' ? null : Number(numberInput.value);
+        });
         // A field whose value is a structured record rather than form-native text (e.g. a
         // drawing_operation argument -- see drawingOperationInput) marks itself with
         // data-json-field so its string value is parsed back into a real object here, instead

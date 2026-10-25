@@ -19,6 +19,7 @@
         var workspacePanelEl = null;
         var workspaceToggleButton = null;
         var objectLabels = {};
+        var formLabels = {};
         // The flat, Dataset-level Resource map (scene.resourcesById) a content.body media
         // node's `resource_or_object_ref` resolves against directly -- never only the
         // focused Object's own narrower `resources[]` ref list (dev.elonn canonical/
@@ -41,6 +42,8 @@
             var content = scene.content && typeof scene.content === 'object' ? scene.content : {};
             // Object title-bar labels (back / close) -- keyed 'object' in world-content.json.
             objectLabels = content.object && typeof content.object === 'object' ? content.object : {};
+            // Generic argument-form control labels (array add/remove) -- keyed 'form'.
+            formLabels = content.form && typeof content.form === 'object' ? content.form : {};
             ensureWorkspacePanel(workspaceOptions);
             updateFloatingPanelChrome(workspacePanelEl, workspaceOptions);
             updateWorkspaceContent(scene.content || {});
@@ -1781,11 +1784,15 @@
             return row;
         }
 
-        var UNSUPPORTED_ARGUMENT_TYPES = ['array', 'geo_point'];
-
         function operationForm(action, object) {
-            var content = object.content && typeof object.content === 'object' ? object.content : {};
             var args = action.operationInvocation.arguments;
+            // dev.elonn canonical/action.md, Initial values: the owning Service's own
+            // current values for this Action, keyed by argument name -- never the target
+            // Object's own content, which a Runtime does not read for this (that was this
+            // form's prior, non-canonical convention: reading content[key] and assuming it
+            // matched the argument's own name).
+            var payload = action.operationInvocation.payload && typeof action.operationInvocation.payload === 'object' && !Array.isArray(action.operationInvocation.payload)
+                ? action.operationInvocation.payload : {};
             var baseInvocation = Object.assign({}, action.operationInvocation);
             var form = document.createElement('form');
             var fields = document.createElement('div');
@@ -1805,11 +1812,21 @@
             var renderedTypes = [];
             Object.keys(args).forEach(function (key) {
                 var spec = args[key];
-                if (!spec || UNSUPPORTED_ARGUMENT_TYPES.indexOf(spec.type) !== -1) {
+                // geo_point ("a real map with a pickable or draggable point") needs a real
+                // mapping dependency this Runtime does not have yet -- pending that choice
+                // (next_step.geo_point_map_widget_dependency_choice_20261025 on
+                // agents.elonn.com), skipped here rather than rendered wrong. Every other
+                // canonical type, including array, renders for real.
+                if (!spec || spec.type === 'geo_point') {
                     return;
                 }
                 renderedTypes.push(common.text(spec.type, 'string'));
-                fields.appendChild(operationFormField(key, spec, content[key], object));
+                // A key absent from payload is undefined here (the same signal content[key]
+                // used to give for "no value") -- present-with-null stays null, read and
+                // handled distinctly from absent by operationFormInput (canonical/action.md,
+                // Initial values' three-valued presence rule).
+                var currentValue = Object.prototype.hasOwnProperty.call(payload, key) ? payload[key] : undefined;
+                fields.appendChild(operationFormField(key, spec, currentValue, object));
             });
 
             // A drawing_operation field submits itself the instant a stroke completes (see
@@ -1842,7 +1859,8 @@
             // wraps several. A drawing_operation field wraps a color input, a width input, AND
             // a canvas, so a <label> here would pop the color picker on every canvas click; use
             // a plain <div> instead. Every other field still wraps a single real control.
-            var isMultiControl = common.text(spec && spec.type, 'string') === 'drawing_operation';
+            var multiControlTypes = ['drawing_operation', 'array', 'geo_point'];
+            var isMultiControl = multiControlTypes.indexOf(common.text(spec && spec.type, 'string')) !== -1;
             var wrapper = document.createElement(isMultiControl ? 'div' : 'label');
             var labelText = document.createElement('span');
             var helpText = common.text(spec && spec.help, '');
@@ -1878,13 +1896,24 @@
             var constraints = spec && spec.constraints && typeof spec.constraints === 'object' ? spec.constraints : {};
             var format = common.text(constraints.format, '');
             var hasDefault = Object.prototype.hasOwnProperty.call(spec, 'default');
-            var value = (currentValue !== undefined && currentValue !== null) ? currentValue : (hasDefault ? spec.default : '');
+            // dev.elonn canonical/action.md, Initial values, three-valued presence: absent
+            // (undefined) falls to the Contract default, then empty; present-with-null is a
+            // real, deliberate "no value" and renders empty WITHOUT falling to default;
+            // present with any other value -- including false, 0, "", or [] -- is that exact
+            // value, never treated as though the key were absent.
+            var value = currentValue !== undefined
+                ? (currentValue === null ? '' : currentValue)
+                : (hasDefault ? spec.default : '');
             var input;
 
             if (type === 'drawing_operation') {
                 // A structured record, not a form-native value -- built and returned whole
                 // (see drawingOperationInput), bypassing the plain <input> trailer below.
                 return drawingOperationInput(key, spec, object);
+            }
+
+            if (type === 'array') {
+                return arrayListInput(key, value);
             }
 
             if (enumValues && type === 'string') {
@@ -1908,9 +1937,12 @@
                     input.step = '1';
                 }
                 input.value = (value === '' || value === null || value === undefined) ? '' : String(value);
-            } else if (type === 'password') {
-                // A secret field (e.g. the auth-form password): masked, never prefilled, and
-                // hinted for the right password manager behaviour by field name.
+            } else if (type === 'string' && format === 'password') {
+                // The one canonical way to declare masked, never-prefilled input
+                // (contract-authoring-guide.md) -- "password" was never a real argument
+                // type. Never seeded from `value`: a secret the member is entering, never
+                // one already known to the Runtime to redisplay, even when an initial value
+                // is technically present on payload for this key.
                 input = document.createElement('input');
                 input.type = 'password';
                 input.autocomplete = key === 'password' ? 'current-password' : 'new-password';
@@ -1938,6 +1970,76 @@
                 input.maxLength = constraints.max_length;
             }
             return input;
+        }
+
+        // A canonical `array` argument (contract-authoring-guide.md, Operation Argument
+        // Schemas; runtime-authoring-guide.md, Argument types: "a list value"): one text row
+        // per item, add/remove rows, submitted as a real JSON array of strings through a
+        // genuine hidden <input data-json-field>, the same marker and mechanism
+        // drawingOperationInput's own hidden field uses -- never a single opaque text blob,
+        // and never relying on FormData walking the visible per-row inputs (named rows would
+        // collide, and an empty list must still submit as [], not be absent entirely).
+        // Handles the plain list-of-strings case generically; a Service declaring a richer
+        // per-item schema is outside this generic control's scope.
+        function arrayListInput(key, value) {
+            var wrapper = document.createElement('div');
+            var list = document.createElement('div');
+            var addButton = document.createElement('button');
+            var hidden = document.createElement('input');
+            wrapper.className = 'operation-form__array';
+            list.className = 'operation-form__array-rows';
+
+            hidden.type = 'hidden';
+            hidden.name = key;
+            hidden.dataset.jsonField = 'true';
+
+            function currentItems() {
+                return Array.isArray(value) ? value.map(function (item) { return common.text(item, ''); }) : [];
+            }
+
+            function syncHiddenValue() {
+                var items = [];
+                list.querySelectorAll('input[type="text"]').forEach(function (rowInput) {
+                    items.push(rowInput.value);
+                });
+                hidden.value = JSON.stringify(items);
+            }
+
+            function addRow(itemValue) {
+                var row = document.createElement('div');
+                var rowInput = document.createElement('input');
+                var remove = document.createElement('button');
+                row.className = 'operation-form__array-row';
+                rowInput.type = 'text';
+                rowInput.value = common.text(itemValue, '');
+                rowInput.addEventListener('input', syncHiddenValue);
+                remove.type = 'button';
+                remove.className = 'operation-form__array-remove';
+                remove.textContent = common.text(formLabels.array_remove_label, 'Remove');
+                remove.addEventListener('click', function () {
+                    row.remove();
+                    syncHiddenValue();
+                });
+                row.appendChild(rowInput);
+                row.appendChild(remove);
+                list.appendChild(row);
+            }
+
+            currentItems().forEach(addRow);
+
+            addButton.type = 'button';
+            addButton.className = 'operation-form__array-add';
+            addButton.textContent = common.text(formLabels.array_add_label, 'Add');
+            addButton.addEventListener('click', function () {
+                addRow('');
+                syncHiddenValue();
+            });
+
+            wrapper.appendChild(list);
+            wrapper.appendChild(addButton);
+            wrapper.appendChild(hidden);
+            syncHiddenValue();
+            return wrapper;
         }
 
         // Renders a drawing_operation argument as a live freehand drawing surface (dev.elonn
