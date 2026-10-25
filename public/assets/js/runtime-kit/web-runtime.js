@@ -21,7 +21,6 @@
     var resize = null;
     var lastCarryTitleTap = null;
     var workspaceResultsCleared = false;
-    var findScope = '';
     // Set by the server when there is no auth cookie. In this mode the runtime renders
     // api.elonn's login / register Dataset instead of the member's world, and every operation
     // dispatch is an auth submission, not a World Call.
@@ -94,7 +93,6 @@
         var operationAction = event.target.closest('[data-operation-invocation]');
         var workspaceToggle = event.target.closest('[data-workspace-results-toggle]');
         var workspaceClear = event.target.closest('[data-workspace-results-clear]');
-        var findScopeButton = event.target.closest('[data-runtime-find-scope]');
         var collectionButton = event.target.closest('[data-collection-id]');
         var objectButton = event.target.closest('button[data-object-id]');
         var worldBack = event.target.closest('[data-world-back]');
@@ -155,13 +153,6 @@
         if (workspaceClear) {
             event.preventDefault();
             clearResults();
-            return;
-        }
-
-        if (findScopeButton) {
-            event.preventDefault();
-            findScope = String(findScopeButton.dataset.runtimeFindScope || '');
-            renderState();
             return;
         }
 
@@ -577,8 +568,7 @@
                 y: panel.y,
                 width: panel.width,
                 height: panel.height,
-                z: panel.z,
-                findScope: findScope
+                z: panel.z
             }
         });
     }

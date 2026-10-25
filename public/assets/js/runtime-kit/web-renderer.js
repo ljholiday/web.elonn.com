@@ -43,7 +43,7 @@
             objectLabels = content.object && typeof content.object === 'object' ? content.object : {};
             ensureWorkspacePanel(workspaceOptions);
             updateFloatingPanelChrome(workspacePanelEl, workspaceOptions);
-            updateWorkspaceContent(scene.content || {}, workspaceOptions.findScope);
+            updateWorkspaceContent(scene.content || {});
             if (workspaceToggleButton) {
                 workspaceToggleButton.textContent = workspaceOptions.collapsed === true ? 'Show' : 'Hide';
             }
@@ -71,19 +71,18 @@
         }
 
         /*
-         * The workspace panel is built exactly once (see ensureWorkspacePanel), so title,
-         * placeholder, and scope options -- all sourced from the World Dataset's
-         * context.content, not hardcoded here -- would otherwise be frozen at whatever
-         * SceneModel.loading()'s empty content was during that first build. Re-applied on
-         * every render instead, the same way updateFloatingPanelChrome() re-applies
-         * geometry every render despite the panel structure itself only existing once.
+         * The workspace panel is built exactly once (see ensureWorkspacePanel), so title and
+         * placeholder -- both sourced from the World Dataset's context.content, not hardcoded
+         * here -- would otherwise be frozen at whatever SceneModel.loading()'s empty content was
+         * during that first build. Re-applied on every render instead, the same way
+         * updateFloatingPanelChrome() re-applies geometry every render despite the panel
+         * structure itself only existing once.
          */
-        function updateWorkspaceContent(content, currentScope) {
+        function updateWorkspaceContent(content) {
             var find = content.find && typeof content.find === 'object' ? content.find : {};
             var titleNode = null;
             var input = null;
             var clearButton = null;
-            var scopeGroup = null;
             if (!workspacePanelEl) {
                 return;
             }
@@ -99,26 +98,6 @@
             if (clearButton) {
                 clearButton.textContent = common.text(find.clear_label, 'Clear');
             }
-            scopeGroup = workspacePanelEl.querySelector('[data-runtime-find-scope-group]');
-            if (scopeGroup) {
-                common.replaceChildren(scopeGroup, scopeButtonNodes(find, currentScope));
-            }
-        }
-
-        function scopeButtonNodes(find, currentScope) {
-            var scope = find.scope && typeof find.scope === 'object' ? find.scope : {};
-            var options = Array.isArray(scope.enum) ? scope.enum : [];
-            var active = common.text(currentScope, scope.default);
-            return options.map(function (value) {
-                var button = panelButton({
-                    label: humanizeKey(value),
-                    dataset: 'runtimeFindScope',
-                    datasetValue: value,
-                    className: 'workspace-results-panel__scope'
-                });
-                button.dataset.active = String(value) === String(active) ? 'true' : 'false';
-                return button;
-            });
         }
 
         /*
@@ -326,8 +305,6 @@
             var input = document.createElement('input');
             var voice = document.createElement('button');
             var voiceIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            var actions = document.createElement('div');
-            var scopeGroup = document.createElement('div');
 
             form.className = 'query-composer';
             form.setAttribute('data-runtime-query-form', '');
@@ -364,18 +341,8 @@
             field.appendChild(input);
             field.appendChild(voice);
 
-            actions.className = 'carry-object-panel__actions';
-
-            scopeGroup.className = 'workspace-results-panel__scope-group';
-            scopeGroup.setAttribute('data-runtime-find-scope-group', '');
-            scopeButtonNodes(find, find.scope && find.scope.default).forEach(function (button) {
-                scopeGroup.appendChild(button);
-            });
-            actions.appendChild(scopeGroup);
-
             form.appendChild(label);
             form.appendChild(field);
-            form.appendChild(actions);
             return form;
         }
 
