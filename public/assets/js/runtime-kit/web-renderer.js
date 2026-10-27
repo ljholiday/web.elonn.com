@@ -960,11 +960,19 @@
                     headerActions.push(objectBackButton(panel.object.id));
                 }
                 headerActions.push(collapseButton(panel.id, panel.collapsed === true));
+                // A canonical Object's title is legitimately blank whenever it has no distinct
+                // heading concept of its own (object.md, Canonical text fields -- e.g. a Time
+                // calendar event/task, whose real text is its summary, decision
+                // time_calendar_event_summary_not_title_20261016). The panel's own heading is a
+                // presentation choice, not canonical data: it shows whichever of the two real
+                // fields the Object actually has, title winning when both are genuinely present,
+                // never inventing a third value.
+                var panelHeading = common.text(panel.title, common.text(panel.object.title, panel.object.summary));
                 return floatingPanel({
                     id: panel.id,
                     objectId: panel.object.id,
                     className: opened ? 'carry-object-panel--opened' : '',
-                    title: common.text(panel.title, panel.object.title),
+                    title: panelHeading,
                     closable: true,
                     collapsed: panel.collapsed,
                     x: panel.x,
@@ -975,7 +983,7 @@
                     headerActions: headerActions,
                     closeLabel: opened && common.text(objectLabels.close_label, '') !== ''
                         ? objectLabels.close_label
-                        : 'Close ' + panel.object.title,
+                        : 'Close ' + panelHeading,
                     buildContent: function (content) {
                         if (opened) {
                             content.dataset.originObject = panel.object.id;

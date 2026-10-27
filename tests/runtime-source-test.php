@@ -301,6 +301,9 @@ $checks = [
         str_contains($webRuntime, "match = {invocation: invocation, label: String(action.label || '')}")
         && str_contains($webRuntime, 'opts.label = open.label')
         && str_contains($webRuntime, 'dispatchOperationInvocation(open.invocation, opts)'),
+    'An opened panel\'s own heading falls back to summary, never a generic word, when an Object\'s title is legitimately blank (e.g. a Time calendar event/task)' =>
+        str_contains($webRenderer, 'common.text(panel.title, common.text(panel.object.title, panel.object.summary))')
+        && str_contains($webRenderer, "'Close ' + panelHeading"),
     'Grouped Dashboard actions lay out one row per group, in the Dataset order -- no runtime group vocabulary' =>
         !str_contains($webRenderer, "ACTION_GROUP_ORDER")
         && !str_contains($webRenderer, "['view', 'circle', 'create']")
