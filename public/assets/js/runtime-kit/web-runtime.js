@@ -991,7 +991,10 @@
             if (String(action.target_id || '') === String(objectId || '')
                 && (action.type === 'open' || action.type === 'open_object')
                 && invocation) {
-                match = {invocation: invocation};
+                // dataset-parser.js already resolved this action's real label (content.label,
+                // falling back through content.name/action.label/action.name); carry it through
+                // so the Turn this invocation produces is labeled with it too, not dropped here.
+                match = {invocation: invocation, label: String(action.label || '')};
                 return true;
             }
             return false;
@@ -1011,7 +1014,9 @@
             dispatchWorldNavigation('world.focus', objectId);
             return;
         }
-        dispatchOperationInvocation(open.invocation, originObject !== '' ? {originObject: originObject} : {});
+        var opts = originObject !== '' ? {originObject: originObject} : {};
+        opts.label = open.label;
+        dispatchOperationInvocation(open.invocation, opts);
     }
 
     function dispatchWorldNavigation(operation, objectId, extra) {

@@ -297,6 +297,10 @@ $checks = [
         && str_contains($webRuntime, "dispatchOperationInvocation(base, {label: label})")
         && str_contains($webRuntime, "inputText: String(command && command.input_text || label || 'Action')")
         && !str_contains($webRuntime, "inputText: String(command && command.input_text || 'operation invocation')"),
+    'Opening an Object through its own open action also carries that action\'s real label through, not just the button-click and form-submit paths' =>
+        str_contains($webRuntime, "match = {invocation: invocation, label: String(action.label || '')}")
+        && str_contains($webRuntime, 'opts.label = open.label')
+        && str_contains($webRuntime, 'dispatchOperationInvocation(open.invocation, opts)'),
     'Grouped Dashboard actions lay out one row per group, in the Dataset order -- no runtime group vocabulary' =>
         !str_contains($webRenderer, "ACTION_GROUP_ORDER")
         && !str_contains($webRenderer, "['view', 'circle', 'create']")
