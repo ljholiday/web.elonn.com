@@ -292,6 +292,11 @@ $checks = [
         && !str_contains($webRenderer, "linkLine('Action'")
         && !str_contains($webRenderer, 'action.href')
         && !str_contains($scripts, 'action.href'),
+    'An operation invocation Turn records the clicked action\'s own label as its input_text, not one generic literal duplicated for every action' =>
+        str_contains($webRuntime, "opts.label = String(control.textContent || '').trim()")
+        && str_contains($webRuntime, "dispatchOperationInvocation(base, {label: label})")
+        && str_contains($webRuntime, "inputText: String(command && command.input_text || label || 'Action')")
+        && !str_contains($webRuntime, "inputText: String(command && command.input_text || 'operation invocation')"),
     'Grouped Dashboard actions lay out one row per group, in the Dataset order -- no runtime group vocabulary' =>
         !str_contains($webRenderer, "ACTION_GROUP_ORDER")
         && !str_contains($webRenderer, "['view', 'circle', 'create']")

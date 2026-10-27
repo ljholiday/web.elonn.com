@@ -256,7 +256,7 @@
             statusNode.dataset.state = 'loading';
         }
 
-        dispatchOperationInvocation(base).then(function () {
+        dispatchOperationInvocation(base, {label: label}).then(function () {
             renderer.status(label + ' saved.', 'ready');
         }).catch(function (error) {
             var message = error && error.message ? error.message : label + ' failed.';
@@ -688,13 +688,20 @@
             }
             workspaceResultsCleared = false;
         }
+        // input_text records what the member actually did, for the Turn it produces in the
+        // Thread/Findings. A typed search carries its own text on the command; a button/form
+        // invocation carries none, so the caller passes the action's own already-resolved
+        // label (opts.label) -- the real, distinct description of that action, not an
+        // invented one. Only when neither exists (should not happen for a well-formed
+        // invocation) does this fall back to a generic label.
+        var label = String(opts.label || '');
         renderer.status('Requesting World Dataset.', 'loading');
         return loadDataset({
             runtimeSessionId: state ? state.runtimeSessionId : '',
             threadId: state ? state.threadId : '',
             selectedObjectId: objectId,
             selectedCollectionId: state ? state.selectedCollectionId : '',
-            inputText: String(command && command.input_text || 'operation invocation'),
+            inputText: String(command && command.input_text || label || 'Action'),
             operationInvocation: command,
             originObject: originObject
         });
@@ -715,7 +722,12 @@
         // An action fired from inside an opened Object panel (Reply, RSVP, Save, a nested
         // entrance) navigates that Object in place; otherwise its result lands as Findings.
         var originObject = originObjectFor(control);
-        dispatchOperationInvocation(command, originObject !== '' ? {originObject: originObject} : {});
+        var opts = originObject !== '' ? {originObject: originObject} : {};
+        // The clicked control's own text is the action's already-resolved label (set by
+        // actionButton/operationLine from action.label) -- the real record of what the
+        // member clicked, read back rather than re-derived.
+        opts.label = String(control.textContent || '').trim();
+        dispatchOperationInvocation(command, opts);
     }
 
     function removeObjectSurface(objectId) {
