@@ -1434,7 +1434,7 @@
             var content = object.content && typeof object.content === 'object' ? object.content : {};
             var frame = document.createElement('div');
             frame.className = 'web-video';
-            var title = common.text(content.title, common.text(object.title, ''));
+            var title = common.text(object.title, '');
             if (title !== '') {
                 var heading = document.createElement('h4');
                 heading.className = 'web-video__title';

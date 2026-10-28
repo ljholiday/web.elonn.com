@@ -256,6 +256,30 @@ function sceneFrom(dataset, carryPanels) {
     && content.querySelector('.object-decomposition') === null);
 }
 
+// Canonical text remains independent even when stale nested fields are present.
+// Exercise the promoted-media rendering path, which formerly preferred content.title.
+for (const title of ['Canonical media title', '']) {
+  const dataset = baseDataset({
+    objects: [
+      {id: 'object:container', type: 'test.object', title: 'Container', name: '', summary: '', description: '', content: {}},
+      {id: 'object:media', type: 'video', title, name: 'Independent name', summary: '', description: 'Independent description',
+       content: {title: 'Stale nested title', summary: 'Stale nested summary', name: 'Stale nested name', description: 'Stale nested description', source: 'https://example.com/movie.mp4', playback: 'native'}}
+    ],
+    placements: [{id: 'placement:container', type: 'carry', content: {object: 'object:container'}}],
+    context: {objects: {'object:container': {title: 'Container', depth: 0, history: [], members: ['object:media']}}}
+  });
+  const parsed = runtime.DatasetParser.parse(dataset);
+  const media = parsed.objects.find((object) => object.id === 'object:media');
+  check('Canonical text parser preserves title/blank summary without nested or sibling substitution: ' + JSON.stringify(title),
+    media.title === title && media.summary === '');
+  renderer.render(sceneFrom(dataset, [{id: 'carry-panel:object:container', objectId: 'object:container', x: 0, y: 0, width: 320, height: 200, z: 1, collapsed: false}]));
+  const frame = rootEl.querySelector('.web-video');
+  const heading = frame ? frame.querySelector('.web-video__title') : null;
+  check('Promoted media renders only its canonical title, including blank: ' + JSON.stringify(title),
+    !!frame && (title ? !!heading && heading.textContent === title : heading === null)
+    && !frame.textContent.includes('Stale nested title'));
+}
+
 checks.forEach((c) => console.log((c.passed ? 'PASS' : 'FAIL') + ': ' + c.label));
 if (checks.some((c) => !c.passed)) process.exit(1);
 JS;

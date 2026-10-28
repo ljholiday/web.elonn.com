@@ -88,7 +88,7 @@
                 return {
                     id: String(object.id || ''),
                     type: String(object.type || 'object'),
-                    // Canonical, set by World (Composer::withCanonicalFields). One field, no chain.
+                    // Producer-declared canonical text, passed through World without substitution.
                     title: common.text(object.title, ''),
                     summary: common.text(object.summary, ''),
                     content: content,
